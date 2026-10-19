@@ -57,8 +57,9 @@ greener/
 │       ├── db/ 
 │       │   └── connection.ts 
 │       ├── integrations/ 
-│       │   ├── metrics-api.ts 
-│       │   └── carbon-api.ts 
+│       │   ├── api-client.ts
+        │   ├── carbon-api.ts  
+│       │   └── metrics-api.ts  
 │       └── modules/ 
 │           └── coletas/ 
 │               ├── coletas.routes.ts 
