@@ -1,20 +1,17 @@
 <div align="center">
-<img width="200" height="200" alt="icon-greener" src="https://raw.githubusercontent.com/greenstackfatec-tech/GreenER/c936a2a0ed724d172b82800ead0b9e01a4578ea6/docs/design/greener-circle-logo.png" />
-  
+
+<img width="180" alt="Logo do GreenER" src="https://raw.githubusercontent.com/greenstackfatec-tech/GreenER/c936a2a0ed724d172b82800ead0b9e01a4578ea6/docs/design/greener-circle-logo.png" />
+
 # GreenER - ABP II
+
+Do consumo computacional ao impacto ambiental.
+</div>
+
 <br>
-
-<img src="#" />
-<img src="#" />
-<img src="#" />
-
-<br><br>
 
 ## 📚 SUMÁRIO
 
-[Sobre o Projeto](#-sobre-o-projeto) | [Product Backlog](#-product-backlog) | [Cronograma ](#-product-backlog) | [Sprints](#-sprints) | [Tecnologias](#%EF%B8%8F-tecnologias) | [Documentação](#-requisitos) | [Instalação](%EF%B8%8F-como-executar-o-projeto) | [Equipe](#%E2%80%8D-nossa-equipe)
-
-</div>
+[Sobre o Projeto](#-sobre-o-projeto) | [Product Backlog](#-product-backlog) | [Plano de Entregas](#-plano-de-entregas) | [Sprints](#-sprints) | [Tecnologias](#%EF%B8%8F-tecnologias) | [Documentação](#-documentação) | [Instalação](#️-como-executar-o-projeto-com-docker) | [Equipe](#%E2%80%8D-nossa-equipe)
 
 <br>
 
@@ -71,15 +68,22 @@ greener/
 ├── database/ 
 │   ├── README.md 
 │   └── schema.sql 
-└── docs/ 
-    ├── plano-de-entregas.md 
+└── docs/
+    ├── README.md
+    ├── plano-de-entregas.md
     ├── arquitetura.md 
     ├── calculos.md 
     ├── api.md 
     └── sprints/ 
         ├── sprint-1.md 
         ├── sprint-2.md 
-        └── sprint-3.md 
+        └── sprint-3.md
+    └── design/
+        ├── greener-circle-logo.png
+        ├── greener-icon.png
+        ├── greener-styleguide.png
+        ├── greenstack-icon.png
+        └── ...
 ```
 
 <br>
@@ -96,26 +100,20 @@ O <b>Product Backlog</b> pode ser encontrado <a href="https://github.com/greenst
 ## [🏆 Plano de Entregas](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano%20de%20entregas.md)
 
 <p style="text-align: justify;">
-(Descrição)
+ O plano de entregas organiza os objetivos, os itens selecionados, os responsáveis, os critérios de aceite e as evidências de cada sprint. Também deve registrar a Definition of Done (DoD), utilizada para avaliar se uma entrega pode ser considerada concluída.
 <br>
-O <b>DoD</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano%20de%20entregas.md">aqui</a>.
+O <b>Plano de Entregas</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano%20de%20entregas.md">aqui</a>.
 </p>
-
-<br>
-
-## 📈 Cronograma de Evolução do projeto
-
-<img width="100%" alt="cronograma-evolucao-projeto" src="#1" />
 
 <br>
   
 ## 🎯 Sprints
 
-| Sprints | Data       | Stauts | Relatório                                                                                                      | Vídeo         |
-| ------- | ---------- | ------ | -------------------------------------------------------------------------------------------------------------- | ------------- |
-| 1       | 13/04/2026 |   ⌛   | [Ver relatório](#) | [Ver vídeo](#) |
-| 2       | 04/05/2026 |   ⬜   | [Ver relatório](#) | [Ver vídeo](#) |
-| 3       | 25/05/2026 |   ⬜   | [Ver relatório](#) | [Ver vídeo](#) |
+| Sprints | Data | Stauts | Relatório | Vídeo |
+| :---: | :---: | :---: | :--- | :---: |
+| 1 | 19/10/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-1.md) | [Ver vídeo](#) |
+| 2 |     --     | ⬜ | [Indisponível]() | [Indisponível](#) |
+| 3 |     --     | ⬜ | [Indisponível]() | [Indisponível](#) |
 
 ### Legenda:
 
@@ -125,10 +123,10 @@ O <b>DoD</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tec
 
 <br>
 
-## 🎯 Sprint 01: Prototipação, Estruturação do banco de dados, e Implementação das APIs
+## 🎯 Sprint 01: Prototipação, Banco de dados, e APIs
 
 <p style="text-align: justify;">
-(Detalhes da sprint)
+A primeira sprint contempla atividades de prototipação, estruturação do banco de dados e preparação das integrações com as APIs auxiliares. O estado de cada atividade e as evidências correspondentes devem ser consultados no relatório da sprint.
 <br>
 O <b>Sprint Backlog</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/sprint-1.md">aqui</a>.
 </p>
@@ -147,102 +145,104 @@ O <b>Sprint Backlog</b> pode ser encontrado <a href="https://github.com/greensta
 | ![My Skills](https://skillicons.dev/icons?i=figma) | Web|
 | ![My Skills](https://skillicons.dev/icons?i=git) | v2.53 |
 | ![My Skills](https://skillicons.dev/icons?i=github) | Web |
+| <img src="https://github.com/tandpfun/skill-icons/blob/main/icons/Docker.svg" width="47"> | v29.8.1 |
+
 
 <br>
 
-## [🗃️ Documentação](#)
+## [🗃️ Documentação](https://github.com/greenstackfatec-tech/greener/tree/develop/docs)
 
 <p style="text-align: justify;">
-A documentação do projeto inclui o modelo lógico do banco de dados, os diagramas de caso de uso e de sequência, além dos artefatos do Scrum (Product Backlog e Sprint Backlog) e dos relatórios de cada sprint.<br>
-A <b>documentação completa</b> pode ser encontrada <a href="#">aqui</a>.
+A pasta docs/ reúne a documentação técnica e os registros de desenvolvimento do GreenER. Ela contém o planejamento das entregas e das sprints, o Product Backlog, a arquitetura do sistema, a descrição dos cálculos de consumo energético e emissões de CO₂e, além da documentação dos endpoints da API desenvolvida pela equipe.
+
+Esses documentos ajudam a organizar as atividades, acompanhar o progresso, registrar decisões técnicas e manter a rastreabilidade entre os requisitos, as implementações e as entregas do projeto.<br>
+A <b>documentação completa</b> pode ser encontrada <a href="https://github.com/greenstackfatec-tech/greener/tree/develop/docs">aqui</a>.
 </p>
-
 <br>
 
-## [📋 Requisitos](#)
+## ⚙️ Como executar o projeto com Docker
 
-### [Requisitos Funcionais (RF)](#)
+### Pré-requisitos
 
-Os Requisitos funcionais são especificações detalhadas que definem o que um sistema deve fazer, descrevendo funcionalidades e comportamentos.
-<br>
-Eles podem ser encontrados <a href="#">aqui</a>.
+- [Git](https://git-scm.com/downloads)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) no Windows ou macOS, ou Docker Engine com o plugin Docker Compose no Linux.
+- Docker em execução no computador.
 
-### [Requisitos Não Funcionais (RNF)](#)
+Não é necessário instalar Node.js ou PostgreSQL diretamente na máquina para executar serviços que estejam configurados corretamente em containers.
 
-Os Requisitos não funcionais definem como um sistema opera. Eles estabelecem critérios de qualidade, restrições e atributos como desempenho, segurança, usabilidade e confiabilidade.
-<br>
-Eles podem ser encontrados <a href="#">aqui</a>.
-
-### [Restrição do Projeto (RP)](#)
-
-Restrições de um projeto são limitações, fatores externos ou imposições que condicionam o planejamento, execução e conclusão, definindo o que pode ser realista entregue.
-<br>
-Eles podem ser encontrados <a href="#">aqui</a>.
-
-<br>
-
-## ⚙️ Como executar o projeto
-
-### 🛠 Pré-requisitos
-
-- Git ([Download](https://git-scm.com/downloads)) - v. 2.53.0
-
-- Node.js ([Download](https://nodejs.org/en/download)) - v. 24.13.1
-
-- PgAdmin ([Download](https://www.pgadmin.org/download/))
-
----
-
-### 1. Clonar o Repositório Principal
+### 1. Clonar o repositório e acessar a branch `develop`
 
 ```bash
-git clone https://github.com/greenstackfatec-tech/GreenER.git
+git clone https://github.com/greenstackfatec-tech/greener.git
+cd greener
+git switch develop
 ```
 
-> **Observação:** Para o banco de dados funcionar, clone o repositório na pasta raíz do seu computador.
+### 2. Configurar as variáveis de ambiente
 
----
+Confira as variáveis documentadas no arquivo `.env.example`. Se o projeto utilizar um arquivo `.env` na raiz, crie-o a partir do exemplo:
 
-### 2. Configuração do projeto
+**Windows (PowerShell):**
 
-**1°** Entre na pasta `GreenER`:
+```powershell
+Copy-Item .env.example .env
+```
+
+**Linux ou macOS:**
 
 ```bash
-cd GreenER
+cp .env.example .env
 ```
 
-> **Observação:** 
+Preencha os valores exigidos pelo projeto. Não compartilhe nem versione senhas, tokens ou outras credenciais reais.
 
-<br>
+### 3. Validar a configuração do Docker Compose
 
-**2°** Instale as bibliotecas com o comando:
+Na raiz do repositório, execute:
 
 ```bash
-npm i
+docker compose config
 ```
 
-<br>
+Esse comando valida a configuração do Compose. Se apresentar erro, corrija o `compose.yaml` e as variáveis necessárias antes de continuar.
 
-**3°** Com o repositório em sua pasta raíz, inicialize o banco de dados:
+### 4. Construir e iniciar os containers
+
+Depois que `compose.yaml`, os Dockerfiles e as variáveis de ambiente estiverem configurados:
 
 ```bash
-npm run db:init
+docker compose up --build
 ```
 
-<br>
-
-**4°** Por fim, execute o projeto:
+Para executar em segundo plano:
 
 ```bash
-npm run start
+docker compose up --build -d
 ```
 
----
+### 5. Verificar os serviços
 
-**Saída Esperada:**
-<br>
+Consulte o estado dos containers:
 
-Servidor rodando em `http://localhost:3000`
+```bash
+docker compose ps
+```
+
+Para acompanhar os logs:
+
+```bash
+docker compose logs -f
+```
+
+Quando os serviços estiverem prontos, acesse os endereços locais definidos nas configurações do Compose. As portas do frontend, backend e banco devem ser conferidas no `compose.yaml`; não presuma que a aplicação estará disponível em uma porta específica.
+
+### 6. Encerrar a aplicação
+
+```bash
+docker compose down
+```
+
+Esse comando encerra e remove os containers da aplicação. Não utilize `docker compose down -v` se quiser preservar os volumes e os dados persistidos do PostgreSQL.
 
 <br>
 
@@ -275,7 +275,7 @@ Servidor rodando em `http://localhost:3000`
       <td> Desenvolvedor </td>
       <td> <a href="https://github.com/thiagosantos-17" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="LinkedIn"/> </a></td>
       <td>        
-         <a href="#" title="LinkedIn">
+         <a href="https://www.linkedin.com/in/thiago-s-7579913b3/?isSelfProfile=false" title="LinkedIn">
          <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/> </a> 
       </td>
    </tr>
@@ -284,7 +284,7 @@ Servidor rodando em `http://localhost:3000`
          <img src="https://avatars.githubusercontent.com/u/269037770?v=4" width="75px;" alt="Renan Santos"/>
       </td>
       <td>Renan Santos</td>
-      <td> Desenvolvedora </td>
+      <td> Desenvolvedor </td>
       <td> <a href="https://github.com/renanrmsantos14" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="LinkedIn"/> </a></td>
       <td>  <a href="https://www.linkedin.com/in/renan-santos-40662738b/?isSelfProfile=true" title="LinkedIn"> <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/> </a> </td>
    </tr>
