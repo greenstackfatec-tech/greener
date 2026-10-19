@@ -119,8 +119,8 @@ O <b>Plano de Entregas</b> pode ser encontrado <a href="https://github.com/green
 | Sprints | Data | Stauts | Relatório | Vídeo |
 | :---: | :---: | :---: | :--- | :---: |
 | 1 | 19/10/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-1.md) | [Ver vídeo](https://youtu.be/gBj58b91ARw) |
-| 2 |     --     | ⬜ | [Indisponível]() | [Indisponível](#) |
-| 3 |     --     | ⬜ | [Indisponível]() | [Indisponível](#) |
+| 2 | 09/11/2026 | ⬜ | [Indisponível]() | [Indisponível](#) |
+| 3 | 23/11/2026 | ⬜ | [Indisponível]() | [Indisponível](#) |
 
 ### Legenda:
 
