@@ -4,10 +4,6 @@
 # GreenER - ABP II
 <br>
 
-<img src="#" />
-<img src="#" />
-<img src="#" />
-
 <br><br>
 
 ## 📚 SUMÁRIO
@@ -105,17 +101,17 @@ O <b>DoD</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tec
 
 ## 📈 Cronograma de Evolução do projeto
 
-<img width="100%" alt="cronograma-evolucao-projeto" src="#1" />
+
 
 <br>
   
 ## 🎯 Sprints
 
-| Sprints | Data       | Stauts | Relatório                                                                                                      | Vídeo         |
-| ------- | ---------- | ------ | -------------------------------------------------------------------------------------------------------------- | ------------- |
-| 1       | 13/04/2026 |   ⌛   | [Ver relatório](#) | [Ver vídeo](#) |
-| 2       | 04/05/2026 |   ⬜   | [Ver relatório](#) | [Ver vídeo](#) |
-| 3       | 25/05/2026 |   ⬜   | [Ver relatório](#) | [Ver vídeo](#) |
+| Sprints | Data | Stauts | Relatório | Vídeo |
+| :---: | :---: | :---: | :--- | :---: |
+| 1 | 13/04/2026 | ⌛ | [Ver relatório](./docs/sprints/sprint-1.md) | [Ver vídeo](#) |
+| 2 | 04/05/2026 | ⬜ | [Ver relatório]() | [Ver vídeo](#) |
+| 3 | 25/05/2026 | ⬜ | [Ver relatório]() | [Ver vídeo](#) |
 
 ### Legenda:
 
