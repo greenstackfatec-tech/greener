@@ -122,3 +122,16 @@ xychart-beta
 | 16/10 | 10 | 18 |
 | 19/10 | 0 | 0 |
 </details>
+
+<details>
+<summary>
+
+### 🗒️ Atas das Daily Meetings
+</summary>
+
+<br>
+
+Registro das daily meetings da Sprint 1 (05/10/2026 a 16/10/2026), com participantes, andamento de cada integrante, impedimentos e avisos.
+
+📄 [Ver atas da Sprint 1 (PDF)](./atas-sprint-1.pdf)
+</details>
