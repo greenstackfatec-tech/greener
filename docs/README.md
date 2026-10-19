@@ -37,6 +37,7 @@ docs/
 | [Arquitetura](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/arquitetura.md) | Descreve a organização dos componentes do sistema e a comunicação entre frontend, backend, banco de dados e serviços externos. |
 | [Cálculos](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/calculos.md) | Registra a metodologia, as fórmulas, as unidades e as premissas utilizadas para estimar consumo energético e emissões de CO₂e. |
 | [Documentação da API](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/api.md) | Reúne informações sobre endpoints, parâmetros, respostas e autenticação das APIs utilizadas ou disponibilizadas pelo projeto. |
+| [Execução com Docker Compose](../README.md#-como-executar-o-projeto-com-docker) | Instruções para configurar o `.env`, iniciar PostgreSQL, backend e frontend e verificar a disponibilidade dos serviços. |
 | [Product Backlog](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/product-backlog.md) | Centraliza e prioriza requisitos, funcionalidades, melhorias e correções do produto. |
 | [Relatório da Sprint 1](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/sprint-1.md) | Registra o planejamento, as atividades, as entregas, as evidências, as pendências e as decisões da primeira sprint. |
 | [Atas da Sprint 1](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/atas-sprint-1.pdf) | Registra as daily meetings da primeira sprint: participantes, andamento de cada integrante, impedimentos e avisos. |
