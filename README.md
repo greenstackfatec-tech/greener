@@ -104,7 +104,7 @@ O <b>Product Backlog</b> pode ser encontrado <a href="https://github.com/greenst
 
 <br>
 
-## [🏆 Plano de Entregas](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano%20de%20entregas.md)
+## [🏆 Plano de Entregas](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano-de-entregas.md)
 
 <p style="text-align: justify;">
  O plano de entregas organiza os objetivos, os itens selecionados, os responsáveis, os critérios de aceite e as evidências de cada sprint. Também deve registrar a Definition of Done (DoD), utilizada para avaliar se uma entrega pode ser considerada concluída.
