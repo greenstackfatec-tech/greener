@@ -72,13 +72,19 @@ greener/
 └── docs/
     ├── README.md
     ├── plano-de-entregas.md
-    ├── arquitetura.md 
-    ├── calculos.md 
-    ├── api.md 
-    └── sprints/ 
-        ├── sprint-1.md 
-        ├── sprint-2.md 
-        └── sprint-3.md
+    ├── arquitetura.md
+    ├── calculos.md
+    ├── api.md
+    ├── diagramas/
+    │   ├── README.md
+    │   ├── diagrama-casos-de-uso.md
+    │   ├── diagrama-classes.md
+    │   └── diagrama-sequencia.md
+    ├── sprints/
+    │   ├── product-backlog.md
+    │   ├── sprint-1.md
+    │   ├── sprint-2.md
+    │   └── sprint-3.md
     └── design/
         ├── greener-circle-logo.png
         ├── greener-icon.png

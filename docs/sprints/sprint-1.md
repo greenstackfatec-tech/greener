@@ -29,3 +29,36 @@
 | ES-001 | Desenvolver diagrama de caso de uso | 8 | 8 | EWS |  | Fernanda |
 | ES-002 | Documentar requisitos e backlog | 10 | 8 | EWS |  | Igor |
 | LP-001 | Carregar dados no SGBD | 7 | 3 | LPA |  | Renan |
+
+## Burndown
+
+```mermaid
+---
+config:
+  themeVariables:
+    xyChart:
+      plotColorPalette: "#4472C4, #ED7D31"
+---
+xychart-beta
+    title "Burndown – Sprint 1"
+    x-axis ["05/10", "06/10", "07/10", "08/10", "09/10", "12/10", "13/10", "14/10", "15/10", "16/10", "19/10"]
+    y-axis "Pontos restantes" 0 --> 140
+    line [118, 106, 94, 82, 70, 58, 46, 34, 22, 10, 0]
+    line [110, 107, 107, 94, 84, 80, 50, 32, 24, 18, 0]
+```
+
+**Legenda:** 🟦 Base Line (ritmo ideal) · 🟧 Realizado
+
+| Dia | Base Line | Realizado |
+|---|---:|---:|
+| 05/10 | 118 | 110 |
+| 06/10 | 106 | 107 |
+| 07/10 | 94 | 107 |
+| 08/10 | 82 | 94 |
+| 09/10 | 70 | 84 |
+| 12/10 | 58 | 80 |
+| 13/10 | 46 | 50 |
+| 14/10 | 34 | 32 |
+| 15/10 | 22 | 24 |
+| 16/10 | 10 | 18 |
+| 19/10 | 0 | 0 |
