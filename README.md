@@ -159,6 +159,15 @@ A pasta docs/ reúne a documentação técnica e os registros de desenvolvimento
 Esses documentos ajudam a organizar as atividades, acompanhar o progresso, registrar decisões técnicas e manter a rastreabilidade entre os requisitos, as implementações e as entregas do projeto.<br>
 A <b>documentação completa</b> pode ser encontrada <a href="https://github.com/greenstackfatec-tech/greener/tree/develop/docs">aqui</a>.
 </p>
+
+### Diagramas
+
+| Diagrama | O que mostra |
+|----------|--------------|
+| [Casos de uso](docs/diagramas/diagrama-casos-de-uso.md) | Atores do sistema e o que cada um pode fazer |
+| [Classes](docs/diagramas/diagrama-classes.md) | Classes do domínio (base do banco de dados) e camadas do backend |
+| [Sequência](docs/diagramas/diagrama-sequencia.md) | Coleta periódica de métricas, consulta do dashboard e login |
+
 <br>
 
 ## ⚙️ Como executar o projeto com Docker
