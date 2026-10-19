@@ -2,9 +2,6 @@
 
 ← [Voltar ao README](../README.md)
 
-> Lista de todas as tarefas do projeto, com prioridade e sprint. É uma proposta do PO e pode ser ajustada pelo time no Planning.
-> O esforço de cada tarefa será estimado no poker planning.
-
 ---
 
 ## Legenda
@@ -93,17 +90,10 @@ Os códigos entre parênteses são os requisitos do desafio (RF, RNF, RP).
 
 ---
 
-## Datas importantes
+## Datas das sprints
 
 | Evento            | Data                                     |
 | ----------------- | ---------------------------------------- |
-| Kick-off          | 28/09/2026                               |
-| Sprint Review 1   | 19/10/2026 às 19h30 *(não confirmada)*   |
-| Sprint Review 2   | 09/11/2026 às 19h30 *(não confirmada)*   |
-| Sprint Review 3   | 23/11/2026 às 19h30 *(não confirmada)*   |
-
-## Histórico de alterações
-
-| Data       | Alteração                                     | Responsável |
-| ---------- | --------------------------------------------- | ----------- |
-| 30/09/2026 | Criação do backlog de tarefas | Igor (P.O.) |
+| Sprint Review 1   | 19/10/2026 |
+| Sprint Review 2   | 09/11/2026 |
+| Sprint Review 3   | 23/11/2026 |
