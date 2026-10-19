@@ -19,7 +19,7 @@ Nesta sprint, a equipe focou na base do projeto. Foram definidas a identidade vi
 ## 📢 Retrospectiva
 
 #### 1. O que funcionou bem
-- Entrega do escopo: todas as tarefas planejadas foram concluídas, e o burndown fechou a sprint zerado.
+- Entrega do escopo: todas as tarefas do Sprint Backlog foram concluídas, e o burndown fechou a sprint zerado. As demais tarefas previstas para a Sprint 1 no Product Backlog (backend, frontend, Docker e coleta) foram replanejadas para a Sprint 2.
 
 - Colaboração: os integrantes se ajudaram nas tarefas e revisões, mesmo com ausências pontuais ao longo da sprint.
 
