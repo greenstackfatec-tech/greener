@@ -144,6 +144,7 @@ O <b>Sprint Backlog</b> pode ser encontrado <a href="https://github.com/greensta
 
 | Tecnologia | Versão |
 |------------|---------|
+| ![My Skills](https://skillicons.dev/icons?i=react) | v19.2|
 | ![My Skills](https://skillicons.dev/icons?i=ts) | v7.0 |
 | ![My Skills](https://skillicons.dev/icons?i=nodejs)| v22.16.0 |
 |![My Skills](https://skillicons.dev/icons?i=postgres) | v18.3 |
