@@ -1,0 +1,31 @@
+name: Tarefa
+description: Item do Product Backlog ou entrega da sprint (vídeo, atas, relatório).
+title: "[ID] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Troque `[ID]` no título pelo ID do [Product Backlog](https://github.com/greenstackfatec-tech/GreenER/blob/develop/docs/sprints/product-backlog.md) (ex.: `[BD03] Criar views de cálculo`). O prefixo do ID já indica a disciplina.
+        Entrega que se repete toda sprint e não tem ID usa o número da sprint: `[S2] Gravar vídeo da Review`.
+        **Dono, pontos, prioridade e prazo** são definidos na Sprint Planning e preenchidos no board.
+  - type: textarea
+    id: objetivo
+    attributes:
+      label: Objetivo
+      description: O que precisa ser feito e por quê.
+    validations:
+      required: true
+  - type: textarea
+    id: pronto
+    attributes:
+      label: Critério de pronto
+      description: Como saber que a tarefa terminou (resultado verificável).
+      placeholder: "- Views criadas e testadas com o seed\n- Documentação atualizada"
+    validations:
+      required: true
+  - type: input
+    id: depende
+    attributes:
+      label: Depende de
+      description: 'Issues que precisam terminar antes desta (ex.: #58). Se travar, marque "blocked by" na issue e mova o card para "Bloqueado".'
+      placeholder: "#58"
