@@ -1,7 +1,6 @@
 name: Bug
 description: Algo que funcionava e quebrou.
 title: "[BUG] "
-labels: ["bug"]
 body:
   - type: textarea
     id: passos
