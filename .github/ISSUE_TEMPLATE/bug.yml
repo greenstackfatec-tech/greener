@@ -1,0 +1,29 @@
+name: Bug
+description: Algo que funcionava e quebrou.
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para reproduzir
+      placeholder: "1. Abrir a tela...\n2. Clicar em...\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+  - type: textarea
+    id: obtido
+    attributes:
+      label: Resultado obtido
+    validations:
+      required: true
+  - type: textarea
+    id: evidencia
+    attributes:
+      label: Evidência
+      description: Print, log ou mensagem de erro (sem senhas ou tokens).

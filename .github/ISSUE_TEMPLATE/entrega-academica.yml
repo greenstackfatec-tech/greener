@@ -1,0 +1,48 @@
+name: Entrega acadêmica
+description: Ata, vídeo, relatório, diagrama ou outra entrega de disciplina.
+title: "[ENTREGA] "
+labels: ["tipo:acadêmico"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pontos, prioridade e prazo interno ficam nos campos do board. Lembre: tudo pronto **3 dias antes da Sprint Review**.
+  - type: dropdown
+    id: disciplina
+    attributes:
+      label: Disciplina
+      options:
+        - BD - Banco de Dados
+        - DD - Design Digital
+        - DW - Desenvolvimento Web II
+        - ES - Engenharia de Software II
+        - TP - Técnicas de Programação I
+        - Geral (ABP)
+    validations:
+      required: true
+  - type: dropdown
+    id: artefato
+    attributes:
+      label: Artefato
+      options:
+        - Ata
+        - Vídeo da Sprint Review
+        - Relatório da sprint
+        - Diagrama
+        - Apresentação
+        - Outro
+    validations:
+      required: true
+  - type: textarea
+    id: descricao
+    attributes:
+      label: O que precisa ser entregue
+    validations:
+      required: true
+  - type: input
+    id: prazo-oficial
+    attributes:
+      label: Prazo oficial
+      placeholder: "dd/mm/aaaa"
+    validations:
+      required: true
