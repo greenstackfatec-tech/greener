@@ -104,7 +104,7 @@ O <b>Product Backlog</b> pode ser encontrado <a href="https://github.com/greenst
 
 <br>
 
-## [🏆 Plano de Entregas](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano%20de%20entregas.md)
+## [🏆 Plano de Entregas](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano-de-entregas.md)
 
 <p style="text-align: justify;">
  O plano de entregas organiza os objetivos, os itens selecionados, os responsáveis, os critérios de aceite e as evidências de cada sprint. Também deve registrar a Definition of Done (DoD), utilizada para avaliar se uma entrega pode ser considerada concluída.
@@ -119,8 +119,8 @@ O <b>Plano de Entregas</b> pode ser encontrado <a href="https://github.com/green
 | Sprints | Data | Stauts | Relatório | Vídeo |
 | :---: | :---: | :---: | :--- | :---: |
 | 1 | 19/10/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-1.md) | [Ver vídeo](https://youtu.be/gBj58b91ARw) |
-| 2 |     --     | ⬜ | [Indisponível]() | [Indisponível](#) |
-| 3 |     --     | ⬜ | [Indisponível]() | [Indisponível](#) |
+| 2 | 09/11/2026 | ⬜ | [Indisponível]() | [Indisponível](#) |
+| 3 | 23/11/2026 | ⬜ | [Indisponível]() | [Indisponível](#) |
 
 ### Legenda:
 
@@ -144,6 +144,7 @@ O <b>Sprint Backlog</b> pode ser encontrado <a href="https://github.com/greensta
 
 | Tecnologia | Versão |
 |------------|---------|
+| ![My Skills](https://skillicons.dev/icons?i=react) | v19.2|
 | ![My Skills](https://skillicons.dev/icons?i=ts) | v7.0 |
 | ![My Skills](https://skillicons.dev/icons?i=nodejs)| v22.16.0 |
 |![My Skills](https://skillicons.dev/icons?i=postgres) | v18.3 |
@@ -196,7 +197,7 @@ git switch develop
 
 ### 2. Configurar as variáveis de ambiente
 
-Confira as variáveis documentadas no arquivo `.env.example`. Se o projeto utilizar um arquivo `.env` na raiz, crie-o a partir do exemplo:
+Crie o arquivo `.env` na raiz a partir do exemplo:
 
 **Windows (PowerShell):**
 
@@ -210,7 +211,7 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-Preencha os valores exigidos pelo projeto. Não compartilhe nem versione senhas, tokens ou outras credenciais reais.
+O exemplo usa valores apropriados somente para desenvolvimento local. Troque a senha antes de usar o ambiente em qualquer contexto compartilhado e não versione credenciais reais.
 
 ### 3. Validar a configuração do Docker Compose
 
@@ -224,13 +225,11 @@ Esse comando valida a configuração do Compose. Se apresentar erro, corrija o `
 
 ### 4. Construir e iniciar os containers
 
-Depois que `compose.yaml`, os Dockerfiles e as variáveis de ambiente estiverem configurados:
-
 ```bash
 docker compose up --build
 ```
 
-Para executar em segundo plano:
+O Compose inicia PostgreSQL, backend e frontend. O backend aguarda o banco ficar saudável; o frontend aguarda o backend conseguir consultar o banco. Para executar em segundo plano, use:
 
 ```bash
 docker compose up --build -d
@@ -238,19 +237,30 @@ docker compose up --build -d
 
 ### 5. Verificar os serviços
 
-Consulte o estado dos containers:
+Abra o painel de disponibilidade do ambiente em [http://localhost:8080](http://localhost:8080). Os endereços e verificações diretas são:
+
+| Serviço | Endereço local | Verificação |
+|---|---|---|
+| Frontend | `http://localhost:8080` | Painel indica estado do backend e PostgreSQL. |
+| Backend | `http://localhost:3000/health/live` | Deve retornar `{"status":"ok"}`. |
+| Backend + banco | `http://localhost:3000/health/ready` | Deve retornar HTTP 200 e `{"status":"ok","database":"connected"}`. |
+| PostgreSQL | `localhost:5432` | `docker compose exec database pg_isready -U greener -d greener`. |
+
+Se alterar as portas no `.env`, use os novos valores correspondentes. Consulte o estado geral dos containers:
 
 ```bash
 docker compose ps
 ```
 
-Para acompanhar os logs:
+Para acompanhar os logs por serviço:
 
 ```bash
-docker compose logs -f
+docker compose logs -f frontend backend database
 ```
 
-Quando os serviços estiverem prontos, acesse os endereços locais definidos nas configurações do Compose. As portas do frontend, backend e banco devem ser conferidas no `compose.yaml`; não presuma que a aplicação estará disponível em uma porta específica.
+Os serviços devem aparecer como `healthy` no resultado de `docker compose ps`.
+
+> O frontend atual é um painel mínimo para confirmar a disponibilidade do ambiente. As rotas de produto ainda não estão implementadas no backend.
 
 ### 6. Encerrar a aplicação
 
@@ -331,4 +341,3 @@ Esse comando encerra e remove os containers da aplicação. Não utilize `docker
 <div align="center">
     <i> Desenvolvido por Green Stack <br>2026</i>
 </div>
-

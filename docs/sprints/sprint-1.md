@@ -12,14 +12,14 @@ Nesta sprint, a equipe focou na base do projeto. Foram definidas a identidade vi
 ## 💻 Demonstração do Produto
 > Clique na imagem abaixo para assistir ao vídeo referente à primeira sprint.
 
-[![Sprint 1 - GreenER](https://img.youtube.com/vi/gBj58b91ARw/maxresdefault.jpg)](https://youtu.be/gBj58b91ARw)
+[Sprint 1 - GreenER](https://youtu.be/gBj58b91ARw)
 
 <br>
 
 ## 📢 Retrospectiva
 
 #### 1. O que funcionou bem
-- Entrega do escopo: todas as tarefas planejadas foram concluídas, e o burndown fechou a sprint zerado.
+- Entrega do escopo: todas as tarefas do Sprint Backlog foram concluídas, e o burndown fechou a sprint zerado. As demais tarefas previstas para a Sprint 1 no Product Backlog (backend, frontend, Docker e coleta) foram replanejadas para a Sprint 2.
 
 - Colaboração: os integrantes se ajudaram nas tarefas e revisões, mesmo com ausências pontuais ao longo da sprint.
 
@@ -55,8 +55,12 @@ xychart-beta
     line [118, 106, 94, 82, 70, 58, 46, 34, 22, 10, 0]
     line [110, 107, 107, 94, 84, 80, 50, 32, 24, 18, 0]
 ```
+<br>
 
-**Legenda:** 🟦 Base Line (ritmo ideal) · 🟧 Realizado
+**Legenda:** 
+
+🟦 Base Line (ritmo ideal) <br>
+🟧 Realizado
 
 <br>
 
@@ -82,19 +86,18 @@ xychart-beta
 | DD-003.1 | Criar o design da homepage mobile | 9 | 5 | DD | ✅ Concluído | Thiago |
 | DD-004 | Criar o design da tela de início | 9 | 5 | DD | ✅ Concluído | Igor |
 | DD-004 | Criar o design da tela de início mobile | 9 | 5 | DD | ✅ Concluído | Igor |
-| DD-004.1 | tela colaboradores | 8 | 3 | DD | ✅ Concluído | Julia |
-| DD-004.1 | tela colaboradores | 8 | 3 | DD | ✅ Concluído | Julia |
+| DD-004.1 | Tela colaboradores | 8 | 3 | DD | ✅ Concluído | Julia |
+| DD-004.1 | Tela colaboradores mobile | 8 | 3 | DD | ✅ Concluído | Julia |
 | DD-005 | Definir paleta de cores | 10 | 1 | DD | ✅ Concluído | Todos |
 | DD-004 | Criar o design da tela not found | 7 | 3 | DD | ✅ Concluído | Guilherme |
 | DD-004 | Criar o design da tela not found mobile | 7 | 3 | DD | ✅ Concluído | Renan |
 | DD-006 | Criar logo para o projeto | 9 | 1 | DD | ✅ Concluído | Guilherme |
-| DD-007 | Criar logo para a equipa | 9 | 1 | DD | ✅ Concluído | Renan |
-| DW-002 | conectar api 1 | 8 | 8 | DW | ✅ Concluído | Julia |
-| DW-002.1 | conectar api 2 | 8 | 5 | DW | ✅ Concluído | Julia |
+| DD-007 | Criar logo para a equipe | 9 | 1 | DD | ✅ Concluído | Renan |
+| DW-002 | Conectar Greener Metrics Aggregator API | 8 | 8 | DW | ✅ Concluído | Julia |
+| DW-002.1 | Conectar Greener Carbon Intensity API | 8 | 5 | DW | ✅ Concluído | Julia |
 | DW-003 | Desenvolver diagrama de classes | 8 | 8 | DW | ✅ Concluído | Fernanda |
-| DW-003.1 | Desenvolver diagrama de sequencia | 8 | 8 | DW | ✅ Concluído | Guilherme |
-| DW-004 | Readme.md | 10 | 3 | DW | ✅ Concluído | Fernanda |
-| DW-004.1 | Criar Banco de Dados | 6 | 5 | DW | ✅ Concluído | Renan |
+| DW-003.1 | Desenvolver diagrama de sequência | 8 | 8 | DW | ✅ Concluído | Guilherme |
+| DW-004 | Criar README.md principal | 10 | 3 | DW | ✅ Concluído | Fernanda |
 | ES-001 | Desenvolver diagrama de caso de uso | 8 | 8 | EWS | ✅ Concluído | Fernanda |
 | ES-002 | Documentar requisitos e backlog | 10 | 8 | EWS | ✅ Concluído | Igor |
 | LP-001 | Carregar dados no SGBD | 7 | 3 | LPA | ✅ Concluído | Renan |

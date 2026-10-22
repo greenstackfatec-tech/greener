@@ -124,21 +124,32 @@ Parâmetros `id` ou `codigo` inválidos e configurações inválidas de URL base
 
 ## Configuração
 
-As variáveis são lidas pelo processo do backend; o arquivo `.env.example` está vazio e não declara configurações atualmente.
+No Compose, as variáveis são carregadas do arquivo `.env` na raiz do repositório, criado a partir de `.env.example`, e repassadas ao backend.
 
 | Variável | Uso | Padrão |
 |---|---|---|
 | `METRICS_API_URL` | URL base da API de métricas. | `https://metrics.unilaunch.org` |
 | `CARBON_API_URL` | URL base da API de intensidade de carbono. | `https://carbon.unilaunch.org` |
 | `API_TIMEOUT_MS` | Tempo limite da requisição em milissegundos. | `10000` |
+| `FRONTEND_PORT` | Porta publicada pelo frontend na máquina host. | `8080` |
+| `BACKEND_PORT` | Porta publicada pelo backend na máquina host. | `3000` |
+| `POSTGRES_PORT` | Porta publicada pelo PostgreSQL na máquina host. | `5432` |
+| `POSTGRES_DB` | Nome do banco criado pelo container PostgreSQL. | `greener` |
+| `POSTGRES_USER` | Usuário do banco. | `greener` |
+| `POSTGRES_PASSWORD` | Senha do banco. | `greener_dev_only` (somente desenvolvimento local) |
 
 O timeout deve ser um inteiro positivo, até `2147483647`. As URLs base devem usar `http:` ou `https:` e não podem conter credenciais, parâmetros de consulta ou fragmento. O cliente usa `fetch` e `AbortController` do runtime; não carrega variáveis de ambiente a partir de arquivo por conta própria.
 
 ## Rotas próprias do GreenER
 
-Não há endpoints próprios documentados porque ainda não há servidor HTTP ou rotas implementados no backend. Os módulos `backend/src/modules/coletas/coletas.routes.ts`, `coletas.controller.ts`, `coletas.service.ts` e `coletas.repository.ts` estão vazios. Quando essas rotas forem implementadas e registradas no servidor, documente aqui o método, caminho, parâmetros, corpo, respostas, erros e requisitos de autenticação com base no comportamento real.
+O servidor HTTP fornece endpoints de saúde para verificação do ambiente:
 
-Não há middleware JWT ou configuração de autenticação implementados nos arquivos atuais. As integrações externas também não enviam tokens. Não considere autenticação de rotas GreenER disponível até que seja implementada.
+| Método | Caminho | Resposta |
+|---|---|---|
+| `GET` | `/health/live` | HTTP 200 `{"status":"ok"}` quando o processo está ativo. |
+| `GET` | `/health/ready` | HTTP 200 `{"status":"ok","database":"connected"}` quando o banco responde; HTTP 503 `{"status":"not_ready","database":"unavailable"}` se não responder. |
+
+O frontend publica os mesmos endpoints sob `/api/` por meio do proxy Nginx, por exemplo `GET /api/health/ready`. As rotas de produto dos módulos `backend/src/modules/coletas/` ainda não foram implementadas. Não há middleware JWT nem autenticação configurados; as integrações externas também não enviam tokens.
 
 
 ---

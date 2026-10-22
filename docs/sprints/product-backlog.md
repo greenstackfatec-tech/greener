@@ -22,21 +22,21 @@ Os códigos entre parênteses são os requisitos do desafio (RF, RNF, RP).
 | :------- | :---------------------------------------------------------------------------------------------------- | :--------- | :--------- | :------ |
 | **BD01** | Modelar as tabelas (serviços, coletas, intensidade de carbono, resultados, usuários e configurações) e seus relacionamentos | alta | BD | 1 |
 | **BD02** | Escrever o `schema.sql` (DDL) com PKs, FKs, UNIQUE e CHECK (RP03)                                     | alta       | BD         | 1       |
-| **BD03** | Criar a conexão do backend com o PostgreSQL (pool e variáveis de ambiente)                            | alta       | BD         | 1       |
-| **BD04** | Criar os repositories com SQL parametrizado, sem ORM, para serviços (upsert) e coletas                | alta       | BD         | 1       |
+| **BD03** | Criar a conexão do backend com o PostgreSQL (pool e variáveis de ambiente)                            | alta       | BD         | 2       |
+| **BD04** | Criar os repositories com SQL parametrizado, sem ORM, para serviços (upsert) e coletas                | alta       | BD         | 2       |
 | **BD05** | Criar o repository dos resultados calculados (potência, energia e CO₂e)                               | alta       | BD         | 2       |
 | **BD06** | Criar as consultas de histórico, ranking e comparação por período (RF10, RF14, RF15)                  | alta       | BD         | 3       |
-| **BD07** | Escrever o `database/README.md` com a ordem e os comandos para aplicar os scripts em um banco vazio   | média      | BD         | 1       |
+| **BD07** | Escrever o `database/README.md` com a ordem e os comandos para aplicar os scripts em um banco vazio   | média      | BD         | 2       |
 | **DD01** | Definir a identidade visual (paleta, fontes e logo)                                                   | alta       | DD         | 1       |
-| **DD02** | Definir o fluxo de navegação entre as telas (RP05)                                                    | alta       | DD         | 1       |
+| **DD02** | Definir o fluxo de navegação entre as telas (RP05)                                                    | alta       | DD         | 2       |
 | **DD03** | Prototipar o dashboard: cards de indicadores e lista de serviços (desktop e mobile)                   | alta       | DD         | 1       |
-| **DD04** | Prototipar as telas de histórico, ranking e comparação (desktop e mobile)                             | média      | DD         | 1       |
-| **DD05** | Prototipar a tela de mapa (desktop e mobile)                                                          | baixa      | DD         | 1       |
-| **DD06** | Prototipar o login e a área de configuração (desktop e mobile)                                        | média      | DD         | 1       |
-| **DD07** | Definir os estados visuais: carregando, erro, serviço indisponível e ativo sem métricas               | alta       | DD         | 1       |
-| **DW01** | Criar o projeto frontend com React + TypeScript e organizar as pastas (pages, components, services, hooks, contexts, providers) (RP01) | alta | DW | 1 |
-| **DW02** | Configurar as rotas entre as telas e o cliente HTTP em `services/` para consumir a API do backend     | alta       | DW         | 1       |
-| **DW03** | Conteinerizar o projeto: Dockerfiles, `compose.yaml` (frontend, backend e PostgreSQL com volume) e `.env.example` (RP04) | alta | DW | 1 |
+| **DD04** | Prototipar as telas de histórico, ranking e comparação (desktop e mobile)                             | média      | DD         | 2       |
+| **DD05** | Prototipar a tela de mapa (desktop e mobile)                                                          | baixa      | DD         | 2       |
+| **DD06** | Prototipar o login e a área de configuração (desktop e mobile)                                        | média      | DD         | 1, 2    |
+| **DD07** | Definir os estados visuais: carregando, erro, serviço indisponível e ativo sem métricas               | alta       | DD         | 2       |
+| **DW01** | Criar o projeto frontend com React + TypeScript e organizar as pastas (pages, components, services, hooks, contexts, providers) (RP01) | alta | DW | 2       |
+| **DW02** | Configurar as rotas entre as telas e o cliente HTTP em `services/` para consumir a API do backend     | alta       | DW         | 2       |
+| **DW03** | Conteinerizar o projeto: Dockerfiles, `compose.yaml` (frontend, backend e PostgreSQL com volume) e `.env.example` (RP04) | alta | DW | 1, 2    |
 | **DW04** | Criar o layout base das telas (header, menu e container)                                              | alta       | DW         | 2       |
 | **DW05** | Implementar o dashboard: tabela de serviços com estado, localização, CPU, RAM, disco, rede, energia e CO₂e (RF01, RF09) | alta | DW | 2 |
 | **DW06** | Implementar os cards de indicadores consolidados (RF08)                                               | alta       | DW         | 2       |
@@ -52,10 +52,10 @@ Os códigos entre parênteses são os requisitos do desafio (RF, RNF, RP).
 | **DW16** | Implementar a tela de login e enviar o token JWT nas requisições protegidas (RP06)                    | alta       | DW         | 3       |
 | **DW17** | Implementar a área de configuração (intervalo de coleta) e o logout                                   | média      | DW         | 3       |
 | **ES01** | Criar e manter o Product Backlog                                                                      | alta       | ES         | 1       |
-| **ES02** | Escrever as user stories com critérios de aceitação (RP07)                                            | alta       | ES         | 1       |
-| **ES03** | Criar o plano de entregas das três sprints                                                            | alta       | ES         | 1       |
+| **ES02** | Escrever as user stories com critérios de aceitação (RP07)                                            | alta       | ES         | 2       |
+| **ES03** | Criar o plano de entregas das três sprints                                                            | alta       | ES         | 1, 2    |
 | **ES04** | Definir a Definition of Done                                                                          | alta       | ES         | 1       |
-| **ES05** | Definir a convenção de Git (nome de branch, commit e Pull Request com o ID da tarefa) e proteger a `main` | alta   | ES         | 1       |
+| **ES05** | Definir a convenção de Git (nome de branch, commit e Pull Request com o ID da tarefa) e proteger a `main` | alta   | ES         | 2       |
 | **ES06** | Criar o Sprint Backlog da Sprint 1 e registrar a Sprint Review (19/10)                                | alta       | ES         | 1       |
 | **ES07** | Criar o Sprint Backlog da Sprint 2 e registrar a Sprint Review (09/11)                                | alta       | ES         | 2       |
 | **ES08** | Criar o Sprint Backlog da Sprint 3 e registrar a Sprint Review (23/11)                                | alta       | ES         | 3       |
@@ -63,16 +63,16 @@ Os códigos entre parênteses são os requisitos do desafio (RF, RNF, RP).
 | **ES10** | Documentar a arquitetura e o modelo de dados (`docs/arquitetura.md`)                                  | média      | ES         | 2       |
 | **ES11** | Documentar os cálculos: fórmulas, unidades e exemplo (`docs/calculos.md`)                             | média      | ES         | 2       |
 | **ES12** | Documentar os endpoints da API (`docs/api.md`)                                                        | média      | ES         | 2, 3    |
-| **ES13** | Esclarecer as dúvidas em aberto com o cliente (área de configuração, constantes do cálculo, água)     | alta       | ES         | 1       |
+| **ES13** | Esclarecer as dúvidas em aberto com o cliente (área de configuração, constantes do cálculo, água)     | alta       | ES         | 1, 2    |
 | **ES14** | Preparar a apresentação final                                                                         | média      | ES         | 3       |
 | **ES15** | Conferir comandos, links e instruções em um clone limpo antes da entrega final                        | média      | ES         | 3       |
-| **TP01** | Criar o projeto backend com Node.js + TypeScript (strict), servidor HTTP, rota `GET /health` e variáveis de ambiente (RP02) | alta | TP | 1 |
-| **TP02** | Organizar o backend em módulos: routes, controllers, services e repositories                          | alta       | TP         | 1       |
-| **TP03** | Investigar as APIs do cliente (formato de resposta, erros, campos de localização) e criar mocks locais | alta      | TP         | 1       |
+| **TP01** | Criar o projeto backend com Node.js + TypeScript (strict), servidor HTTP, rota `GET /health` e variáveis de ambiente (RP02) | alta | TP | 2       |
+| **TP02** | Organizar o backend em módulos: routes, controllers, services e repositories                          | alta       | TP         | 2       |
+| **TP03** | Investigar as APIs do cliente (formato de resposta, erros, campos de localização) e criar mocks locais | alta      | TP         | 1, 2    |
 | **TP04** | Criar o cliente do Agregador de Métricas: consultar `/services` (RF01)                                | alta       | TP         | 1       |
 | **TP05** | Criar o cliente do Agregador de Métricas: consultar `/metrics/{id_servico}` (RF03)                    | alta       | TP         | 1       |
-| **TP06** | Criar a rotina de coleta periódica com intervalo configurável, tratando cada coleta como um novo estado (RF03, RF04, RF11) | alta | TP | 1 |
-| **TP07** | Gravar serviços e coletas no banco                                                                    | alta       | TP         | 1       |
+| **TP06** | Criar a rotina de coleta periódica com intervalo configurável, tratando cada coleta como um novo estado (RF03, RF04, RF11) | alta | TP | 2       |
+| **TP07** | Gravar serviços e coletas no banco                                                                    | alta       | TP         | 2       |
 | **TP08** | Criar o cliente da API de Intensidade de Carbono, por região                                          | alta       | TP         | 2       |
 | **TP09** | Implementar a classe de cálculo (potência, energia e CO₂e) com constantes em configuração e gravar o resultado de cada coleta (RF07) | alta | TP | 2 |
 | **TP10** | Calcular os indicadores consolidados: consumo total, emissão total, serviços ativos e indisponíveis (RF08) | alta  | TP         | 2       |

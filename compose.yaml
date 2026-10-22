@@ -3,6 +3,7 @@ name: greener
 services:
   database:
     image: postgres:18
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-greener}
       POSTGRES_USER: ${POSTGRES_USER:-greener}
@@ -20,6 +21,52 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      PGHOST: database
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-greener}
+      PGUSER: ${POSTGRES_USER:-greener}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-greener_dev_only}
+      METRICS_API_URL: ${METRICS_API_URL:-https://metrics.unilaunch.org}
+      CARBON_API_URL: ${CARBON_API_URL:-https://carbon.unilaunch.org}
+      API_TIMEOUT_MS: ${API_TIMEOUT_MS:-10000}
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   postgres_data:
