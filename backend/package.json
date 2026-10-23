@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
+    "mock": "node --experimental-strip-types src/mocks/server.ts",
+    "test": "node --experimental-strip-types --test src/mocks/mocks.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
