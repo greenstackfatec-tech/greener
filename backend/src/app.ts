@@ -3,9 +3,11 @@ import { verificarConexao } from "./db/connection.ts";
 import { rotasServices } from "./modules/services/services.routes.ts";
 import { responder } from "./shared/http.ts";
 import type { Rota } from "./shared/http.ts";
+import { rotasCollections } from "./modules/collections/collections.routes.ts";
+import { rotasMonitoringSettings } from "./modules/monitoring-settings/monitoring-settings.routes.ts";
 
 // Cada módulo entrega a sua lista de rotas; o app só junta todas.
-const rotas: Rota[] = [...rotasServices];
+const rotas: Rota[] = [...rotasServices, ...rotasCollections, ...rotasMonitoringSettings];
 
 export async function tratarRequisicao(
   request: IncomingMessage,
