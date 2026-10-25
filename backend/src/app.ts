@@ -1,14 +1,13 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { verificarConexao } from "./db/connection.ts";
+import { rotasServices } from "./modules/services/services.routes.ts";
+import { responder } from "./shared/http.ts";
+import type { Rota } from "./shared/http.ts";
+import { rotasCollections } from "./modules/collections/collections.routes.ts";
+import { rotasMonitoringSettings } from "./modules/monitoring-settings/monitoring-settings.routes.ts";
 
-function responder(
-  response: ServerResponse<IncomingMessage>,
-  status: number,
-  body: Record<string, string>,
-): void {
-  response.writeHead(status, { "content-type": "application/json; charset=utf-8" });
-  response.end(JSON.stringify(body));
-}
+// Cada módulo entrega a sua lista de rotas; o app só junta todas.
+const rotas: Rota[] = [...rotasServices, ...rotasCollections, ...rotasMonitoringSettings];
 
 export async function tratarRequisicao(
   request: IncomingMessage,
@@ -29,6 +28,12 @@ export async function tratarRequisicao(
       console.error("Verificação de prontidão do banco de dados falhou:", erro);
       responder(response, 503, { status: "not_ready", database: "unavailable" });
     }
+    return;
+  }
+
+  const rota = rotas.find((candidata) => candidata.metodo === request.method && candidata.caminho === pathname);
+  if (rota) {
+    await rota.tratar(request, response);
     return;
   }
 
