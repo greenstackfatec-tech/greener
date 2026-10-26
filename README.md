@@ -52,8 +52,8 @@ greener/
 │       ├── components/     (StatusBackend.tsx)
 │       ├── services/       (api.ts)
 │       ├── hooks/          (useProntidao.ts)
-│       ├── contexts/       (estrutura prevista, ainda vazia)
-│       └── providers/      (estrutura prevista, ainda vazia)
+│       ├── contexts/       (ProntidaoContext.ts)
+│       └── providers/      (ProntidaoProvider.tsx)
 ├── backend/
 │   ├── README.md 
 │   ├── Dockerfile 

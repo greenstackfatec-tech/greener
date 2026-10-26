@@ -10,8 +10,8 @@ Aplicação React 19 + TypeScript criada com Vite. Por enquanto há uma única t
 | `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx` |
 | `src/services/` | Comunicação com o backend | `api.ts` |
 | `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts` |
-| `src/contexts/` | Estado compartilhado entre componentes | estrutura prevista, ainda vazia |
-| `src/providers/` | Provedores de contexto e dependências | estrutura prevista, ainda vazia |
+| `src/contexts/` | Estado compartilhado entre componentes | `ProntidaoContext.ts` |
+| `src/providers/` | Provedores de contexto e dependências | `ProntidaoProvider.tsx` |
 
 ## Executar localmente
 

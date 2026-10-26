@@ -1,8 +1,8 @@
 import { StatusBackend } from "../components/StatusBackend.tsx";
-import { useProntidao } from "../hooks/useProntidao.ts";
+import { useProntidaoContext } from "../contexts/ProntidaoContext.ts";
 
 export function InicioPage() {
-  const estado = useProntidao();
+  const estado = useProntidaoContext();
 
   return (
     <main>
