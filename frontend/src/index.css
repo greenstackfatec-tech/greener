@@ -24,3 +24,17 @@ h1 {
   margin-top: 0;
   color: #176b4d;
 }
+
+.status {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: #f2f7f3;
+}
+
+.status[data-state="ok"] {
+  color: #176b4d;
+}
+
+.status[data-state="erro"] {
+  color: #a12e2e;
+}
