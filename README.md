@@ -41,13 +41,19 @@ greener/
 ├── frontend/ 
 │   ├── README.md 
 │   ├── Dockerfile 
+│   ├── nginx.conf 
+│   ├── package.json 
+│   ├── vite.config.ts 
+│   ├── eslint.config.js 
 │   └── src/ 
-│       ├── components/ 
-│       ├── pages/ 
-│       ├── services / 
-│       ├── hooks / 
-│       ├── contexts / 
-│       └── providers/ 
+│       ├── main.tsx 
+│       ├── App.tsx 
+│       ├── pages/          (InicioPage.tsx)
+│       ├── components/     (StatusBackend.tsx)
+│       ├── services/       (api.ts)
+│       ├── hooks/          (useProntidao.ts)
+│       ├── contexts/       (ProntidaoContext.ts)
+│       └── providers/      (ProntidaoProvider.tsx)
 ├── backend/
 │   ├── README.md 
 │   ├── Dockerfile 
@@ -144,8 +150,9 @@ O <b>Sprint Backlog</b> pode ser encontrado <a href="https://github.com/greensta
 
 | Tecnologia | Versão |
 |------------|---------|
-| ![My Skills](https://skillicons.dev/icons?i=react) | v19.2|
-| ![My Skills](https://skillicons.dev/icons?i=ts) | v7.0 |
+| ![My Skills](https://skillicons.dev/icons?i=react) | v19.3|
+| ![My Skills](https://skillicons.dev/icons?i=vite) | v8.3 |
+| ![My Skills](https://skillicons.dev/icons?i=ts) | v7.0 (backend) · v6.0 (frontend) |
 | ![My Skills](https://skillicons.dev/icons?i=nodejs)| v22.16.0 |
 |![My Skills](https://skillicons.dev/icons?i=postgres) | v18.3 |
 | ![My Skills](https://skillicons.dev/icons?i=html)| HTML5 |
@@ -260,7 +267,7 @@ docker compose logs -f frontend backend database
 
 Os serviços devem aparecer como `healthy` no resultado de `docker compose ps`.
 
-> O frontend atual é um painel mínimo para confirmar a disponibilidade do ambiente. As rotas de produto ainda não estão implementadas no backend.
+> O frontend já é um projeto React + TypeScript (Vite), mas por enquanto só exibe a tela inicial que confirma a disponibilidade do ambiente. As rotas de produto ainda não estão implementadas no backend. Para rodar o frontend fora do Docker, veja o [README do frontend](frontend/README.md).
 
 ### 6. Encerrar a aplicação
 
