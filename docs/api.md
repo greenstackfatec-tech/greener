@@ -149,7 +149,13 @@ O servidor HTTP fornece endpoints de saúde para verificação do ambiente:
 | `GET` | `/health/live` | HTTP 200 `{"status":"ok"}` quando o processo está ativo. |
 | `GET` | `/health/ready` | HTTP 200 `{"status":"ok","database":"connected"}` quando o banco responde; HTTP 503 `{"status":"not_ready","database":"unavailable"}` se não responder. |
 
-O frontend publica os mesmos endpoints sob `/api/` por meio do proxy Nginx, por exemplo `GET /api/health/ready`. As rotas de produto dos módulos `backend/src/modules/coletas/` ainda não foram implementadas. Não há middleware JWT nem autenticação configurados; as integrações externas também não enviam tokens.
+O frontend publica os mesmos endpoints sob `/api/` por meio do proxy Nginx, por exemplo `GET /api/health/ready`. O backend também oferece `GET /services` e `GET /collections`; o módulo de coletas está em `backend/src/modules/collections/`. A autenticação JWT e a proteção da configuração estão descritas abaixo; as integrações externas também não enviam tokens.
+
+### Login e acesso à configuração (TP18 / #98)
+
+`POST /auth/login` recebe `{"email":"...","senha":"..."}` e retorna `{"token":"<JWT>"}`, válido por uma hora. `GET /monitoring-settings` exige `Authorization: Bearer <token>` e responde `401` sem token válido. Configuração, validações, erros e testes estão no [README do backend](../backend/README.md).
+
+Após cinco tentativas incorretas por e-mail na janela de cinco minutos, o login responde `429` com `error: "too_many_requests"` e cabeçalho `Retry-After` em segundos. A limitação é por e-mail, inclusive inexistente, independente do IP do proxy. Tentativas simultâneas contam para a cota; um login válido zera as falhas anteriores. O controle atual é mantido na memória de cada processo; os detalhes estão no README do backend.
 
 
 ---

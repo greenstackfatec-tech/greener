@@ -34,6 +34,7 @@ services:
       PGDATABASE: ${POSTGRES_DB:-greener}
       PGUSER: ${POSTGRES_USER:-greener}
       PGPASSWORD: ${POSTGRES_PASSWORD:-greener_dev_only}
+      JWT_SECRET: ${JWT_SECRET:-}
       METRICS_API_URL: ${METRICS_API_URL:-https://metrics.unilaunch.org}
       CARBON_API_URL: ${CARBON_API_URL:-https://carbon.unilaunch.org}
       API_TIMEOUT_MS: ${API_TIMEOUT_MS:-10000}
