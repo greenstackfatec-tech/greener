@@ -13,6 +13,20 @@ Aplicação React 19 + TypeScript criada com Vite. Por enquanto há uma única t
 | `src/contexts/` | Estado compartilhado entre componentes | `ProntidaoContext.ts` |
 | `src/providers/` | Provedores de contexto e dependências | `ProntidaoProvider.tsx` |
 
+## Telas e rotas
+
+As rotas ficam em `src/rotas.tsx`. Por enquanto só a tela de início está registrada; as outras entram com as tarefas indicadas.
+
+| Rota | Tela | Tarefa | Situação |
+|---|---|---|---|
+| `/` | Início | DW18 | Registrada (mostra o status do backend) |
+| `/login` | Login | DW19 | A implementar |
+| `/cadastro` | Cadastro | DW20 | A implementar |
+| `/administrativa` | Administrativa | DW21 | A implementar |
+| `/dashboard` | Dashboard | DW05 | A implementar |
+
+O cliente HTTP fica em `src/services/api.ts`. A função `requisitar<T>(caminho)` faz as chamadas a partir de `/api`; as telas não usam `fetch` diretamente.
+
 ## Executar localmente
 
 Requer Node 24.

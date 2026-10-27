@@ -6,10 +6,14 @@ export interface Prontidao {
   database: string;
 }
 
-export async function consultarProntidao(signal?: AbortSignal): Promise<Prontidao> {
-  const response = await fetch(`${BASE_URL}/health/ready`, { signal });
+export async function requisitar<T>(caminho: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(`${BASE_URL}${caminho}`, { signal });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
-  return (await response.json()) as Prontidao;
+  return (await response.json()) as T;
+}
+
+export function consultarProntidao(signal?: AbortSignal): Promise<Prontidao> {
+  return requisitar<Prontidao>("/health/ready", signal);
 }

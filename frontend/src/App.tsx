@@ -1,10 +1,11 @@
-import { InicioPage } from "./pages/InicioPage.tsx";
+import { RouterProvider } from "react-router";
 import { ProntidaoProvider } from "./providers/ProntidaoProvider.tsx";
+import { router } from "./rotas.tsx";
 
 export function App() {
   return (
     <ProntidaoProvider>
-      <InicioPage />
+      <RouterProvider router={router} />
     </ProntidaoProvider>
   );
 }
