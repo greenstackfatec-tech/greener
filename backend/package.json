@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "mock": "node --experimental-strip-types src/mocks/server.ts",
-    "test": "node --experimental-strip-types --test src/mocks/mocks.test.ts src/modules/services/services.test.ts",
+    "test": "node --experimental-strip-types --test src/mocks/mocks.test.ts src/modules/services/services.test.ts src/modules/auth/auth.test.ts",
+    "test:integration": "node --experimental-strip-types --test src/modules/auth/auth.integration.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
