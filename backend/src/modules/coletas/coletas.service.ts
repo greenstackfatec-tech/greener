@@ -22,9 +22,7 @@ import {
   StatusColeta,
 } from "./coletas.repository.ts";
 import { ErroApi } from "../../integrations/api-client.ts";
-
-/** Intervalo padrão de coleta em segundos (fallback se config não estiver disponível). */
-const INTERVALO_PADRAO_SEGUNDOS = 60;
+import { buscarIntervaloColetaSegundos } from "../configuracoes/configuracoes.repository.ts";
 
 /** Converte Servico da API externa para formato interno do banco. */
 function paraServicoBanco(api: ServicoApi): ServicoBanco {
@@ -71,6 +69,7 @@ export interface ResultadoRodadaColeta {
  * @returns Resultado da coleta
  */
 async function coletarServico(servico: ServicoBanco): Promise<ResultadoColeta> {
+  const intervalo = await buscarIntervaloColetaSegundos();
   try {
     // 1. Buscar métricas do serviço (API externa usa string ID)
     const respostaMetricas = await buscarMetricas(String(servico.id));
@@ -85,7 +84,10 @@ async function coletarServico(servico: ServicoBanco): Promise<ResultadoColeta> {
 
     if (!temMetricasValidas) {
       // Serviço ativo mas sem métricas (RF06)
-      await gravarColetaSemMetricas(servico.id, respostaMetricas.collection_interval_seconds);
+      await gravarColetaSemMetricas(
+        servico.id,
+        respostaMetricas.collection_interval_seconds,
+      );
       return {
         servicoId: servico.id,
         servicoNome: servico.nome,
@@ -98,10 +100,18 @@ async function coletarServico(servico: ServicoBanco): Promise<ResultadoColeta> {
     const intensidadeCarbono = await buscarIntensidadeCarbono(regionCode);
 
     // 4. Calcular potência, energia e CO₂e
-    const calculo = await calculadoraEnergia.calcularParaServico(respostaMetricas, regionCode);
+    const calculo = await calculadoraEnergia.calcularParaServico(
+      respostaMetricas,
+      regionCode,
+    );
 
     // 5. Gravar resultado no banco
-    await gravarColetaSucesso(servico, respostaMetricas, intensidadeCarbono, calculo);
+    await gravarColetaSucesso(
+      servico,
+      respostaMetricas,
+      intensidadeCarbono,
+      calculo,
+    );
 
     return {
       servicoId: servico.id,
@@ -123,10 +133,12 @@ async function coletarServico(servico: ServicoBanco): Promise<ResultadoColeta> {
       if (
         erro.tipo === "timeout" ||
         erro.tipo === "rede" ||
-        (erro.tipo === "http" && erro.statusHttp !== undefined && erro.statusHttp >= 500)
+        (erro.tipo === "http" &&
+          erro.statusHttp !== undefined &&
+          erro.statusHttp >= 500)
       ) {
         // Serviço indisponível (RF05)
-        await gravarColetaIndisponivel(servico.id, INTERVALO_PADRAO_SEGUNDOS);
+        await gravarColetaIndisponivel(servico.id, intervalo);
         return {
           servicoId: servico.id,
           servicoNome: servico.nome,
@@ -137,7 +149,7 @@ async function coletarServico(servico: ServicoBanco): Promise<ResultadoColeta> {
     }
 
     // Erro inesperado - tratar como indisponível
-    await gravarColetaIndisponivel(servico.id, INTERVALO_PADRAO_SEGUNDOS);
+    await gravarColetaIndisponivel(servico.id, intervalo);
     return {
       servicoId: servico.id,
       servicoNome: servico.nome,
@@ -160,10 +172,18 @@ export async function executarRodadaColeta(): Promise<ResultadoRodadaColeta> {
 
   const resultados = await Promise.all(servicosAtivos.map(coletarServico));
 
-  const sucessos = resultados.filter((r: ResultadoColeta) => r.status === "sucesso").length;
-  const semMetricas = resultados.filter((r: ResultadoColeta) => r.status === "sem_metricas").length;
-  const indisponiveis = resultados.filter((r: ResultadoColeta) => r.status === "indisponivel").length;
-  const erros = resultados.filter((r: ResultadoColeta) => r.erro !== undefined).length;
+  const sucessos = resultados.filter(
+    (r: ResultadoColeta) => r.status === "sucesso",
+  ).length;
+  const semMetricas = resultados.filter(
+    (r: ResultadoColeta) => r.status === "sem_metricas",
+  ).length;
+  const indisponiveis = resultados.filter(
+    (r: ResultadoColeta) => r.status === "indisponivel",
+  ).length;
+  const erros = resultados.filter(
+    (r: ResultadoColeta) => r.erro !== undefined,
+  ).length;
 
   return {
     coletadoEm,

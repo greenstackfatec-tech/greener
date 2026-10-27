@@ -156,21 +156,23 @@ export async function gravarColetaIndisponivel(
 export async function buscarHistoricoColetas(
   servicoId: number,
   limite = 100,
-): Promise<Array<{
-  id: number;
-  coletadoEm: Date;
-  cpuPercentual: number | null;
-  memoriaGb: number | null;
-  discoGb: number | null;
-  redeGb: number | null;
-  intervaloSegundos: number;
-  statusColeta: StatusColeta;
-  potenciaEstimadaW: number | null;
-  duracaoSegundos: number | null;
-  energiaKwh: number | null;
-  emissaoCo2eG: number | null;
-  calculadoEm: Date | null;
-}>> {
+): Promise<
+  Array<{
+    id: number;
+    coletadoEm: Date;
+    cpuPercentual: number | null;
+    memoriaGb: number | null;
+    discoGb: number | null;
+    redeGb: number | null;
+    intervaloSegundos: number;
+    statusColeta: StatusColeta;
+    potenciaEstimadaW: number | null;
+    duracaoSegundos: number | null;
+    energiaKwh: number | null;
+    emissaoCo2eG: number | null;
+    calculadoEm: Date | null;
+  }>
+> {
   const sql = `
     SELECT
       id, coletado_em, cpu_percentual, memoria_gb, disco_gb, rede_gb,

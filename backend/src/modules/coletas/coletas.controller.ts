@@ -5,7 +5,11 @@
 
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { URL } from "node:url";
-import { executarRodadaColeta, iniciarRotinaColeta, type ResultadoRodadaColeta } from "./coletas.service.ts";
+import {
+  executarRodadaColeta,
+  iniciarRotinaColeta,
+  type ResultadoRodadaColeta,
+} from "./coletas.service.ts";
 
 /** Tamanho máximo do body em bytes (1MB). */
 const MAX_BODY_SIZE = 1024 * 1024;
@@ -19,12 +23,16 @@ function responder(
   status: number,
   body: Record<string, unknown>,
 ): void {
-  response.writeHead(status, { "content-type": "application/json; charset=utf-8" });
+  response.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+  });
   response.end(JSON.stringify(body));
 }
 
 /** Lê o body JSON da requisição com limite de tamanho. */
-async function lerBody(request: IncomingMessage): Promise<Record<string, unknown>> {
+async function lerBody(
+  request: IncomingMessage,
+): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     let data = "";
     let size = 0;
@@ -52,7 +60,10 @@ async function lerBody(request: IncomingMessage): Promise<Record<string, unknown
 }
 
 /** Valida Content-Type para JSON. */
-function validarContentType(request: IncomingMessage, response: ServerResponse<IncomingMessage>): boolean {
+function validarContentType(
+  request: IncomingMessage,
+  response: ServerResponse<IncomingMessage>,
+): boolean {
   const contentType = request.headers["content-type"] ?? "";
   if (!contentType.includes("application/json")) {
     responder(response, 415, {
@@ -185,13 +196,22 @@ export async function statusRotinaColeta(
 }
 
 /** Mapeamento de rotas para handlers. */
-export const rotasColetas: Record<string, Record<string, (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => Promise<void>>> = {
-  "POST": {
+export const rotasColetas: Record<
+  string,
+  Record<
+    string,
+    (
+      req: IncomingMessage,
+      res: ServerResponse<IncomingMessage>,
+    ) => Promise<void>
+  >
+> = {
+  POST: {
     "/coletas/executar": executarColetaManual,
     "/coletas/rotina/iniciar": iniciarRotinaColetaPeriodica,
     "/coletas/rotina/parar": pararRotinaColetaPeriodica,
   },
-  "GET": {
+  GET: {
     "/coletas/rotina/status": statusRotinaColeta,
   },
 };

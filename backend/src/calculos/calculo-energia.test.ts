@@ -15,7 +15,12 @@ import {
 } from "./calculo-energia.ts";
 
 test("calcularPotencia - CPU a 100%", () => {
-  const metricas = { cpu_percent: 100, memory_gb: 0, disk_gb: 0, network_gb: 0 };
+  const metricas = {
+    cpu_percent: 100,
+    memory_gb: 0,
+    disk_gb: 0,
+    network_gb: 0,
+  };
   const potencia = calcularPotencia(metricas);
   assert.equal(potencia, 100); // 100% * 100W = 100W
 });
@@ -33,7 +38,12 @@ test("calcularPotencia - apenas RAM", () => {
 });
 
 test("calcularPotencia - apenas Disco", () => {
-  const metricas = { cpu_percent: 0, memory_gb: 0, disk_gb: 500, network_gb: 0 };
+  const metricas = {
+    cpu_percent: 0,
+    memory_gb: 0,
+    disk_gb: 500,
+    network_gb: 0,
+  };
   const potencia = calcularPotencia(metricas);
   assert.equal(potencia, 500 * 0.01); // 500GB * 0.01 W/GB = 5W
 });
@@ -45,14 +55,24 @@ test("calcularPotencia - apenas Rede", () => {
 });
 
 test("calcularPotencia - métricas combinadas", () => {
-  const metricas = { cpu_percent: 50, memory_gb: 4, disk_gb: 100, network_gb: 2 };
+  const metricas = {
+    cpu_percent: 50,
+    memory_gb: 4,
+    disk_gb: 100,
+    network_gb: 2,
+  };
   // CPU: 50W, RAM: 1.5W, Disco: 1W, Rede: 0.04W = 52.54W
   const potencia = calcularPotencia(metricas);
   assert.equal(potencia, 52.54);
 });
 
 test("calcularPotencia - métricas negativas lançam erro", () => {
-  const metricas = { cpu_percent: -10, memory_gb: 0, disk_gb: 0, network_gb: 0 };
+  const metricas = {
+    cpu_percent: -10,
+    memory_gb: 0,
+    disk_gb: 0,
+    network_gb: 0,
+  };
   assert.throws(() => calcularPotencia(metricas), /não podem ser negativas/);
 });
 
@@ -161,6 +181,9 @@ test("CalculadoraEnergia - injeta dependência para testes", async () => {
     metrics: { cpu_percent: 100, memory_gb: 0, disk_gb: 0, network_gb: 0 },
   };
   const resultado = await calc.calcularParaServico(respostaMetricas, "TEST");
-  assert.equal(resultado.intensidadeCarbono.carbon_intensity_gco2e_per_kwh, 400);
+  assert.equal(
+    resultado.intensidadeCarbono.carbon_intensity_gco2e_per_kwh,
+    400,
+  );
   assert.equal(resultado.emissaoCo2eG, 40); // 0.1 kWh * 400 = 40 gCO2e
 });
