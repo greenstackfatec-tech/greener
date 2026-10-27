@@ -20,7 +20,9 @@ import {
   gravarColetaSemMetricas,
   gravarColetaIndisponivel,
   StatusColeta,
-} from "./coletas.repository.ts";
+  buscarHistoricoColetas,
+  listarColetas as listarColetasDoRepository,
+} from "./collections.repository.ts";
 import { ErroApi } from "../../integrations/api-client.ts";
 import { buscarIntervaloColetaSegundos } from "../configuracoes/configuracoes.repository.ts";
 
@@ -238,6 +240,19 @@ export function iniciarRotinaColeta(intervaloSegundos: number): () => void {
       timer = null;
     }
   };
+}
+
+/**
+ * Lista o histórico de coletas de todos os serviços.
+ * @returns Lista de coletas
+ */
+export async function listarColetas(): Promise<Array<{
+  id: number;
+  servicoId: number;
+  coletadoEm: string;
+  statusColeta: StatusColeta;
+}>> {
+  return listarColetasDoRepository();
 }
 
 /** Exporta tipos para uso externo. */

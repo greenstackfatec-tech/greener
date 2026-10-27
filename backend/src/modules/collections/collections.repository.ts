@@ -12,7 +12,13 @@ import type { ResultadoCalculo } from "../../calculos/calculo-energia.ts";
 const pool = new pg.Pool();
 
 /** Status possíveis de uma coleta. */
-export type StatusColeta = "sucesso" | "sem_metricas" | "indisponivel";
+export const StatusColeta = {
+  Sucesso: "sucesso" as const,
+  SemMetricas: "sem_metricas" as const,
+  Indisponivel: "indisponivel" as const,
+} as const;
+
+export type StatusColeta = (typeof StatusColeta)[keyof typeof StatusColeta];
 
 /** Dados brutos de uma coleta para gravação. */
 export interface ColetaParaGravar {
@@ -199,6 +205,33 @@ export async function buscarHistoricoColetas(
     energiaKwh: row.energia_kwh,
     emissaoCo2eG: row.emissao_co2e_g,
     calculadoEm: row.calculado_em,
+  }));
+}
+
+/**
+ * Lista todas as coletas (para endpoint GET /collections).
+ * @returns Lista de coletas ordenadas por data (mais recente primeiro)
+ */
+export async function listarColetas(): Promise<Array<{
+  id: number;
+  servicoId: number;
+  coletadoEm: string;
+  statusColeta: StatusColeta;
+}>> {
+  const sql = `
+    SELECT
+      id, servico_id, coletado_em, status_coleta
+    FROM metricas_servico
+    ORDER BY coletado_em DESC
+    LIMIT 100
+  `;
+
+  const resultado = await pool.query(sql);
+  return resultado.rows.map((row) => ({
+    id: row.id,
+    servicoId: row.servico_id,
+    coletadoEm: row.coletado_em,
+    statusColeta: row.status_coleta,
   }));
 }
 

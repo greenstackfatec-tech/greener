@@ -1,33 +1,16 @@
-/**
- * Controller para endpoints de coletas (Node.js http nativo).
- * TP16 - Endpoints de serviços e indicadores (RF09).
- */
-
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { URL } from "node:url";
+import { responder } from "../../shared/http.ts";
 import {
   executarRodadaColeta,
   iniciarRotinaColeta,
   type ResultadoRodadaColeta,
-} from "./coletas.service.ts";
+} from "./collections.service.ts";
 
 /** Tamanho máximo do body em bytes (1MB). */
 const MAX_BODY_SIZE = 1024 * 1024;
 
 /** Armazena a função de parada da rotina ativa. */
 let pararRotina: (() => void) | null = null;
-
-/** Resposta JSON padronizada. */
-function responder(
-  response: ServerResponse<IncomingMessage>,
-  status: number,
-  body: Record<string, unknown>,
-): void {
-  response.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-  });
-  response.end(JSON.stringify(body));
-}
 
 /** Lê o body JSON da requisição com limite de tamanho. */
 async function lerBody(
@@ -76,7 +59,7 @@ function validarContentType(
 }
 
 /**
- * POST /coletas/executar
+ * POST /collections/executar
  * Executa uma rodada de coleta manual (sob demanda).
  */
 export async function executarColetaManual(
@@ -101,7 +84,7 @@ export async function executarColetaManual(
 }
 
 /**
- * POST /coletas/rotina/iniciar
+ * POST /collections/rotina/iniciar
  * Inicia a rotina de coleta periódica.
  * Body: { intervaloSegundos?: number }
  */
@@ -148,7 +131,7 @@ export async function iniciarRotinaColetaPeriodica(
 }
 
 /**
- * POST /coletas/rotina/parar
+ * POST /collections/rotina/parar
  * Para a rotina de coleta periódica.
  */
 export async function pararRotinaColetaPeriodica(
@@ -182,7 +165,7 @@ export async function pararRotinaColetaPeriodica(
 }
 
 /**
- * GET /coletas/rotina/status
+ * GET /collections/rotina/status
  * Retorna o status da rotina de coleta.
  */
 export async function statusRotinaColeta(
@@ -195,23 +178,15 @@ export async function statusRotinaColeta(
   });
 }
 
-/** Mapeamento de rotas para handlers. */
-export const rotasColetas: Record<
-  string,
-  Record<
-    string,
-    (
-      req: IncomingMessage,
-      res: ServerResponse<IncomingMessage>,
-    ) => Promise<void>
-  >
-> = {
-  POST: {
-    "/coletas/executar": executarColetaManual,
-    "/coletas/rotina/iniciar": iniciarRotinaColetaPeriodica,
-    "/coletas/rotina/parar": pararRotinaColetaPeriodica,
-  },
-  GET: {
-    "/coletas/rotina/status": statusRotinaColeta,
-  },
-};
+/**
+ * GET /collections
+ * Lista o histórico de coletas.
+ */
+export async function listar(
+  _request: IncomingMessage,
+  response: ServerResponse<IncomingMessage>,
+): Promise<void> {
+  const { listarColetas } = await import("./collections.service.ts");
+  const coletas = await listarColetas();
+  responder(response, 200, coletas);
+}

@@ -1,16 +1,14 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { URL } from "node:url";
 import { verificarConexao } from "./db/connection.ts";
-import { rotasColetas } from "./modules/coletas/coletas.controller.ts";
+import { rotasServices } from "./modules/services/services.routes.ts";
+import { rotasCollections } from "./modules/collections/collections.routes.ts";
+import { rotasMonitoringSettings } from "./modules/monitoring-settings/monitoring-settings.routes.ts";
+import { responder } from "./shared/http.ts";
+import type { Rota } from "./shared/http.ts";
 
-function responder(
-  response: ServerResponse<IncomingMessage>,
-  status: number,
-  body: Record<string, unknown>,
-): void {
-  response.writeHead(status, { "content-type": "application/json; charset=utf-8" });
-  response.end(JSON.stringify(body));
-}
+// Cada módulo entrega a sua lista de rotas; o app só junta todas.
+const rotas: Rota[] = [...rotasServices, ...rotasCollections, ...rotasMonitoringSettings];
 
 export async function tratarRequisicao(
   request: IncomingMessage,
@@ -37,10 +35,9 @@ export async function tratarRequisicao(
     return;
   }
 
-  // Rotas de coletas
-  const rotasMetodo = rotasColetas[method];
-  if (rotasMetodo && rotasMetodo[pathname]) {
-    await rotasMetodo[pathname](request, response);
+  const rota = rotas.find((candidata) => candidata.metodo === request.method && candidata.caminho === pathname);
+  if (rota) {
+    await rota.tratar(request, response);
     return;
   }
 
