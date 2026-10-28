@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
 import { tratarRequisicao } from "../../app.ts";
+import { encerrarConexao } from "../../db/connection.ts";
 import type { Servico } from "./services.repository.ts";
 
 test("GET /services passa por route, controller, service e repository", async (t) => {
@@ -9,9 +10,10 @@ test("GET /services passa por route, controller, service e repository", async (t
     void tratarRequisicao(request, response);
   });
   // Fecha o servidor no fim, mesmo se alguma verificação falhar.
-  t.after(() => {
+  t.after(async () => {
     servidor.close();
     servidor.closeAllConnections();
+    await encerrarConexao();
   });
   // Porta 0 = o sistema escolhe uma porta livre, sem conflito com o npm start.
   await new Promise<void>((resolve) => servidor.listen(0, "127.0.0.1", resolve));
@@ -24,7 +26,7 @@ test("GET /services passa por route, controller, service e repository", async (t
     assert.equal(resposta.status, 200);
     assert.match(resposta.headers.get("content-type") ?? "", /application\/json/);
     const servicos = (await resposta.json()) as Servico[];
-    assert.equal(servicos.length, 3);
+    assert.ok(servicos.length >= 8, "o seed tem 8 serviços");
     assert.equal(servicos[0]?.nome, "Billing API");
   });
 
