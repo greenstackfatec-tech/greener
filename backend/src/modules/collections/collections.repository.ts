@@ -3,13 +3,11 @@
  * BD05 - Repository dos resultados calculados (potência, energia e CO₂e).
  */
 
-import pg from "pg";
+import { consultar } from "../../db/connection.ts";
 import type { Servico } from "../services/services.repository.ts";
 import type { RespostaMetricas } from "../../integrations/metrics-api.ts";
 import type { IntensidadeCarbono } from "../../integrations/carbon-api.ts";
 import type { ResultadoCalculo } from "../../calculos/calculo-energia.ts";
-
-const pool = new pg.Pool();
 
 /** Status possíveis de uma coleta. */
 export const StatusColeta = {
@@ -48,7 +46,7 @@ export async function gravarColeta(coleta: ColetaParaGravar): Promise<number> {
       intervalo_segundos, status_coleta, potencia_estimada_w, duracao_segundos,
       energia_kwh, emissao_co2e_g, calculado_em
     ) VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
-    RETURNING id
+    RETURNING id::int
   `;
 
   const valores = [
@@ -66,7 +64,7 @@ export async function gravarColeta(coleta: ColetaParaGravar): Promise<number> {
   ];
 
   try {
-    const resultado = await pool.query(sql, valores);
+    const resultado = await consultar(sql, valores);
     return resultado.rows[0].id;
   } catch (erro) {
     console.error("[REPOSITORY] Erro ao gravar coleta:", erro);
@@ -179,18 +177,19 @@ export async function buscarHistoricoColetas(
     calculadoEm: Date | null;
   }>
 > {
+  // O pg devolve BIGINT e NUMERIC como texto; os casts trazem como number.
   const sql = `
     SELECT
-      id, coletado_em, cpu_percentual, memoria_gb, disco_gb, rede_gb,
-      intervalo_segundos, status_coleta, potencia_estimada_w, duracao_segundos,
-      energia_kwh, emissao_co2e_g, calculado_em
+      id::int, coletado_em, cpu_percentual::float8, memoria_gb::float8, disco_gb::float8,
+      rede_gb::float8, intervalo_segundos, status_coleta, potencia_estimada_w::float8,
+      duracao_segundos, energia_kwh::float8, emissao_co2e_g::float8, calculado_em
     FROM metricas_servico
     WHERE servico_id = $1
     ORDER BY coletado_em DESC
     LIMIT $2
   `;
 
-  const resultado = await pool.query(sql, [servicoId, limite]);
+  const resultado = await consultar(sql, [servicoId, limite]);
   return resultado.rows.map((row) => ({
     id: row.id,
     coletadoEm: row.coletado_em,
@@ -220,22 +219,17 @@ export async function listarColetas(): Promise<Array<{
 }>> {
   const sql = `
     SELECT
-      id, servico_id, coletado_em, status_coleta
+      id::int, servico_id::int, coletado_em, status_coleta
     FROM metricas_servico
     ORDER BY coletado_em DESC
     LIMIT 100
   `;
 
-  const resultado = await pool.query(sql);
+  const resultado = await consultar(sql);
   return resultado.rows.map((row) => ({
     id: row.id,
     servicoId: row.servico_id,
     coletadoEm: row.coletado_em,
     statusColeta: row.status_coleta,
   }));
-}
-
-/** Fecha o pool de conexões (para testes/encerramento). */
-export async function encerrarPool(): Promise<void> {
-  await pool.end();
 }
