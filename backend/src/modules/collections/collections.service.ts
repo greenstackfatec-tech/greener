@@ -255,5 +255,10 @@ export async function listarColetas(): Promise<Array<{
   return listarColetasDoRepository();
 }
 
+/** Lista o histórico de coletas de um serviço, com as métricas e o cálculo. */
+export async function listarColetasDoServico(servicoId: number) {
+  return buscarHistoricoColetas(servicoId);
+}
+
 /** Exporta tipos para uso externo. */
 export type { StatusColeta };

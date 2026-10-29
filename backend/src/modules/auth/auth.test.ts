@@ -385,7 +385,7 @@ test("middleware protege também controllers de escrita antes de executar qualqu
     execucoes += 1;
     responder(response, 200, { autorizado: true });
   });
-  const base = await iniciarServidor(t, protegido);
+  const base = await iniciarServidor(t, (request, response) => protegido(request, response, {}));
   for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
     const resposta = await fetch(base, { method });
     assert.equal(resposta.status, 401);

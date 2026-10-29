@@ -38,6 +38,16 @@ export async function listarServicos(): Promise<Servico[]> {
   return resultado.rows;
 }
 
+export async function buscarServicoPorId(id: number): Promise<Servico | null> {
+  const resultado = await consultar<Servico>(
+    `SELECT id::int, nome, status, cidade, latitude::float8, longitude::float8
+     FROM servicos
+     WHERE id = $1`,
+    [id],
+  );
+  return resultado.rows[0] ?? null;
+}
+
 // Upsert pelo id da API: o serviço que já existe é atualizado em vez de duplicado.
 // O status não muda aqui; quem marca removido ou ativo de novo é a detecção (TP11).
 export async function salvarServico(servico: ServicoParaSalvar): Promise<Servico> {

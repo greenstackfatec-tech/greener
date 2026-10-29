@@ -1,8 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { responder } from "../../shared/http.ts";
+import { lerId, responder } from "../../shared/http.ts";
 import {
   executarRodadaColeta,
   iniciarRotinaColeta,
+  listarColetas,
+  listarColetasDoServico,
   type ResultadoRodadaColeta,
 } from "./collections.service.ts";
 
@@ -179,14 +181,23 @@ export async function statusRotinaColeta(
 }
 
 /**
- * GET /collections
- * Lista o histórico de coletas.
+ * GET /collections e GET /collections?serviceId=
+ * Lista o histórico de coletas; com serviceId, só as daquele serviço.
  */
 export async function listar(
-  _request: IncomingMessage,
+  request: IncomingMessage,
   response: ServerResponse<IncomingMessage>,
 ): Promise<void> {
-  const { listarColetas } = await import("./collections.service.ts");
-  const coletas = await listarColetas();
-  responder(response, 200, coletas);
+  const url = new URL(request.url ?? "/", "http://localhost");
+  if (!url.searchParams.has("serviceId")) {
+    responder(response, 200, await listarColetas());
+    return;
+  }
+
+  const servicoId = lerId(url.searchParams.get("serviceId"));
+  if (servicoId === null) {
+    responder(response, 400, { error: "invalid_id", message: "serviceId deve ser um número inteiro positivo." });
+    return;
+  }
+  responder(response, 200, await listarColetasDoServico(servicoId));
 }
