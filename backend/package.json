@@ -6,8 +6,10 @@
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "mock": "node --experimental-strip-types src/mocks/server.ts",
-    "test": "node --experimental-strip-types --test src/mocks/mocks.test.ts src/modules/auth/auth.test.ts",
+    "test": "node --experimental-strip-types --test src/mocks/mocks.test.ts src/modules/auth/auth.test.ts src/modules/collections/collections.test.ts",
     "test:integration": "node --experimental-strip-types --test src/modules/auth/auth.integration.test.ts src/modules/services/services.test.ts src/modules/services/services.repository.integration.test.ts src/modules/collections/collections.repository.integration.test.ts",
+    "test:collections:integration": "node --experimental-strip-types --test src/modules/collections/collections.integration.test.ts src/db/migrations.integration.test.ts",
+    "test:persistence": "node --experimental-strip-types scripts/verify-persistence.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -1,0 +1,35 @@
+# Complemento exclusivo de testes; use pelo script npm run test:persistence.
+services:
+  backend:
+    environment:
+      METRICS_API_URL: http://mocks:4010
+      CARBON_API_URL: http://mocks:4010
+    depends_on:
+      mocks:
+        condition: service_healthy
+
+  mocks:
+    build:
+      context: ./backend
+    command:
+      - node
+      - --experimental-strip-types
+      - --input-type=module
+      - -e
+      - |
+        import { createServer } from "node:http";
+        import { tratarRequisicaoMock } from "./src/mocks/app.ts";
+
+        createServer(tratarRequisicaoMock).listen(4010, "0.0.0.0");
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - |
+          fetch("http://127.0.0.1:4010/services")
+            .then((r) => process.exit(r.ok ? 0 : 1))
+            .catch(() => process.exit(1));
+      interval: 2s
+      timeout: 5s
+      retries: 15
