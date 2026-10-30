@@ -28,6 +28,31 @@ export interface RegiaoParaSalvar {
   fonte: string | null;
 }
 
+export async function buscarAplicacaoId(nome: string): Promise<number> {
+  const resultado = await consultar<{ id: number }>(
+    "SELECT id::int FROM aplicacoes WHERE nome = $1",
+    [nome],
+  );
+  const aplicacao = resultado.rows[0];
+  if (!aplicacao) {
+    throw new Error(`Aplicação "${nome}" não encontrada no banco de dados`);
+  }
+  return aplicacao.id;
+}
+
+/** Usa as regiões configuradas no banco, sem alterar seus fatores de emissão. */
+export async function buscarRegiaoId(nome: string, pais: string): Promise<number> {
+  const resultado = await consultar<{ id: number }>(
+    "SELECT id::int FROM regioes WHERE nome = $1 AND pais = $2",
+    [nome, pais],
+  );
+  const regiao = resultado.rows[0];
+  if (!regiao) {
+    throw new Error(`Região "${nome}" de "${pais}" não cadastrada no banco de dados`);
+  }
+  return regiao.id;
+}
+
 // O pg devolve BIGINT e NUMERIC como texto; os casts ::int e ::float8 trazem como number.
 export async function listarServicos(): Promise<Servico[]> {
   const resultado = await consultar<Servico>(
