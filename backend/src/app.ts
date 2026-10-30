@@ -6,7 +6,7 @@ import { rotasServices } from "./modules/services/services.routes.ts";
 import { rotasCollections } from "./modules/collections/collections.routes.ts";
 import { rotasMonitoringSettings } from "./modules/monitoring-settings/monitoring-settings.routes.ts";
 import { rotasDashboardIndicators } from "./modules/dashboard-indicators/dashboard-indicators.routes.ts";
-import { responder } from "./shared/http.ts";
+import { casarCaminho, responder } from "./shared/http.ts";
 import type { Rota } from "./shared/http.ts";
 
 // Cada módulo entrega a sua lista de rotas; o app só junta todas.
@@ -37,10 +37,13 @@ export async function tratarRequisicao(
     return;
   }
 
-  const rota = rotas.find((candidata) => candidata.metodo === request.method && candidata.caminho === pathname);
-  if (rota) {
-    await rota.tratar(request, response);
-    return;
+  for (const rota of rotas) {
+    if (rota.metodo !== method) continue;
+    const parametros = casarCaminho(rota.caminho, pathname);
+    if (parametros) {
+      await rota.tratar(request, response, parametros);
+      return;
+    }
   }
 
   responder(response, 404, { error: "not_found" });
