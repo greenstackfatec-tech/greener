@@ -3,8 +3,7 @@ FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
-# Copia arquivos de configuração antes do código fonte
-COPY tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts ./
+# Copia todo o conteúdo da pasta frontend para o container
 COPY . .
 RUN npm run build
 
