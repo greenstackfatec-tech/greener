@@ -5,5 +5,4 @@ dist
 *.log
 *.md
 eslint.config.js
-tsconfig.*
 vite.config.ts

@@ -1,10 +1,15 @@
 # Estágio de build
 FROM node:24-alpine AS build
 WORKDIR /app
+
+# Copia dependências primeiro para cachear
 COPY package.json package-lock.json ./
 RUN npm ci
-# Copia todo o conteúdo da pasta frontend para o container
+
+# Copia todo o restante (incluindo tsconfig.json, vite.config.ts, src)
 COPY . .
+
+# Roda o build
 RUN npm run build
 
 # Estágio final (Nginx)
