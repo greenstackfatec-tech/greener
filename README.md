@@ -38,6 +38,7 @@ greener/
 ├── README.md 
 ├── .env.example 
 ├── compose.yaml 
+├── compose.persistence.yaml
 ├── frontend/ 
 │   ├── README.md 
 │   ├── Dockerfile 
@@ -60,11 +61,14 @@ greener/
 │   ├── package.json
 │   ├── package-lock.json
 │   ├── tsconfig.json
+│   ├── scripts/
+│   │   └── verify-persistence.ts
 │   └── src/
 │       ├── app.ts
 │       ├── server.ts
 │       ├── db/
-│       │   └── connection.ts
+│       │   ├── connection.ts
+│       │   └── migrations.integration.test.ts
 │       ├── integrations/
 │       │   ├── api-client.ts
 │       │   ├── carbon-api.ts
@@ -92,7 +96,9 @@ greener/
 │           │   ├── collections.routes.ts
 │           │   ├── collections.controller.ts
 │           │   ├── collections.service.ts
-│           │   └── collections.repository.ts
+│           │   ├── collections.repository.ts
+│           │   ├── collections.test.ts
+│           │   └── collections.integration.test.ts
 │           ├── monitoring-settings/
 │           │   ├── monitoring-settings.routes.ts
 │           │   ├── monitoring-settings.controller.ts
@@ -103,10 +109,14 @@ greener/
 │               ├── services.controller.ts
 │               ├── services.service.ts
 │               ├── services.repository.ts
-│               └── services.test.ts
+│               ├── services.test.ts
+│               └── services.repository.integration.test.ts
 ├── database/ 
 │   ├── README.md 
-│   └── schema.sql 
+│   ├── schema.sql
+│   ├── seed.sql
+│   └── migrations/
+│       └── 001_persistencia_coletas.sql
 └── docs/
     ├── README.md
     ├── plano-de-entregas.md
