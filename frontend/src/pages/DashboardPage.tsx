@@ -43,7 +43,18 @@ export function DashboardPage() {
     } finally { setCarregando(false); setAtualizando(false); }
   }, []);
 
-  useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => {
+  let ativo = true;
+  requisitar<Servico[]>("/services")
+    .then((dados) => { if (ativo) setServicos(dados); })
+    .catch((falha) => {
+      if (ativo) setErro(falha instanceof ErroApi
+        ? "Não foi possível carregar os serviços. Verifique a conexão com o servidor."
+        : "Não foi possível conectar ao servidor. Tente novamente.");
+    })
+    .finally(() => { if (ativo) setCarregando(false); });
+  return () => { ativo = false; };
+}, []);
 
   const contagem = useMemo(() => ({
     total: servicos.filter((s) => s.status !== "removido").length,
