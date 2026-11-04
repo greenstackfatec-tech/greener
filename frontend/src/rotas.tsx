@@ -4,11 +4,14 @@ import { EmConstrucaoPage } from "./pages/EmConstrucaoPage.tsx";
 import { InicioPage } from "./pages/InicioPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { DashboardPage } from "./pages/DashboardPage.tsx";
+import { AdministrativaPage } from "./pages/AdministrativaPage.tsx";
+import { RotaPrivada } from "./components/RotaPrivada.tsx";
 
 export const router = createBrowserRouter([
   { path: ROTAS.inicio, element: <InicioPage /> },
   { path: ROTAS.login, element: <LoginPage /> },
   { path: ROTAS.cadastro, element: <EmConstrucaoPage nome="Cadastro" /> },
-  { path: ROTAS.administrativa, element: <EmConstrucaoPage nome="Administrativa" /> },
+  // Rotas privadas: sem token, <RotaPrivada /> leva ao /login.
+  { element: <RotaPrivada />, children: [{ path: ROTAS.administrativa, element: <AdministrativaPage /> }] },
   { path: ROTAS.dashboard, element: <DashboardPage /> },
 ]);
