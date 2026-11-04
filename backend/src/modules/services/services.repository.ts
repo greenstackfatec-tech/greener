@@ -14,7 +14,7 @@ export interface ServicoParaSalvar {
   idExterno: string;
   nome: string;
   aplicacaoId: number;
-  regiaoId: number;
+  regiaoId: number | null;
   cidade: string | null;
   latitude: number | null;
   longitude: number | null;

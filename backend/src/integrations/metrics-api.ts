@@ -1,16 +1,17 @@
 import {
   consultarJson, inteiro, numero, objeto, parametro,
-  respostaInvalida, texto, textoOpcional,
+  numeroOpcional, respostaInvalida, texto, textoOpcional,
 } from "./api-client.ts";
 import type { OpcoesApi } from "./api-client.ts";
 
+/** Todos os campos podem faltar: serviço sem localização é aceito (RF12, RF13). */
 export interface LocalizacaoServico {
-  region_code: string;
-  country: string;
-  region: string;
+  region_code: string | null;
+  country: string | null;
+  region: string | null;
   city: string | null;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface Servico {
@@ -41,14 +42,17 @@ function consultar(caminho: string, opcoes: OpcoesApi): Promise<unknown> {
 
 function lerServico(dados: unknown): Servico {
   const servico = objeto(dados, "servico");
-  const local = objeto(servico.location, "location");
+  // location nulo ou ausente vira localização vazia; outro tipo continua sendo resposta inválida.
+  const local = servico.location === undefined || servico.location === null
+    ? {}
+    : objeto(servico.location, "location");
   const location: LocalizacaoServico = {
-    region_code: texto(local.region_code, "location.region_code"),
-    country: texto(local.country, "location.country"),
-    region: texto(local.region, "location.region"),
+    region_code: textoOpcional(local.region_code, "location.region_code"),
+    country: textoOpcional(local.country, "location.country"),
+    region: textoOpcional(local.region, "location.region"),
     city: textoOpcional(local.city, "location.city"),
-    latitude: numero(local.latitude, "location.latitude"),
-    longitude: numero(local.longitude, "location.longitude"),
+    latitude: numeroOpcional(local.latitude, "location.latitude"),
+    longitude: numeroOpcional(local.longitude, "location.longitude"),
   };
   return {
     id: texto(servico.id, "id"),

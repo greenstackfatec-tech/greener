@@ -53,7 +53,9 @@ async function coletarServico(
   aplicacaoId: number,
   intervalo: number,
 ): Promise<ResultadoColeta> {
-  const regiaoId = await buscarRegiaoId(servicoApi.location.region, servicoApi.location.country);
+  const { region, country, region_code: codigoRegiao } = servicoApi.location;
+  // Sem país e região o serviço é gravado sem região (campos nulos).
+  const regiaoId = region && country ? await buscarRegiaoId(region, country) : null;
   const servico = await salvarServico({
     idExterno: servicoApi.id,
     nome: servicoApi.name,
@@ -102,13 +104,14 @@ async function coletarServico(
   // Falhas no cálculo não descartam as métricas recebidas.
   let calculo: CalculoColeta | undefined;
   let erroCalculo: string | undefined;
-  try {
-    calculo = await calculadoraEnergia.calcularParaServico(
-      respostaMetricas,
-      servicoApi.location.region_code,
-    );
-  } catch (erro) {
-    erroCalculo = erro instanceof Error ? erro.message : "Falha ao calcular a coleta";
+  if (!codigoRegiao) {
+    erroCalculo = "Serviço sem localização: CO₂e não calculado";
+  } else {
+    try {
+      calculo = await calculadoraEnergia.calcularParaServico(respostaMetricas, codigoRegiao);
+    } catch (erro) {
+      erroCalculo = erro instanceof Error ? erro.message : "Falha ao calcular a coleta";
+    }
   }
   if (calculo) {
     await gravarColetaSucesso(servico, respostaMetricas, calculo.intensidadeCarbono, calculo);

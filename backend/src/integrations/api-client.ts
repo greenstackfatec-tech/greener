@@ -111,6 +111,11 @@ export function textoOpcional(valor: unknown, campo: string): string | null {
   return valor;
 }
 
+export function numeroOpcional(valor: unknown, campo: string): number | null {
+  if (valor === undefined || valor === null) return null;
+  return numero(valor, campo);
+}
+
 export function numero(valor: unknown, campo: string, minimo = -Infinity, maximo = Infinity): number {
   if (typeof valor !== "number" || !Number.isFinite(valor) || valor < minimo || valor > maximo) {
     return respostaInvalida(campo);
