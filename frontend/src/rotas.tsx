@@ -3,6 +3,7 @@ import { ROTAS } from "./caminhos.ts";
 import { EmConstrucaoPage } from "./pages/EmConstrucaoPage.tsx";
 import { InicioPage } from "./pages/InicioPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
+import { DashboardPage } from "./pages/DashboardPage.tsx";
 
 export const router = createBrowserRouter([
   { path: ROTAS.inicio, element: <InicioPage /> },
@@ -10,4 +11,5 @@ export const router = createBrowserRouter([
   { path: ROTAS.cadastro, element: <EmConstrucaoPage nome="Cadastro" /> },
   { path: ROTAS.administrativa, element: <EmConstrucaoPage nome="Administrativa" /> },
   { path: ROTAS.dashboard, element: <EmConstrucaoPage nome="Dashboard" /> },
+  { path: ROTAS.dashboard, element: <DashboardPage /> },
 ]);
