@@ -131,12 +131,15 @@ No Compose, as variáveis são carregadas do arquivo `.env` na raiz do repositó
 | `METRICS_API_URL` | URL base da API de métricas. | `https://metrics.unilaunch.org` |
 | `CARBON_API_URL` | URL base da API de intensidade de carbono. | `https://carbon.unilaunch.org` |
 | `API_TIMEOUT_MS` | Tempo limite da requisição em milissegundos. | `10000` |
+| `COLLECTIONS_AUTO_START` | Inicia a coleta junto com o HTTP; aceita `true` ou `false`. | `true` |
 | `FRONTEND_PORT` | Porta publicada pelo frontend na máquina host. | `8080` |
 | `BACKEND_PORT` | Porta publicada pelo backend na máquina host. | `3000` |
 | `POSTGRES_PORT` | Porta publicada pelo PostgreSQL na máquina host. | `5432` |
 | `POSTGRES_DB` | Nome do banco criado pelo container PostgreSQL. | `greener` |
 | `POSTGRES_USER` | Usuário do banco. | `greener` |
 | `POSTGRES_PASSWORD` | Senha do banco. | `greener_dev_only` (somente desenvolvimento local) |
+| `PGCONNECT_TIMEOUT` | Limite para conexão e espera pelo pool, em segundos. | `5` |
+| `PGQUERY_TIMEOUT_MS` | Limite de execução/leitura das consultas, em milissegundos. | `10000` |
 
 O timeout deve ser um inteiro positivo, até `2147483647`. As URLs base devem usar `http:` ou `https:` e não podem conter credenciais, parâmetros de consulta ou fragmento. O cliente usa `fetch` e `AbortController` do runtime; não carrega variáveis de ambiente a partir de arquivo por conta própria.
 
@@ -150,6 +153,16 @@ O servidor HTTP fornece endpoints de saúde para verificação do ambiente:
 | `GET` | `/health/ready` | HTTP 200 `{"status":"ok","database":"connected"}` quando o banco responde; HTTP 503 `{"status":"not_ready","database":"unavailable"}` se não responder. |
 
 O frontend publica os mesmos endpoints sob `/api/` por meio do proxy Nginx, por exemplo `GET /api/health/ready`. O backend também oferece `GET /services` e `GET /collections`; o módulo de coletas está em `backend/src/modules/collections/`. A autenticação JWT e a proteção da configuração estão descritas abaixo; as integrações externas também não enviam tokens.
+
+### Controle da coleta periódica (TP06 / #93)
+
+A coleta inicia automaticamente com o servidor. As regras de intervalo, recuperação e configuração estão no [README do backend](../backend/README.md#rotina-periódica--tp06).
+
+- `POST /collections/executar`: executa uma rodada manual e retorna o resumo em `dados`. Chamadas concorrentes aguardam a coleta anterior do mesmo serviço, incluindo a automática, e produzem novas amostras. Erros de persistência respondem `500` após aguardar os demais serviços.
+- `POST /collections/rotina/iniciar`: exige `Content-Type: application/json`, com `{}` ou `{ "intervaloSegundos": 60 }`. O campo opcional deve ser um número inteiro entre 1 e 2147483 e substitui apenas o intervalo alternativo e de descoberta; a API mantém prioridade. Responde `200` com o estado da rotina e preserva `dados.intervaloSegundos`, equivalente a `dados.intervaloAlternativoSegundos`; `400` para JSON/intervalo inválido ou rotina já ativa/em encerramento; `415` sem o Content-Type adequado.
+- `POST /collections/rotina/parar`: cancela os timers e aguarda as coletas pendentes antes de responder `200`; responde `400` se a rotina já estiver parada. Uma nova chamada de início só é aceita após terminar a parada.
+- `GET /collections/rotina/status`: responde `200` com `{ "sucesso": true, "dados": { "executando": true, "encerrando": false, "coletasEmAndamento": 0, "intervaloAlternativoSegundos": 60 } }`. `executando` indica rotina ativa, inclusive quando está aguardando o próximo disparo; `coletasEmAndamento` conta os serviços ocupados.
+- `GET /collections`: retorna as últimas 100 coletas persistidas. Cada amostra acrescenta uma linha; a anterior permanece no histórico.
 
 ### Login e acesso à configuração (TP18 / #98)
 
