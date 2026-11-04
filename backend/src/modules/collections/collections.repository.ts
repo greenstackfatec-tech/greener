@@ -45,7 +45,8 @@ export async function gravarColeta(coleta: ColetaParaGravar): Promise<number> {
       servico_id, coletado_em, cpu_percentual, memoria_gb, disco_gb, rede_gb,
       intervalo_segundos, status_coleta, potencia_estimada_w, duracao_segundos,
       energia_kwh, emissao_co2e_g, calculado_em
-    ) VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+    ) VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+              CASE WHEN $8::numeric IS NOT NULL THEN NOW() ELSE NULL END)
     RETURNING id::int
   `;
 
@@ -86,18 +87,28 @@ export async function gravarColetaSucesso(
   intensidadeCarbono: IntensidadeCarbono,
   resultadoCalculo: ResultadoCalculo,
 ): Promise<number> {
+  return gravarColetaRecebida(servico.id, respostaMetricas, resultadoCalculo);
+}
+
+/** Preserva as métricas recebidas mesmo quando o cálculo não está disponível. */
+export async function gravarColetaRecebida(
+  servicoId: number,
+  respostaMetricas: RespostaMetricas,
+  resultadoCalculo: ResultadoCalculo | null = null,
+  statusColeta: "sucesso" | "sem_metricas" = "sucesso",
+): Promise<number> {
   return gravarColeta({
-    servicoId: servico.id,
+    servicoId,
     cpuPercentual: respostaMetricas.metrics.cpu_percent,
     memoriaGb: respostaMetricas.metrics.memory_gb,
     discoGb: respostaMetricas.metrics.disk_gb,
     redeGb: respostaMetricas.metrics.network_gb,
     intervaloSegundos: respostaMetricas.collection_interval_seconds,
-    statusColeta: "sucesso",
-    potenciaEstimadaW: resultadoCalculo.potenciaEstimadaW,
-    duracaoSegundos: resultadoCalculo.duracaoSegundos,
-    energiaKwh: resultadoCalculo.energiaKwh,
-    emissaoCo2eG: resultadoCalculo.emissaoCo2eG,
+    statusColeta,
+    potenciaEstimadaW: resultadoCalculo?.potenciaEstimadaW ?? null,
+    duracaoSegundos: resultadoCalculo?.duracaoSegundos ?? null,
+    energiaKwh: resultadoCalculo?.energiaKwh ?? null,
+    emissaoCo2eG: resultadoCalculo?.emissaoCo2eG ?? null,
   });
 }
 
@@ -211,12 +222,14 @@ export async function buscarHistoricoColetas(
  * Lista todas as coletas (para endpoint GET /collections).
  * @returns Lista de coletas ordenadas por data (mais recente primeiro)
  */
-export async function listarColetas(): Promise<Array<{
-  id: number;
-  servicoId: number;
-  coletadoEm: string;
-  statusColeta: StatusColeta;
-}>> {
+export async function listarColetas(): Promise<
+  Array<{
+    id: number;
+    servicoId: number;
+    coletadoEm: string;
+    statusColeta: StatusColeta;
+  }>
+> {
   const sql = `
     SELECT
       id::int, servico_id::int, coletado_em, status_coleta
