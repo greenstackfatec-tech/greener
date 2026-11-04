@@ -10,6 +10,5 @@ export const router = createBrowserRouter([
   { path: ROTAS.login, element: <LoginPage /> },
   { path: ROTAS.cadastro, element: <EmConstrucaoPage nome="Cadastro" /> },
   { path: ROTAS.administrativa, element: <EmConstrucaoPage nome="Administrativa" /> },
-  { path: ROTAS.dashboard, element: <EmConstrucaoPage nome="Dashboard" /> },
   { path: ROTAS.dashboard, element: <DashboardPage /> },
 ]);
