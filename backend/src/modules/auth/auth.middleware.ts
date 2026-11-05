@@ -3,7 +3,7 @@ import type { Rota } from "../../shared/http.ts";
 import { verificarToken } from "./jwt.ts";
 
 export function exigirAutenticacao(tratar: Rota["tratar"]): Rota["tratar"] {
-  return async (request, response) => {
+  return async (request, response, parametros) => {
     response.setHeader("cache-control", "no-store");
     const authorization = request.headers.authorization;
     const token = authorization && authorization.length <= 4096
@@ -14,6 +14,6 @@ export function exigirAutenticacao(tratar: Rota["tratar"]): Rota["tratar"] {
       responder(response, 401, { error: "unauthorized", message: "Token ausente ou inválido." });
       return;
     }
-    await tratar(request, response);
+    await tratar(request, response, parametros);
   };
 }

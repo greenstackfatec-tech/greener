@@ -8,4 +8,6 @@ export const ROTAS = {
   cadastro: "/cadastro",
   administrativa: "/administrativa",
   dashboard: "/dashboard",
+  /** Galeria do DD07; só registrada em desenvolvimento. */
+  dashboardEstados: "/dashboard/estados",
 } as const;

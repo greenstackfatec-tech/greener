@@ -61,18 +61,21 @@ INSERT INTO usuarios (nome, email, senha_hash) VALUES
 
 -- Serviços da API de métricas. O status fica com o DEFAULT ('ativo').
 -- A coluna "ordem" só serve para os ids seguirem a ordem da API.
-INSERT INTO servicos (aplicacao_id, regiao_id, nome, cidade, latitude, longitude)
-SELECT a.id, r.id, s.nome, s.cidade, s.latitude, s.longitude
+-- IDs externos confirmados na API; nomes não identificam serviços de forma única.
+INSERT INTO servicos (
+    id_externo, aplicacao_id, regiao_id, nome, cidade, latitude, longitude
+)
+SELECT s.id_externo, a.id, r.id, s.nome, s.cidade, s.latitude, s.longitude
 FROM (VALUES
-    (1, 'Billing API',       'Sudeste',  'Brazil',        'Sao Paulo', -23.5505, -46.6333),
-    (2, 'Checkout Worker',   'Virginia', 'United States', 'Ashburn',    39.0438, -77.4874),
-    (3, 'Recommendation AI', 'Leinster', 'Ireland',       'Dublin',     53.3498,  -6.2603),
-    (4, 'Inventory Sync',    'Ontario',  'Canada',        'Toronto',    43.6532, -79.3832),
-    (5, 'Audit Stream',      'Tokyo',    'Japan',         'Tokyo',      35.6762, 139.6503),
-    (6, 'Email Dispatcher',  'Sudeste',  'Brazil',        'Sao Paulo', -23.5505, -46.6333),
-    (7, 'Fraud Detector',    'Virginia', 'United States', 'Ashburn',    39.0438, -77.4874),
-    (8, 'Reporting Batch',   'Ontario',  'Canada',        'Toronto',    43.6532, -79.3832)
-) AS s (ordem, nome, regiao, pais, cidade, latitude, longitude)
+    (1, 'billing-api',       'Billing API',       'Sudeste',  'Brazil',        'Sao Paulo', -23.5505, -46.6333),
+    (2, 'checkout-worker',   'Checkout Worker',   'Virginia', 'United States', 'Ashburn',    39.0438, -77.4874),
+    (3, 'recommendation-ai', 'Recommendation AI', 'Leinster', 'Ireland',       'Dublin',     53.3498,  -6.2603),
+    (4, 'inventory-sync',    'Inventory Sync',    'Ontario',  'Canada',        'Toronto',    43.6532, -79.3832),
+    (5, 'audit-stream',      'Audit Stream',      'Tokyo',    'Japan',         'Tokyo',      35.6762, 139.6503),
+    (6, 'email-dispatcher',  'Email Dispatcher',  'Sudeste',  'Brazil',        'Sao Paulo', -23.5505, -46.6333),
+    (7, 'fraud-detector',    'Fraud Detector',    'Virginia', 'United States', 'Ashburn',    39.0438, -77.4874),
+    (8, 'reporting-batch',   'Reporting Batch',   'Ontario',  'Canada',        'Toronto',    43.6532, -79.3832)
+) AS s (ordem, id_externo, nome, regiao, pais, cidade, latitude, longitude)
 JOIN regioes r    ON r.nome = s.regiao AND r.pais = s.pais
 JOIN aplicacoes a ON a.nome = 'GreenER Demo'
 ORDER BY s.ordem;

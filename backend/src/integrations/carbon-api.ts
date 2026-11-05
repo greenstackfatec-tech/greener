@@ -44,8 +44,8 @@ function lerRegiao(dados: unknown): RegiaoCarbono {
     city: textoOpcional(regiao.city, "city"),
     latitude: numero(regiao.latitude, "latitude"),
     longitude: numero(regiao.longitude, "longitude"),
-    carbon_intensity_gco2e_per_kwh: numero(regiao.carbon_intensity_gco2e_per_kwh, "carbon_intensity_gco2e_per_kwh"),
-    renewable_share_percent: numero(regiao.renewable_share_percent, "renewable_share_percent"),
+    carbon_intensity_gco2e_per_kwh: numero(regiao.carbon_intensity_gco2e_per_kwh, "carbon_intensity_gco2e_per_kwh", 0),
+    renewable_share_percent: numero(regiao.renewable_share_percent, "renewable_share_percent", 0, 100),
   };
 }
 
@@ -73,7 +73,7 @@ export async function buscarIntensidadeCarbono(
     country: texto(dados.country, "country"),
     region: texto(dados.region, "region"),
     city: textoOpcional(dados.city, "city"),
-    carbon_intensity_gco2e_per_kwh: numero(dados.carbon_intensity_gco2e_per_kwh, "carbon_intensity_gco2e_per_kwh"),
-    renewable_share_percent: numero(dados.renewable_share_percent, "renewable_share_percent"),
+    carbon_intensity_gco2e_per_kwh: numero(dados.carbon_intensity_gco2e_per_kwh, "carbon_intensity_gco2e_per_kwh", 0),
+    renewable_share_percent: numero(dados.renewable_share_percent, "renewable_share_percent", 0, 100),
   };
 }
