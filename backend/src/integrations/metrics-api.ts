@@ -78,9 +78,9 @@ export async function buscarMetricas(id: string, opcoes: OpcoesApi = {}): Promis
     collection_interval_seconds: inteiro(dados.collection_interval_seconds, "collection_interval_seconds", 0),
     metrics: {
       cpu_percent: numero(metricas.cpu_percent, "metrics.cpu_percent", 0, 100),
-      memory_gb: numero(metricas.memory_gb, "metrics.memory_gb"),
-      disk_gb: numero(metricas.disk_gb, "metrics.disk_gb"),
-      network_gb: numero(metricas.network_gb, "metrics.network_gb"),
+      memory_gb: numero(metricas.memory_gb, "metrics.memory_gb", 0),
+      disk_gb: numero(metricas.disk_gb, "metrics.disk_gb", 0),
+      network_gb: numero(metricas.network_gb, "metrics.network_gb", 0),
     },
   };
 }

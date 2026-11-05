@@ -8,6 +8,8 @@ export interface OpcoesApi {
 
 export type TipoErroApi = "http" | "timeout" | "rede" | "resposta_invalida";
 
+export class ErroConfiguracaoApi extends TypeError {}
+
 export class ErroApi extends Error {
   readonly tipo: TipoErroApi;
   readonly statusHttp: number | undefined;
@@ -33,13 +35,18 @@ export async function consultarJson(
   caminho: string,
   opcoes: OpcoesApi = {},
 ): Promise<unknown> {
-  const base = new URL(opcoes.baseUrl ?? process.env[variavelUrl] ?? basePadrao);
+  let base: URL;
+  try {
+    base = new URL(opcoes.baseUrl ?? process.env[variavelUrl] ?? basePadrao);
+  } catch (erro) {
+    throw new ErroConfiguracaoApi(`${variavelUrl} deve ser uma URL HTTP(S) válida.`, { cause: erro });
+  }
   if (!['https:', 'http:'].includes(base.protocol) || base.username || base.password || base.search || base.hash) {
-    throw new TypeError(`${variavelUrl} deve ser uma URL HTTP(S) sem credenciais, consulta ou fragmento.`);
+    throw new ErroConfiguracaoApi(`${variavelUrl} deve ser uma URL HTTP(S) sem credenciais, consulta ou fragmento.`);
   }
   const timeoutMs = opcoes.timeoutMs ?? Number(process.env.API_TIMEOUT_MS ?? 10000);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2147483647) {
-    throw new TypeError("API_TIMEOUT_MS/timeoutMs deve ser um inteiro positivo em milissegundos.");
+    throw new ErroConfiguracaoApi("API_TIMEOUT_MS/timeoutMs deve ser um inteiro positivo em milissegundos.");
   }
   const url = `${base.href.replace(/\/+$/, "")}/${caminho.replace(/^\/+/, "")}`;
   const controller = new AbortController();

@@ -3,9 +3,11 @@ import { responder } from "../../shared/http.ts";
 import {
   executarRodadaColeta,
   rotinaColeta,
+  consultarMonitoramentoColeta,
   type ResultadoRodadaColeta,
 } from "./collections.service.ts";
 import { intervaloAgendavel, INTERVALO_MAXIMO_SEGUNDOS } from "./collections.scheduler.ts";
+import { ErroApi } from "../../integrations/api-client.ts";
 
 /** Tamanho máximo do body em bytes (1MB). */
 const MAX_BODY_SIZE = 1024 * 1024;
@@ -71,17 +73,32 @@ export async function executarColetaManual(
 ): Promise<void> {
   try {
     const resultado: ResultadoRodadaColeta = await executarRodadaColeta();
+    const completo = resultado.totalServicos === 0 || resultado.sucessos === resultado.totalServicos;
+    const indisponivel = resultado.totalServicos > 0 && resultado.indisponiveis === resultado.totalServicos;
     responder(response, 200, {
-      sucesso: true,
-      mensagem: "Rodada de coleta executada com sucesso",
+      sucesso: completo,
+      resultado: completo ? "completo" : indisponivel ? "falha" : "parcial",
+      mensagem: resultado.totalServicos === 0 ? "A API não retornou serviços nesta rodada."
+        : completo ? "Rodada de coleta concluída com sucesso."
+        : indisponivel ? "Não foi possível obter métricas dos serviços nesta rodada."
+        : "Rodada concluída com resultados parciais.",
       dados: resultado,
     });
   } catch (erro) {
     console.error("[CONTROLLER] Erro ao executar coleta manual:", erro);
-    responder(response, 500, {
+    const externo = erro instanceof ErroApi;
+    const timeout = externo && erro.tipo === "timeout";
+    const mensagem = externo
+      ? timeout ? "Não foi possível atualizar a lista de serviços no tempo esperado."
+        : "Não foi possível atualizar a lista de serviços. Tente novamente mais tarde."
+      : "Não foi possível concluir a coleta. Verifique a configuração e a conexão com o banco.";
+    responder(response, externo ? timeout ? 504 : 502 : 500, {
       sucesso: false,
-      mensagem: "Erro ao executar coleta",
-      erro: erro instanceof Error ? erro.message : "Erro desconhecido",
+      resultado: "falha",
+      error: externo ? timeout ? "external_api_timeout" : "external_api_failure" : "internal_error",
+      message: mensagem,
+      mensagem,
+      erro: mensagem,
     });
   }
 }
@@ -131,8 +148,10 @@ export async function iniciarRotinaColetaPeriodica(
     console.error("[CONTROLLER] Erro ao iniciar rotina:", erro);
     responder(response, 500, {
       sucesso: false,
-      mensagem: "Erro ao iniciar rotina de coleta",
-      erro: erro instanceof Error ? erro.message : "Erro desconhecido",
+      mensagem: "Não foi possível iniciar a rotina de coleta.",
+      erro: "Não foi possível iniciar a rotina de coleta.",
+      error: "internal_error",
+      message: "Não foi possível iniciar a rotina de coleta.",
     });
   }
 }
@@ -165,8 +184,10 @@ export async function pararRotinaColetaPeriodica(
     console.error("[CONTROLLER] Erro ao parar rotina:", erro);
     responder(response, 500, {
       sucesso: false,
-      mensagem: "Erro ao parar rotina de coleta",
-      erro: erro instanceof Error ? erro.message : "Erro desconhecido",
+      mensagem: "Não foi possível parar a rotina de coleta.",
+      erro: "Não foi possível parar a rotina de coleta.",
+      error: "internal_error",
+      message: "Não foi possível parar a rotina de coleta.",
     });
   }
 }
@@ -179,9 +200,10 @@ export async function statusRotinaColeta(
   _request: IncomingMessage,
   response: ServerResponse<IncomingMessage>,
 ): Promise<void> {
+  response.setHeader("Cache-Control", "no-store");
   responder(response, 200, {
     sucesso: true,
-    dados: rotinaColeta.status(),
+    dados: { ...rotinaColeta.status(), monitoramento: consultarMonitoramentoColeta() },
   });
 }
 
