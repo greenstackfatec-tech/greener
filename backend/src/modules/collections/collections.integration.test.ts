@@ -186,8 +186,11 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       const resposta = await executar();
       estado.falharPrimeiroCarbono = false;
       assert.equal(resposta.status, 200);
-      const resultado = (await resposta.json()) as { dados: { sucessos: number; erros: number } };
-      assert.equal(resultado.dados.sucessos, 2);
+      const resultado = (await resposta.json()) as { sucesso: boolean; resultado: string; dados: { sucessos: number; parciais: number; erros: number } };
+      assert.equal(resultado.sucesso, false);
+      assert.equal(resultado.resultado, "parcial");
+      assert.equal(resultado.dados.sucessos, 1);
+      assert.equal(resultado.dados.parciais, 1);
       assert.equal(resultado.dados.erros, 1);
       const [coleta] = await buscarHistoricoColetas(idServico);
       assert.equal(coleta.cpuPercentual, metricas.metrics.cpu_percent);

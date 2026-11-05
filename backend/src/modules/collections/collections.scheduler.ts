@@ -1,5 +1,5 @@
 import type { Servico } from "../../integrations/metrics-api.ts";
-import type { ResultadoColeta } from "./collections.service.ts";
+import type { ResultadoColeta } from "./collections.types.ts";
 
 export const INTERVALO_PADRAO_SEGUNDOS = 60;
 export const INTERVALO_MAXIMO_SEGUNDOS = Math.floor(2_147_483_647 / 1000);
@@ -122,7 +122,7 @@ export function criarRotinaColeta(dependencias: DependenciasRotina) {
         const resultado = await dependencias.coletarServico(
           entrada.servico, entrada.intervaloApi ?? intervaloAlternativo, informarIntervalo,
         );
-        logger.log(`[COLETA] ${entrada.servico.id}: ${resultado.status}`);
+        logger.log(`[COLETA] ${entrada.servico.id}: resultado=${resultado.resultado}, statusMetricas=${resultado.status}`);
         if (resultado.erro) logger.error(`[COLETA] ${entrada.servico.id}: ${resultado.erro}`);
       } catch (erro) {
         logger.error(`[COLETA] ${entrada.servico.id}: falha na coleta; nova tentativa programada:`, erro);
