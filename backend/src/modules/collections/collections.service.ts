@@ -19,6 +19,7 @@ import {
   gravarColetaRecebida,
   gravarColetaIndisponivel,
   type StatusColeta,
+  buscarHistoricoColetas,
   listarColetas as listarColetasDoRepository,
 } from "./collections.repository.ts";
 import { ErroApi } from "../../integrations/api-client.ts";
@@ -232,6 +233,11 @@ export async function listarColetas(): Promise<
   }>
 > {
   return listarColetasDoRepository();
+}
+
+/** Lista o histórico de coletas de um serviço, com as métricas e o cálculo. */
+export async function listarColetasDoServico(servicoId: number) {
+  return buscarHistoricoColetas(servicoId);
 }
 
 /** Exporta tipos para uso externo. */
