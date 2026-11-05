@@ -1,9 +1,7 @@
 /**
  * Repository para configurações do sistema (tabela configuracoes).
  */
-import pg from "pg";
-
-const pool = new pg.Pool();
+import { consultar } from "../../db/connection.ts";
 
 /**
  * Busca uma configuração por chave.
@@ -15,7 +13,7 @@ export async function buscarConfiguracao(
   valorPadrao: string,
 ): Promise<string> {
   const sql = "SELECT valor FROM configuracoes WHERE chave = $1";
-  const resultado = await pool.query(sql, [chave]);
+  const resultado = await consultar<{ valor: string }>(sql, [chave]);
   return resultado.rows.length > 0 ? resultado.rows[0].valor : valorPadrao;
 }
 

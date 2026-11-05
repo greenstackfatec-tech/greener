@@ -1,16 +1,18 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { responder } from "../../shared/http.ts";
+import { lerId, responder } from "../../shared/http.ts";
 import {
   executarRodadaColeta,
-  iniciarRotinaColeta,
+  listarColetas,
+  listarColetasDoServico,
+  rotinaColeta,
+  consultarMonitoramentoColeta,
   type ResultadoRodadaColeta,
 } from "./collections.service.ts";
+import { intervaloAgendavel, INTERVALO_MAXIMO_SEGUNDOS } from "./collections.scheduler.ts";
+import { ErroApi } from "../../integrations/api-client.ts";
 
 /** Tamanho máximo do body em bytes (1MB). */
 const MAX_BODY_SIZE = 1024 * 1024;
-
-/** Armazena a função de parada da rotina ativa. */
-let pararRotina: (() => void) | null = null;
 
 /** Lê o body JSON da requisição com limite de tamanho. */
 async function lerBody(
@@ -32,9 +34,14 @@ async function lerBody(
 
     request.on("end", () => {
       try {
-        resolve(data ? JSON.parse(data) : {});
+        const body: unknown = data ? JSON.parse(data) : {};
+        if (body === null || typeof body !== "object" || Array.isArray(body)) {
+          reject(new SyntaxError("Body deve ser um objeto JSON"));
+          return;
+        }
+        resolve(body as Record<string, unknown>);
       } catch {
-        reject(new Error("JSON inválido"));
+        reject(new SyntaxError("JSON inválido"));
       }
     });
 
@@ -68,17 +75,32 @@ export async function executarColetaManual(
 ): Promise<void> {
   try {
     const resultado: ResultadoRodadaColeta = await executarRodadaColeta();
+    const completo = resultado.totalServicos === 0 || resultado.sucessos === resultado.totalServicos;
+    const indisponivel = resultado.totalServicos > 0 && resultado.indisponiveis === resultado.totalServicos;
     responder(response, 200, {
-      sucesso: true,
-      mensagem: "Rodada de coleta executada com sucesso",
+      sucesso: completo,
+      resultado: completo ? "completo" : indisponivel ? "falha" : "parcial",
+      mensagem: resultado.totalServicos === 0 ? "A API não retornou serviços nesta rodada."
+        : completo ? "Rodada de coleta concluída com sucesso."
+        : indisponivel ? "Não foi possível obter métricas dos serviços nesta rodada."
+        : "Rodada concluída com resultados parciais.",
       dados: resultado,
     });
   } catch (erro) {
     console.error("[CONTROLLER] Erro ao executar coleta manual:", erro);
-    responder(response, 500, {
+    const externo = erro instanceof ErroApi;
+    const timeout = externo && erro.tipo === "timeout";
+    const mensagem = externo
+      ? timeout ? "Não foi possível atualizar a lista de serviços no tempo esperado."
+        : "Não foi possível atualizar a lista de serviços. Tente novamente mais tarde."
+      : "Não foi possível concluir a coleta. Verifique a configuração e a conexão com o banco.";
+    responder(response, externo ? timeout ? 504 : 502 : 500, {
       sucesso: false,
-      mensagem: "Erro ao executar coleta",
-      erro: erro instanceof Error ? erro.message : "Erro desconhecido",
+      resultado: "falha",
+      error: externo ? timeout ? "external_api_timeout" : "external_api_failure" : "internal_error",
+      message: mensagem,
+      mensagem,
+      erro: mensagem,
     });
   }
 }
@@ -95,37 +117,43 @@ export async function iniciarRotinaColetaPeriodica(
   if (!validarContentType(request, response)) return;
 
   try {
-    if (pararRotina) {
-      responder(response, 400, {
-        sucesso: false,
-        mensagem: "Rotina de coleta já está em execução",
-      });
-      return;
-    }
-
     const body = await lerBody(request);
-    const intervaloSegundos = Number(body.intervaloSegundos ?? 60);
-    if (!Number.isInteger(intervaloSegundos) || intervaloSegundos < 10) {
+    const intervaloSegundos = body.intervaloSegundos;
+    if (intervaloSegundos !== undefined &&
+        (typeof intervaloSegundos !== "number" || !intervaloAgendavel(intervaloSegundos))) {
       responder(response, 400, {
         sucesso: false,
-        mensagem: "intervaloSegundos deve ser um inteiro >= 10",
+        mensagem: `intervaloSegundos deve ser um inteiro entre 1 e ${INTERVALO_MAXIMO_SEGUNDOS}`,
       });
       return;
     }
 
-    pararRotina = iniciarRotinaColeta(intervaloSegundos);
+    if (!rotinaColeta.iniciar(intervaloSegundos)) {
+      responder(response, 400, {
+        sucesso: false,
+        mensagem: "Rotina de coleta já iniciada ou em encerramento",
+      });
+      return;
+    }
 
+    const status = rotinaColeta.status();
     responder(response, 200, {
       sucesso: true,
-      mensagem: `Rotina de coleta iniciada com intervalo de ${intervaloSegundos}s`,
-      dados: { intervaloSegundos },
+      mensagem: "Rotina iniciada; cada serviço usa o intervalo informado pela API",
+      dados: { intervaloSegundos: status.intervaloAlternativoSegundos, ...status },
     });
   } catch (erro) {
+    if (erro instanceof SyntaxError) {
+      responder(response, 400, { sucesso: false, mensagem: erro.message });
+      return;
+    }
     console.error("[CONTROLLER] Erro ao iniciar rotina:", erro);
     responder(response, 500, {
       sucesso: false,
-      mensagem: "Erro ao iniciar rotina de coleta",
-      erro: erro instanceof Error ? erro.message : "Erro desconhecido",
+      mensagem: "Não foi possível iniciar a rotina de coleta.",
+      erro: "Não foi possível iniciar a rotina de coleta.",
+      error: "internal_error",
+      message: "Não foi possível iniciar a rotina de coleta.",
     });
   }
 }
@@ -139,7 +167,8 @@ export async function pararRotinaColetaPeriodica(
   response: ServerResponse<IncomingMessage>,
 ): Promise<void> {
   try {
-    if (!pararRotina) {
+    const status = rotinaColeta.status();
+    if (!status.executando && !status.encerrando) {
       responder(response, 400, {
         sucesso: false,
         mensagem: "Nenhuma rotina de coleta em execução",
@@ -147,8 +176,7 @@ export async function pararRotinaColetaPeriodica(
       return;
     }
 
-    pararRotina();
-    pararRotina = null;
+    await rotinaColeta.parar();
 
     responder(response, 200, {
       sucesso: true,
@@ -158,8 +186,10 @@ export async function pararRotinaColetaPeriodica(
     console.error("[CONTROLLER] Erro ao parar rotina:", erro);
     responder(response, 500, {
       sucesso: false,
-      mensagem: "Erro ao parar rotina de coleta",
-      erro: erro instanceof Error ? erro.message : "Erro desconhecido",
+      mensagem: "Não foi possível parar a rotina de coleta.",
+      erro: "Não foi possível parar a rotina de coleta.",
+      error: "internal_error",
+      message: "Não foi possível parar a rotina de coleta.",
     });
   }
 }
@@ -172,21 +202,31 @@ export async function statusRotinaColeta(
   _request: IncomingMessage,
   response: ServerResponse<IncomingMessage>,
 ): Promise<void> {
+  response.setHeader("Cache-Control", "no-store");
   responder(response, 200, {
     sucesso: true,
-    dados: { executando: pararRotina !== null },
+    dados: { ...rotinaColeta.status(), monitoramento: consultarMonitoramentoColeta() },
   });
 }
 
 /**
- * GET /collections
- * Lista o histórico de coletas.
+ * GET /collections e GET /collections?serviceId=
+ * Lista o histórico de coletas; com serviceId, só as daquele serviço.
  */
 export async function listar(
-  _request: IncomingMessage,
+  request: IncomingMessage,
   response: ServerResponse<IncomingMessage>,
 ): Promise<void> {
-  const { listarColetas } = await import("./collections.service.ts");
-  const coletas = await listarColetas();
-  responder(response, 200, coletas);
+  const url = new URL(request.url ?? "/", "http://localhost");
+  if (!url.searchParams.has("serviceId")) {
+    responder(response, 200, await listarColetas());
+    return;
+  }
+
+  const servicoId = lerId(url.searchParams.get("serviceId"));
+  if (servicoId === null) {
+    responder(response, 400, { error: "invalid_id", message: "serviceId deve ser um número inteiro positivo." });
+    return;
+  }
+  responder(response, 200, await listarColetasDoServico(servicoId));
 }

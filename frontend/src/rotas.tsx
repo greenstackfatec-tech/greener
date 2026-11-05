@@ -5,6 +5,7 @@ import { EmConstrucaoPage } from "./pages/EmConstrucaoPage.tsx";
 import { InicioPage } from "./pages/InicioPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { DashboardPage } from "./pages/DashboardPage.tsx";
+import { EstadosPage } from "./pages/EstadosPage.tsx";
 
 export const router = createBrowserRouter([
   { path: ROTAS.inicio, element: <InicioPage /> },
@@ -12,4 +13,5 @@ export const router = createBrowserRouter([
   { path: ROTAS.cadastro, element: <CadastroPage /> },
   { path: ROTAS.administrativa, element: <EmConstrucaoPage nome="Administrativa" /> },
   { path: ROTAS.dashboard, element: <DashboardPage /> },
+  ...(import.meta.env.DEV ? [{ path: ROTAS.dashboardEstados, element: <EstadosPage /> }] : []),
 ]);
