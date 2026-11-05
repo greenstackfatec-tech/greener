@@ -2,17 +2,28 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
 import type { TestContext } from "node:test";
+import { setTimeout } from "node:timers/promises";
 import pg from "pg";
 import { tratarRequisicaoMock } from "../../mocks/app.ts";
 import { metricas, servicos } from "../../mocks/fixtures.ts";
-import { executarRodadaColeta } from "./collections.service.ts";
+import {
+  executarRodadaColeta, buscarIntervaloAlternativo, coletarServico,
+  iniciarRotinaColeta, rotinaColeta,
+} from "./collections.service.ts";
+import { criarRotinaColeta } from "./collections.scheduler.ts";
+import { listarServicos } from "../../integrations/metrics-api.ts";
+import { consultarMonitoramentoColeta } from "./collections.service.ts";
+import { calculadoraEnergia } from "../../calculos/calculo-energia.ts";
+import { regioes } from "../../mocks/fixtures.ts";
 
 async function preparar(t: TestContext, umServico = false) {
+  t.mock.method(console, "error", () => {});
   const consultas: { sql: string; parametros: unknown[] }[] = [];
   const caminhos: string[] = [];
   const estado = {
     falharCadastro: false,
     falharColeta: false,
+    falharPrimeiraColeta: false,
     falharPrimeiroCadastro: false,
     semCarbono: false,
     falharPrimeiroCarbono: false,
@@ -21,6 +32,9 @@ async function preparar(t: TestContext, umServico = false) {
     metricas404: false,
     intervaloZero: false,
     listaVazia: false,
+    metricasInvalidas: false,
+    intervaloApi: 60,
+    cpuPercentual: 25,
   };
   const gravacoes: unknown[][] = [];
   t.mock.method(pg.Pool.prototype, "query", async (sql: string, parametros: unknown[] = []) => {
@@ -50,7 +64,10 @@ async function preparar(t: TestContext, umServico = false) {
       };
     }
     if (sql.includes("INSERT INTO metricas_servico")) {
-      if (estado.falharColeta) throw new Error("Falha ao salvar coleta");
+      if (estado.falharColeta || estado.falharPrimeiraColeta) {
+        estado.falharPrimeiraColeta = false;
+        throw new Error("Falha ao salvar coleta");
+      }
       gravacoes.push(parametros);
       return { rows: [{ id: consultas.length }] };
     }
@@ -92,6 +109,15 @@ async function preparar(t: TestContext, umServico = false) {
     } else if (umServico && caminho === "/services") {
       response.writeHead(200, { "content-type": "application/json" });
       response.end(JSON.stringify(servicos.slice(0, 1)));
+    } else if (estado.metricasInvalidas && caminho.startsWith("/metrics/")) {
+      response.end(JSON.stringify({ ...metricas, metrics: { ...metricas.metrics, memory_gb: -1 } }));
+    } else if (caminho.startsWith("/metrics/")) {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({
+        ...metricas,
+        collection_interval_seconds: estado.intervaloApi,
+        metrics: { ...metricas.metrics, cpu_percent: estado.cpuPercentual },
+      }));
     } else {
       tratarRequisicaoMock(request, response);
     }
@@ -171,7 +197,8 @@ test("carbono indisponível preserva as métricas de todos os serviços sem inve
   const { estado, gravacoes } = await preparar(t);
   estado.semCarbono = true;
   const resultado = await executarRodadaColeta();
-  assert.equal(resultado.sucessos, 2);
+  assert.equal(resultado.sucessos, 0);
+  assert.equal(resultado.parciais, 2);
   assert.equal(resultado.erros, 2);
   assert.equal(resultado.indisponiveis, 0);
   assert.equal(gravacoes.length, 2);
@@ -184,7 +211,8 @@ test("falha de carbono de uma região não impede o cálculo e a gravação da o
   const { estado, gravacoes } = await preparar(t);
   estado.falharPrimeiroCarbono = true;
   const resultado = await executarRodadaColeta();
-  assert.equal(resultado.sucessos, 2);
+  assert.equal(resultado.sucessos, 1);
+  assert.equal(resultado.parciais, 1);
   assert.equal(resultado.erros, 1);
   assert.equal(gravacoes.find((g) => g[0] === 41)![9], null);
   assert.ok((gravacoes.find((g) => g[0] === 42)![9] as number) > 0);
@@ -250,4 +278,180 @@ test("lista de serviços vazia conclui sem consultas ou gravações no banco", a
   assert.equal(resultado.erros, 0);
   assert.deepEqual(resultado.detalhes, []);
   assert.equal(consultas.length, 0);
+});
+
+test("TP06 rotina consulta novamente a API e grava cada novo estado, com recuperação de falha", async (t) => {
+  const { estado, gravacoes } = await preparar(t, true);
+  estado.intervaloApi = 1;
+  const rotina = criarRotinaColeta({
+    listarServicos, buscarIntervaloAlternativo, coletarServico,
+    logger: { log() {}, warn() {}, error() {} },
+  });
+  t.after(() => rotina.parar());
+  async function aguardar(condicao: () => boolean) {
+    const limite = Date.now() + 5000;
+    while (!condicao()) {
+      assert.ok(Date.now() < limite, "A coleta não ocorreu no prazo esperado");
+      await setTimeout(10);
+    }
+  }
+  rotina.iniciar();
+  await aguardar(() => gravacoes.length === 1);
+  const primeira = structuredClone(gravacoes[0]);
+  estado.semMetricas = true;
+  await aguardar(() => gravacoes.length === 2);
+  assert.equal(gravacoes[1][6], "indisponivel");
+  estado.semMetricas = false;
+  estado.cpuPercentual = 40;
+  await aguardar(() => gravacoes.length === 3);
+  await rotina.parar();
+  assert.deepEqual(gravacoes[0], primeira);
+  assert.equal(gravacoes[0][1], 25);
+  assert.equal(gravacoes[2][1], 40);
+  assert.equal(gravacoes[0][0], gravacoes[2][0]);
+  assert.equal(gravacoes[2][5], 1);
+});
+
+test("coletas manuais concorrentes e automáticas usam a mesma fila por serviço", async (t) => {
+  const { gravacoes, caminhos } = await preparar(t, true);
+  const original = globalThis.fetch;
+  let liberar!: () => void;
+  let avisar!: () => void;
+  const iniciada = new Promise<void>((resolve) => { avisar = resolve; });
+  const bloqueio = new Promise<void>((resolve) => { liberar = resolve; });
+  let consultasMetricas = 0;
+  let emAndamento = 0;
+  let maximo = 0;
+  t.mock.method(globalThis, "fetch", async (...args: Parameters<typeof fetch>) => {
+    if (String(args[0]).includes("/metrics/")) {
+      emAndamento++;
+      maximo = Math.max(maximo, emAndamento);
+      if (++consultasMetricas === 1) {
+        avisar();
+        await bloqueio;
+      }
+      try { return await original(...args); }
+      finally { emAndamento--; }
+    }
+    return original(...args);
+  });
+  const automatica = coletarServico(servicos[0], 60);
+  await iniciada;
+  const manuais = [executarRodadaColeta(), executarRodadaColeta()];
+  liberar();
+  await Promise.all([automatica, ...manuais]);
+  assert.equal(maximo, 1);
+  assert.equal(caminhos.filter((c) => c.includes("/metrics/")).length, 3);
+  assert.equal(gravacoes.length, 3);
+});
+
+test("o agendador recebe o intervalo da API mesmo quando a persistência falha", async (t) => {
+  const { estado } = await preparar(t, true);
+  estado.intervaloApi = 90;
+  estado.falharColeta = true;
+  t.mock.method(console, "error", () => {});
+  const intervalos: number[] = [];
+  await assert.rejects(() => coletarServico(servicos[0], 60, (valor) => { intervalos.push(valor); }));
+  assert.deepEqual(intervalos, [90]);
+});
+
+test("a função pública de início mantém o contrato anterior e compartilha uma única rotina", async (t) => {
+  const { gravacoes } = await preparar(t, true);
+  t.mock.method(console, "log", () => {});
+  t.after(() => rotinaColeta.parar());
+  const parar = iniciarRotinaColeta(60);
+  const pararNovamente = iniciarRotinaColeta(60);
+  assert.equal(typeof parar, "function");
+  assert.equal(rotinaColeta.status().executando, true);
+  const limite = Date.now() + 5000;
+  while (gravacoes.length === 0 || rotinaColeta.status().coletasEmAndamento > 0) {
+    assert.ok(Date.now() < limite, "A função pública não iniciou a coleta");
+    await setTimeout(10);
+  }
+  assert.equal(gravacoes.length, 1);
+  assert.equal(parar(), undefined);
+  pararNovamente();
+  await rotinaColeta.parar();
+  assert.equal(rotinaColeta.status().executando, false);
+});
+
+test("métricas inválidas não chegam ao cálculo nem são gravadas como válidas", async (t) => {
+  const { estado, gravacoes, caminhos } = await preparar(t, true);
+  estado.metricasInvalidas = true;
+  const rodada = await executarRodadaColeta();
+  assert.equal(rodada.sucessos, 0);
+  assert.equal(rodada.indisponiveis, 1);
+  assert.equal(rodada.detalhes[0].falha?.tipo, "resposta_invalida");
+  assert.equal(gravacoes[0][1], null);
+  assert.equal(gravacoes[0][6], "indisponivel");
+  assert.ok(!caminhos.some((c) => c.includes("/regions/")));
+});
+
+test("resultado calculado não finito preserva somente métricas brutas e informa falha de cálculo", async (t) => {
+  const { gravacoes } = await preparar(t, true);
+  t.mock.method(calculadoraEnergia, "calcularParaServico", async () => ({
+    potenciaEstimadaW: 10, duracaoSegundos: 60, energiaKwh: Infinity, emissaoCo2eG: NaN,
+    intensidadeCarbono: { ...regioes[0], region_code: "BR-SP" },
+  }));
+  const rodada = await executarRodadaColeta();
+  assert.equal(rodada.sucessos, 0);
+  assert.equal(rodada.parciais, 1);
+  assert.equal(rodada.detalhes[0].falha?.etapa, "calculo");
+  assert.equal(rodada.detalhes[0].calculo, undefined);
+  assert.ok(gravacoes[0].slice(7).every((valor) => valor === null));
+});
+
+test("erro de configuração na integração não vira indisponibilidade externa nem grava amostra", async (t) => {
+  const { gravacoes } = await preparar(t, true);
+  const anterior = process.env.API_TIMEOUT_MS;
+  process.env.API_TIMEOUT_MS = "inválido";
+  t.after(() => {
+    if (anterior === undefined) delete process.env.API_TIMEOUT_MS; else process.env.API_TIMEOUT_MS = anterior;
+  });
+  await assert.rejects(() => coletarServico(servicos[0], 60), TypeError);
+  assert.equal(gravacoes.length, 0);
+  assert.ok(consultarMonitoramentoColeta().falhasAtivas.some((f) => f.etapa === "configuracao" && f.idExterno === servicos[0].id));
+});
+
+test("falha de persistência preserva o diagnóstico externo e não provoca segunda gravação", async (t) => {
+  const { estado, consultas } = await preparar(t, true);
+  estado.semMetricas = true;
+  estado.falharColeta = true;
+  await assert.rejects(executarRodadaColeta, AggregateError);
+  const falhas = consultarMonitoramentoColeta().falhasAtivas.filter((f) => f.idExterno === servicos[0].id);
+  assert.ok(falhas.some((f) => f.etapa === "metricas"));
+  assert.ok(falhas.some((f) => f.etapa === "persistencia"));
+  assert.equal(consultas.filter((c) => c.sql.includes("INSERT INTO metricas_servico")).length, 1);
+});
+
+test("rejeição na fila não bloqueia a próxima coleta concorrente do mesmo serviço", async (t) => {
+  const { estado, gravacoes } = await preparar(t, true);
+  estado.falharPrimeiraColeta = true;
+  const primeira = assert.rejects(() => coletarServico(servicos[0], 60));
+  const segunda = coletarServico(servicos[0], 60);
+  await primeira;
+  assert.equal((await segunda).resultado, "completo");
+  assert.equal(gravacoes.length, 1);
+});
+
+test("coleta automática publica falha e recuperação no mesmo diagnóstico da manual", async (t) => {
+  const { estado } = await preparar(t, true);
+  estado.intervaloApi = 1;
+  estado.semCarbono = true;
+  t.mock.method(console, "log", () => {});
+  t.after(() => rotinaColeta.parar());
+  const aguardar = async (condicao: () => boolean) => {
+    const limite = Date.now() + 5000;
+    while (!condicao()) {
+      assert.ok(Date.now() < limite, "Diagnóstico não foi atualizado");
+      await setTimeout(10);
+    }
+  };
+  rotinaColeta.iniciar(1);
+  await aguardar(() => consultarMonitoramentoColeta().falhasAtivas.some((f) => f.etapa === "carbono"));
+  assert.equal(rotinaColeta.status().executando, true);
+  estado.semCarbono = false;
+  await aguardar(() => consultarMonitoramentoColeta().situacao === "ok");
+  await rotinaColeta.parar();
+  assert.equal(consultarMonitoramentoColeta().falhasAtivas.length, 0);
 });

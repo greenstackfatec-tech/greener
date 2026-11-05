@@ -30,6 +30,27 @@ test("GET /services passa por route, controller, service e repository", async (t
     assert.equal(servicos[0]?.nome, "Billing API");
   });
 
+  await t.test("GET /services/:id devolve um serviço só", async () => {
+    const lista = (await (await fetch(`${baseUrl}/services`)).json()) as Servico[];
+    const resposta = await fetch(`${baseUrl}/services/${lista[0].id}`);
+    assert.equal(resposta.status, 200);
+    assert.deepEqual(await resposta.json(), lista[0]);
+  });
+
+  await t.test("GET /services/:id de serviço que não existe responde 404 em JSON", async () => {
+    const resposta = await fetch(`${baseUrl}/services/999999`);
+    assert.equal(resposta.status, 404);
+    assert.equal(((await resposta.json()) as { error: string }).error, "not_found");
+  });
+
+  await t.test("GET /services/:id com id inválido responde 400", async () => {
+    for (const id of ["abc", "0", "-1", "1.5", "99999999999"]) {
+      const resposta = await fetch(`${baseUrl}/services/${id}`);
+      assert.equal(resposta.status, 400, `id ${id}`);
+      assert.equal(((await resposta.json()) as { error: string }).error, "invalid_id");
+    }
+  });
+
   await t.test("caminho que não existe responde 404", async () => {
     const resposta = await fetch(`${baseUrl}/nao-existe`);
     assert.equal(resposta.status, 404);

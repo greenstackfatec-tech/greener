@@ -313,6 +313,8 @@ Os serviços devem aparecer como `healthy` no resultado de `docker compose ps`.
 
 > O frontend usa React + TypeScript (Vite) e exibe a disponibilidade do ambiente. O backend oferece rotas de serviços, coletas, configuração e autenticação JWT. Para rodar o frontend fora do Docker, veja o [README do frontend](frontend/README.md).
 
+A coleta periódica inicia automaticamente com o backend. Consulte a [configuração e os comandos de controle](backend/README.md#rotina-periódica--tp06).
+
 ### 6. Encerrar a aplicação
 
 ```bash
