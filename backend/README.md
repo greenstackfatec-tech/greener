@@ -48,10 +48,22 @@ O primeiro comando executa uma rodada; os outros consultam os serviços e o hist
 A resposta da rodada contém o resumo em `dados` e os resultados por serviço em `dados.detalhes`. O comportamento da gravação é:
 
 - **Métricas e cálculo disponíveis:** grava as métricas e os resultados de potência, energia e CO₂e.
-- **Falha no cálculo ou na consulta de carbono:** preserva as métricas recebidas, com `status_coleta = 'sucesso'`, e deixa os campos de cálculo e `calculado_em` nulos. O erro aparece em `dados.detalhes[].erro` e no contador `dados.erros`. Nesse caso, `sucesso` indica obtenção das métricas; não significa que o cálculo foi concluído.
+- **Falha no cálculo ou na consulta de carbono:** preserva as métricas recebidas, com `status_coleta = 'sucesso'`, e deixa os campos de cálculo e `calculado_em` nulos. O detalhe retorna `resultado: "parcial"` e `falha` com etapa, tipo, código e mensagem; `erro` mantém a mesma mensagem para compatibilidade. O status do banco descreve a obtenção das métricas; o campo `resultado` descreve a operação completa.
 - **Todas as métricas iguais a zero:** grava os zeros e classifica a coleta como `sem_metricas`.
 - **Falha ao obter métricas:** registra uma coleta `indisponivel`, sem valores de métricas. HTTP 404 apenas é reportado, sem inserir uma coleta.
 - **Falha ao gravar no banco:** a rodada retorna HTTP 500 depois de aguardar os demais serviços. Gravações já concluídas permanecem no banco; a rodada inteira não é uma única transação.
+
+### Falhas externas e diagnóstico
+
+`API_TIMEOUT_MS` limita cada chamada externa, incluindo a leitura do corpo (padrão: 10000 ms). A rotina tenta novamente no próximo ciclo, sem retry imediato. Respostas inválidas são rejeitadas e falhas não geram métricas zeradas.
+
+Uma rodada processada responde HTTP 200 com `resultado: "completo"`, `"parcial"` ou `"falha"`; `sucesso` é verdadeiro apenas no primeiro caso. `dados.sucessos` conta cálculos completos e `dados.parciais` conta métricas preservadas sem cálculo. Falhas na descoberta respondem 504 para timeout ou 502 para os demais erros externos; configuração e falhas internas respondem 500. As respostas de erro usam `{ error, message }`, sem detalhes internos.
+
+`GET /collections/rotina/status` acrescenta `dados.monitoramento`, com situação `aguardando`, `ok` ou `degradado`, horários de tentativa/sucesso e `falhasAtivas`. A consulta não dispara coleta e usa `Cache-Control: no-store`. A recuperação é registrada por etapa e serviço.
+
+O dashboard consulta o diagnóstico a cada cinco segundos e na atualização manual, exibe falhas no aviso existente e mantém os dados anteriores identificados como possivelmente desatualizados.
+
+O diagnóstico fica em memória e reinicia com o processo; o histórico no PostgreSQL permanece. Múltiplas réplicas exigem diagnóstico compartilhado.
 
 ### Rotina periódica — TP06
 
@@ -65,7 +77,7 @@ O backend inicia a coleta automaticamente ao abrir a porta HTTP, com a primeira 
 
 As [rotas de início, parada e status](../docs/api.md#controle-da-coleta-periódica-tp06--93) compartilham `rotinaColeta`, exportada por `collections.service.ts`. A função existente `iniciarRotinaColeta(intervaloSegundos)` continua disponível e retorna uma função de parada, usando a mesma instância. Seu argumento e o campo homônimo do POST de início configuram apenas o intervalo alternativo e de descoberta; a API mantém prioridade. Sem argumento no POST, a configuração local é consultada periodicamente.
 
-Parar aguarda as coletas pendentes. Em `SIGINT`/`SIGTERM`, o servidor impede reinícios, aguarda requisições e coletas e fecha os pools do banco. A coordenação é por processo; múltiplas réplicas exigem coordenação compartilhada. As regras de estado dos serviços e a atualização automática do dashboard permanecem nas tarefas correspondentes.
+Parar aguarda as coletas pendentes. Em `SIGINT`/`SIGTERM`, o servidor impede reinícios, aguarda requisições e coletas e fecha os pools do banco. A coordenação é por processo; múltiplas réplicas exigem coordenação compartilhada. As regras de estado dos serviços e a atualização automática das métricas da tabela permanecem nas tarefas correspondentes.
 
 ### Testes de persistência
 

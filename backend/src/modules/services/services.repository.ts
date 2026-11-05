@@ -8,6 +8,9 @@ export interface Servico {
   cidade: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** Vêm da região; nulos quando o serviço não tem localização. */
+  pais?: string | null;
+  regiao?: string | null;
 }
 
 /** Serviço com a localização e a última coleta, que é o que o dashboard mostra (RF02, RF05, RF06). */
@@ -29,7 +32,7 @@ export interface ServicoParaSalvar {
   idExterno: string;
   nome: string;
   aplicacaoId: number;
-  regiaoId: number;
+  regiaoId: number | null;
   cidade: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -92,8 +95,25 @@ export async function listarServicos(): Promise<ServicoComUltimaColeta[]> {
        LIMIT 1
      ) m ON TRUE
      ORDER BY s.id`,
+export async function listarServicos(): Promise<Servico[]> {
+  const resultado = await consultar<Servico>(
+    `SELECT s.id::int, s.nome, s.status, s.cidade, s.latitude::float8, s.longitude::float8,
+            r.pais, r.nome AS regiao
+     FROM servicos s
+     LEFT JOIN regioes r ON r.id = s.regiao_id
+     ORDER BY s.id`,
   );
   return resultado.rows;
+}
+
+export async function buscarServicoPorId(id: number): Promise<Servico | null> {
+  const resultado = await consultar<Servico>(
+    `SELECT id::int, nome, status, cidade, latitude::float8, longitude::float8
+     FROM servicos
+     WHERE id = $1`,
+    [id],
+  );
+  return resultado.rows[0] ?? null;
 }
 
 // Upsert pelo id da API: o serviço que já existe é atualizado em vez de duplicado.
