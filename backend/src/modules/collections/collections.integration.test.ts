@@ -203,6 +203,34 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
   );
 
   await t.test(
+    "serviço sem localização é gravado com campos nulos e guarda as métricas sem calcular CO₂e",
+    async () => {
+      const anterior = cadastro;
+      cadastro = [
+        { ...structuredClone(servicos[0]), id: "servico-sem-localizacao", location: null } as never,
+      ];
+      const resposta = await executar();
+      cadastro = anterior;
+      assert.equal(resposta.status, 200);
+      const registros = await banco.query(
+        `SELECT id::int, regiao_id, cidade, latitude, longitude
+         FROM servicos WHERE id_externo = $1`,
+        ["servico-sem-localizacao"],
+      );
+      assert.equal(registros.rowCount, 1);
+      assert.deepEqual(
+        { ...registros.rows[0], id: undefined },
+        { id: undefined, regiao_id: null, cidade: null, latitude: null, longitude: null },
+      );
+      const [coleta] = await buscarHistoricoColetas(registros.rows[0].id);
+      assert.equal(coleta.statusColeta, "sucesso");
+      assert.equal(coleta.cpuPercentual, metricas.metrics.cpu_percent);
+      assert.equal(coleta.energiaKwh, null);
+      assert.equal(coleta.calculadoEm, null);
+    },
+  );
+
+  await t.test(
     "região não cadastrada gera erro sem inventar fatores nem gravar serviço com FK inválida",
     async (t) => {
       t.mock.method(console, "error", () => {});
@@ -270,7 +298,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     assert.deepEqual(resultado.rows, [{ id: idServico, coletas: 5 }]);
     const resposta = await fetch(`${urlApi}/collections`);
     assert.equal(resposta.status, 200);
-    assert.equal(((await resposta.json()) as unknown[]).length, 11);
+    assert.equal(((await resposta.json()) as unknown[]).length, 12);
   });
 
   await t.test(
