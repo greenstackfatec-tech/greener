@@ -3,9 +3,11 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import test from "node:test";
+import { setTimeout } from "node:timers/promises";
 import pg from "pg";
 import { tratarRequisicaoMock } from "../../mocks/app.ts";
 import { metricas, regioes, servicos } from "../../mocks/fixtures.ts";
+import { criarRotinaColeta } from "./collections.scheduler.ts";
 
 test("TP07 grava serviços e coletas com os repositories reais da BD04", async (t) => {
   const schema = `tp07_${randomUUID().replaceAll("-", "")}`;
@@ -56,6 +58,8 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     semMetricas: false,
     zerarMetricas: false,
     intervaloZero: false,
+    intervaloApi: 60,
+    cpuPercentual: 25,
   };
   const mock = createServer((request, response) => {
     const caminho = new URL(request.url!, "http://localhost").pathname;
@@ -78,7 +82,11 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
                     collection_interval_seconds: 60,
                     metrics: { cpu_percent: 0, memory_gb: 0, disk_gb: 0, network_gb: 0 },
                   }
-                : metricas,
+                : {
+                    ...metricas,
+                    collection_interval_seconds: estado.intervaloApi,
+                    metrics: { ...metricas.metrics, cpu_percent: estado.cpuPercentual },
+                  },
         ),
       );
     } else if (caminho === "/services") {
@@ -317,4 +325,41 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       }
     },
   );
+
+  await t.test("TP06 duas coletas automáticas preservam estados diferentes no PostgreSQL", async (t) => {
+    const { listarServicos } = await import("../../integrations/metrics-api.ts");
+    const { coletarServico, buscarIntervaloAlternativo } = await import("./collections.service.ts");
+    const rotina = criarRotinaColeta({
+      listarServicos, coletarServico, buscarIntervaloAlternativo,
+      logger: { log() {}, warn() {}, error() {} },
+    });
+    t.after(() => rotina.parar());
+    estado.intervaloApi = 1;
+    const antes = await buscarHistoricoColetas(idServico);
+    async function aguardarQuantidade(quantidade: number) {
+      const limite = Date.now() + 5000;
+      while (Date.now() < limite) {
+        const historico = await buscarHistoricoColetas(idServico);
+        if (historico.length >= quantidade) return historico;
+        await setTimeout(20);
+      }
+      throw new Error("A rotina não persistiu a coleta no prazo esperado");
+    }
+    rotina.iniciar();
+    const [primeira] = await aguardarQuantidade(antes.length + 1);
+    estado.cpuPercentual = 40;
+    const [segunda] = await aguardarQuantidade(antes.length + 2);
+    await rotina.parar();
+    assert.equal(primeira.cpuPercentual, 25);
+    assert.equal(segunda.cpuPercentual, 40);
+    assert.notEqual(segunda.id, primeira.id);
+    assert.ok(segunda.coletadoEm > primeira.coletadoEm);
+    const historico = await buscarHistoricoColetas(idServico);
+    assert.deepEqual(historico.find((coleta) => coleta.id === primeira.id), primeira);
+    const cadastroSalvo = await banco.query("SELECT id::int FROM servicos WHERE id_externo = $1", [servicos[0].id]);
+    assert.deepEqual(cadastroSalvo.rows, [{ id: idServico }]);
+    const lista = (await (await fetch(`${urlApi}/collections`)).json()) as { id: number }[];
+    assert.ok(lista.some((coleta) => coleta.id === primeira.id));
+    assert.ok(lista.some((coleta) => coleta.id === segunda.id));
+  });
 });

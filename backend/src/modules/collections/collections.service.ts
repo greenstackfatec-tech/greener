@@ -24,6 +24,7 @@ import {
 } from "./collections.repository.ts";
 import { ErroApi } from "../../integrations/api-client.ts";
 import { buscarIntervaloColetaSegundos } from "../configuracoes/configuracoes.repository.ts";
+import { criarRotinaColeta, INTERVALO_PADRAO_SEGUNDOS, intervaloAgendavel } from "./collections.scheduler.ts";
 
 interface CalculoColeta extends ResultadoCalculo {
   intensidadeCarbono: IntensidadeCarbono;
@@ -36,6 +37,7 @@ export interface ResultadoColeta {
   status: StatusColeta;
   erro?: string;
   calculo?: CalculoColeta;
+  intervaloSegundos?: number;
 }
 
 /** Resultado de uma rodada completa de coleta. */
@@ -49,10 +51,11 @@ export interface ResultadoRodadaColeta {
   detalhes: ResultadoColeta[];
 }
 
-async function coletarServico(
+async function coletarEGravarServico(
   servicoApi: ServicoApi,
   aplicacaoId: number,
   intervalo: number,
+  informarIntervalo?: (segundos: number) => void,
 ): Promise<ResultadoColeta> {
   const regiaoId = await buscarRegiaoId(servicoApi.location.region, servicoApi.location.country);
   const servico = await salvarServico({
@@ -89,6 +92,8 @@ async function coletarServico(
     };
   }
 
+  informarIntervalo?.(respostaMetricas.collection_interval_seconds);
+  const intervaloSegundos = respostaMetricas.collection_interval_seconds;
   const metricas = respostaMetricas.metrics;
   const temMetricasValidas =
     metricas.cpu_percent > 0 ||
@@ -97,7 +102,7 @@ async function coletarServico(
     metricas.network_gb > 0;
   if (!temMetricasValidas) {
     await gravarColetaRecebida(servico.id, respostaMetricas, null, "sem_metricas");
-    return { ...identificacaoServico, status: "sem_metricas" };
+    return { ...identificacaoServico, status: "sem_metricas", intervaloSegundos };
   }
 
   // Falhas no cálculo não descartam as métricas recebidas.
@@ -116,7 +121,38 @@ async function coletarServico(
   } else {
     await gravarColetaRecebida(servico.id, respostaMetricas);
   }
-  return { ...identificacaoServico, status: "sucesso", calculo, erro: erroCalculo };
+  return { ...identificacaoServico, status: "sucesso", calculo, erro: erroCalculo, intervaloSegundos };
+}
+
+const coletasPendentes = new Map<string, Promise<ResultadoColeta>>();
+
+export function coletarServico(
+  servico: ServicoApi,
+  intervalo: number,
+  informarIntervalo?: (segundos: number) => void,
+  aplicacaoId?: number,
+): Promise<ResultadoColeta> {
+  const anterior = coletasPendentes.get(servico.id);
+  const coleta = (async () => {
+    await anterior?.catch(() => {}); // Uma falha anterior não bloqueia a fila.
+    const id = aplicacaoId ?? await buscarAplicacaoId("GreenER Demo");
+    return coletarEGravarServico(servico, id, intervalo, informarIntervalo);
+  })().finally(() => {
+    if (coletasPendentes.get(servico.id) === coleta) coletasPendentes.delete(servico.id);
+  });
+  coletasPendentes.set(servico.id, coleta);
+  return coleta;
+}
+
+export async function buscarIntervaloAlternativo(): Promise<number> {
+  try {
+    const intervalo = await buscarIntervaloColetaSegundos();
+    if (intervaloAgendavel(intervalo)) return intervalo;
+    console.warn("[COLETA] Configuração local de intervalo inválida; usando 60s.");
+  } catch (erro) {
+    console.error("[COLETA] Falha ao ler intervalo local; usando 60s:", erro);
+  }
+  return INTERVALO_PADRAO_SEGUNDOS;
 }
 
 export async function executarRodadaColeta(): Promise<ResultadoRodadaColeta> {
@@ -137,9 +173,9 @@ export async function executarRodadaColeta(): Promise<ResultadoRodadaColeta> {
   }
 
   const aplicacaoId = await buscarAplicacaoId("GreenER Demo");
-  const intervalo = await buscarIntervaloColetaSegundos();
+  const intervalo = await buscarIntervaloAlternativo();
   const tarefas = servicosApi.map((servicoApi) =>
-    coletarServico(servicoApi, aplicacaoId, intervalo),
+    coletarServico(servicoApi, intervalo, undefined, aplicacaoId),
   );
 
   // Espera todas as gravações terminarem antes de reportar uma falha.
@@ -175,48 +211,13 @@ export async function executarRodadaColeta(): Promise<ResultadoRodadaColeta> {
   return rodada;
 }
 
-/**
- * Inicia a rotina de coleta periódica.
- * @param intervaloSegundos Intervalo entre coletas em segundos
- * @returns Função para parar a rotina
- */
+export const rotinaColeta = criarRotinaColeta({
+  listarServicos, buscarIntervaloAlternativo, coletarServico,
+});
+
 export function iniciarRotinaColeta(intervaloSegundos: number): () => void {
-  let timer: ReturnType<typeof setInterval> | null = null;
-  let executando = false;
-
-  async function rodada() {
-    if (executando) return; // Evita sobreposição
-    executando = true;
-    try {
-      const resultado = await executarRodadaColeta();
-      console.log(
-        `[COLETA] ${resultado.coletadoEm.toISOString()} - ` +
-          `Total: ${resultado.totalServicos} | ` +
-          `Sucesso: ${resultado.sucessos} | ` +
-          `Sem métricas: ${resultado.semMetricas} | ` +
-          `Indisponíveis: ${resultado.indisponiveis} | ` +
-          `Erros: ${resultado.erros}`,
-      );
-    } catch (erro) {
-      console.error("[COLETA] Erro na rodada:", erro);
-    } finally {
-      executando = false;
-    }
-  }
-
-  // Executa imediatamente na inicialização
-  rodada();
-
-  // Agenda execuções periódicas
-  timer = setInterval(rodada, intervaloSegundos * 1000);
-
-  // Retorna função de parada
-  return () => {
-    if (timer) {
-      clearInterval(timer);
-      timer = null;
-    }
-  };
+  rotinaColeta.iniciar(intervaloSegundos);
+  return () => { void rotinaColeta.parar(); };
 }
 
 /**
