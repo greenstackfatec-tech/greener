@@ -51,7 +51,9 @@ async function chamar<T>(caminho: string, init: RequestInit): Promise<T> {
       Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
     );
   }
-  return (await response.json()) as T;
+  // Respostas sem corpo (ex.: HTTP 204 de um PUT) devolvem `undefined`.
+  const texto = await response.text();
+  return (texto === "" ? undefined : JSON.parse(texto)) as T;
 }
 
 /** GET em `/api{caminho}`. */
@@ -63,6 +65,16 @@ export function requisitar<T>(caminho: string, signal?: AbortSignal): Promise<T>
 export function enviar<T>(caminho: string, corpo: unknown, signal?: AbortSignal): Promise<T> {
   return chamar<T>(caminho, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(corpo),
+    signal,
+  });
+}
+
+/** PUT com corpo JSON em `/api{caminho}` (usado para alterar configurações). */
+export function atualizar<T = void>(caminho: string, corpo: unknown, signal?: AbortSignal): Promise<T> {
+  return chamar<T>(caminho, {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(corpo),
     signal,
