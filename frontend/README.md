@@ -6,6 +6,9 @@ Aplicação React 19 + TypeScript criada com Vite. Telas implementadas: início 
 
 | Pasta | Responsabilidade | Conteúdo atual |
 |---|---|---|
+| `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx`, `CadastroPage.tsx` |
+| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `GraficoConsumo.tsx` |
+| `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `cadastro.ts` |
 | `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx` |
 | `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `ResumoConsumo.tsx` |
 | `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `indicadores.ts`, `servicos.ts` |
@@ -18,6 +21,7 @@ Aplicação React 19 + TypeScript criada com Vite. Telas implementadas: início 
 | `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts`, `useServicos.ts`, `useAgora.ts` |
 | `src/contexts/` | Estado compartilhado entre componentes | `ProntidaoContext.ts` |
 | `src/providers/` | Provedores de contexto e dependências | `ProntidaoProvider.tsx` |
+| `src/utils/` | Funções puras reutilizáveis | `validacao.ts` |
 
 ## Telas e rotas
 
@@ -27,7 +31,7 @@ As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. A
 |---|---|---|---|
 | `/` | Início | DW18 | Implementada (mostra o status do backend) |
 | `/login` | Login | DW19 | Implementada (JWT, "lembrar de mim", erros e bloqueio por tentativas) |
-| `/cadastro` | Cadastro | DW20 | Página provisória |
+| `/cadastro` | Cadastro | DW20 | Implementada (pessoa física e jurídica, validação por campo). O envio depende do endpoint do backend |
 | `/administrativa` | Administrativa | DW21 | Página provisória |
 | `/dashboard` | Dashboard | DW05, DW07 | Implementada (tabela, indicadores e estados visuais) |
 | `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
@@ -54,6 +58,17 @@ Pendências que dependem de outras tarefas:
 `src/services/auth.ts` chama `POST /auth/login` e `src/services/token.ts` guarda o JWT: em `localStorage` com "Lembrar de mim" marcado e em `sessionStorage` sem ele. Tokens expirados (1 hora) são descartados na leitura. Após entrar, a tela leva ao `/dashboard`. Conta de teste do seed: `teste@greener.com` / `greener123`.
 
 Pendências que dependem de outras tarefas: recuperação de senha (sem endpoint), proteção das rotas privadas e logout (DW17/DW21) e redirecionamento de quem já está logado.
+
+## Cadastro
+
+ Cria a conta (POST /auth/register). TODO(backend): o endpoint ainda NÃO existe (hoje só há POST /auth/login) e a tabela `usuarios`
+ não tem colunas para tipo de pessoa e CPF/CNPJ. Enquanto isso, o backend responde 404 e a tela
+ mostra "cadastro indisponível". Contrato esperado:
+ corpo:      { tipoPessoa: "fisica" | "juridica", nome, documento, email, senha }
+ sucesso:    201 com corpo JSON (ex.: { "id": "2" }); o cliente HTTP exige JSON na resposta
+ 400:        { error: "invalid_request", message: "..." }
+ 409:        { error: "email_already_exists" | "document_already_exists", message: "..." }
+ Lança `ErroApi` (services/api.ts) quando o backend recusa.
 
 ## Executar localmente
 
