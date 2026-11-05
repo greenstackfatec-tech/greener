@@ -1,9 +1,6 @@
 import { requisitar } from "./api.ts";
 
 export type StatusServico = "ativo" | "indisponivel" | "removido";
-export type StatusColeta = "sucesso" | "sem_metricas" | "indisponivel";
-
-/** Serviço como a tela de dashboard usa. Campo que o backend não enviou fica `null` (nunca 0 nem texto inventado). */
 export type StatusColeta = "sucesso" | "sem_metricas" | "indisponivel" | null;
 
 /** Serviço como o dashboard o consome (GET /api/services). */
@@ -16,10 +13,6 @@ export interface Servico {
   longitude: number | null;
   regiao: string | null;
   pais: string | null;
-  coletadoEm: string | null;
-  statusColeta: StatusColeta | null;
-  regiao: string;
-  pais: string;
   coletadoEm: string | null;
   statusColeta: StatusColeta;
   cpuPercentual: number | null;
@@ -59,13 +52,10 @@ function normalizar(item: unknown): Servico {
     cidade: texto(bruto.cidade),
     latitude: numero(bruto.latitude),
     longitude: numero(bruto.longitude),
-    // TODO(TP16/#81): o GET /services de hoje devolve só id, nome, status, cidade, latitude e longitude.
-    // Os campos abaixo passam a aparecer na tela sozinhos quando o backend começar a enviá-los
-    // (com estes mesmos nomes, ou ajuste só este arquivo).
     regiao: texto(bruto.regiao),
     pais: texto(bruto.pais),
     coletadoEm: texto(bruto.coletadoEm),
-    statusColeta: statusColeta as StatusColeta | null,
+    statusColeta: statusColeta as StatusColeta,
     cpuPercentual: numero(bruto.cpuPercentual),
     memoriaGb: numero(bruto.memoriaGb),
     discoGb: numero(bruto.discoGb),
@@ -83,6 +73,7 @@ export async function listarServicos(signal?: AbortSignal): Promise<Servico[]> {
   }
   return bruto.map(normalizar);
 }
+
 /** Estado visual de um serviço (RF02, RF05, RF06): os três são distintos na interface. */
 export type Situacao = "ativo" | "indisponivel" | "sem_metricas" | "removido";
 
@@ -91,11 +82,4 @@ export function situacaoDoServico(servico: Servico): Situacao {
   if (servico.status === "indisponivel" || servico.statusColeta === "indisponivel") return "indisponivel";
   if (servico.statusColeta !== "sucesso") return "sem_metricas";
   return "ativo";
-}
-
-export async function listarServicos(signal?: AbortSignal): Promise<Servico[]> {
-  const dados = await requisitar<unknown>("/services", signal);
-  // Resposta fora do formato esperado conta como falha de atualização (RNF04), não como lista vazia.
-  if (!Array.isArray(dados)) throw new Error("Resposta inesperada do servidor.");
-  return dados as Servico[];
 }

@@ -22,6 +22,11 @@ function servicos() {
   ];
 }
 
+interface MockRequest {
+  url: string;
+  socket: { destroy(): void };
+}
+
 export function mockServicos(): Plugin {
   let cenario: Cenario = "ok";
   return {
@@ -29,7 +34,8 @@ export function mockServicos(): Plugin {
     apply: "serve",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        const url = new URL(req.url ?? "/", "http://localhost");
+        const mockReq = req as MockRequest;
+        const url = new URL(mockReq.url ?? "/", "http://localhost");
         const responder = (status: number, corpo: unknown) => {
           res.statusCode = status;
           res.setHeader("Content-Type", "application/json");
@@ -48,7 +54,7 @@ export function mockServicos(): Plugin {
         }
 
         if (cenario === "rede") {
-          req.socket.destroy();
+          mockReq.socket.destroy();
           return;
         }
         const entregar = () => {

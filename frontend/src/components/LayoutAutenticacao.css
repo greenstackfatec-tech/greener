@@ -416,3 +416,59 @@
     display: inline !important;
   }
 }
+/* ---------- Gráfico de consumo (tela administrativa) ---------- */
+
+.grafico {
+  padding: 24px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.grafico-titulo {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.grafico-barras {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  height: 160px;
+  margin-top: 16px;
+  padding-bottom: 8px;
+}
+
+.grafico-barra-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+}
+
+.grafico-barra {
+  width: 100%;
+  max-width: 40px;
+  border-radius: 4px 4px 0 0;
+  background: var(--verde);
+  transition: height 0.3s ease;
+}
+
+.grafico-legenda {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--texto-apoio);
+  white-space: nowrap;
+}
+
+.grafico-unidade {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--texto-apoio);
+  text-align: center;
+}
