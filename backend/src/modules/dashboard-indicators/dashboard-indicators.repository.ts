@@ -3,9 +3,9 @@
  * TP10 - Calcular indicadores consolidados: consumo total, emissão total, serviços ativos e indisponíveis (RF08).
  */
 
-import pg from "pg";
+import { criarPool } from "../../db/connection.ts";
 
-const pool = new pg.Pool();
+const pool = criarPool();
 
 /** Indicadores consolidados do ambiente. */
 export interface IndicadoresConsolidados {
@@ -38,7 +38,7 @@ export async function buscarIndicadoresConsolidados(): Promise<IndicadoresConsol
       WHERE ms.status_coleta = 'sucesso'
         AND ms.energia_kwh IS NOT NULL
         AND ms.emissao_co2e_g IS NOT NULL
-      ORDER BY ms.servico_id, ms.coletado_em DESC
+      ORDER BY ms.servico_id, ms.coletado_em DESC, ms.id DESC
     ),
     contagem_servicos AS (
       SELECT
@@ -51,8 +51,9 @@ export async function buscarIndicadoresConsolidados(): Promise<IndicadoresConsol
       COALESCE(SUM(l.emissao_co2e_g), 0) as emissao_total_co2e_g,
       c.servicos_ativos,
       c.servicos_indisponiveis
-    FROM ultima_coleta_por_servico l
-    CROSS JOIN contagem_servicos c
+    FROM contagem_servicos c
+    LEFT JOIN ultima_coleta_por_servico l ON TRUE
+    GROUP BY c.servicos_ativos, c.servicos_indisponiveis
   `;
 
   try {

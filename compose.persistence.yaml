@@ -2,6 +2,7 @@
 services:
   backend:
     environment:
+      COLLECTIONS_AUTO_START: "false"
       METRICS_API_URL: http://mocks:4010
       CARBON_API_URL: http://mocks:4010
     depends_on:
