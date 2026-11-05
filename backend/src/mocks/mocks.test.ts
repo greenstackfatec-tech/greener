@@ -92,7 +92,7 @@ test("mocks locais atendem os clientes de integração", async (t) => {
   });
 
   await t.test("consulta intensidade usando a região do serviço", async () => {
-    const intensidade = await buscarIntensidadeCarbono(servico.location.region_code, opcoes);
+    const intensidade = await buscarIntensidadeCarbono(regiao.code, opcoes);
     assert.deepEqual(intensidade, {
       region_code: regiao.code,
       country: regiao.country,
@@ -170,26 +170,24 @@ test("mocks locais atendem os clientes de integração", async (t) => {
     });
   });
 
-  await t.test("localização ausente gera resposta_invalida na lista e no detalhe", async () => {
+  await t.test("localização ausente é aceita na lista e no detalhe, com campos nulos", async () => {
     const resposta = await fetch(`${cenario("sem-localizacao").baseUrl}/services/${servico.id}`);
     assert.equal(resposta.status, 200);
-    // location é obrigatório no contrato: null injeta uma resposta propositalmente inválida.
     assert.deepEqual(await resposta.json(), {
       ...servico,
       location: null,
       metrics_path: `/cenarios/sem-localizacao${servico.metrics_path}`,
     });
-    for (const consultar of [
-      () => listarServicos(cenario("sem-localizacao")),
-      () => buscarServico(servico.id, cenario("sem-localizacao")),
-    ]) {
-      await assert.rejects(consultar, (erro: unknown) => {
-        assert.ok(erro instanceof ErroApi);
-        assert.equal(erro.tipo, "resposta_invalida");
-        assert.equal(erro.statusHttp, undefined);
-        return true;
-      });
-    }
+    const vazia = {
+      region_code: null, country: null, region: null, city: null, latitude: null, longitude: null,
+    };
+    const lista = await listarServicos(cenario("sem-localizacao"));
+    assert.equal(lista.length, servicos.length);
+    assert.ok(lista.every((item) => JSON.stringify(item.location) === JSON.stringify(vazia)));
+    assert.deepEqual(
+      (await buscarServico(servico.id, cenario("sem-localizacao"))).location,
+      vazia,
+    );
   });
 
   await t.test("CORS permite GET e preflight OPTIONS do front local", async () => {
@@ -222,17 +220,16 @@ test("mocks locais atendem os clientes de integração", async (t) => {
 
   await t.test("cenários simultâneos não alteram as respostas normais nem as fixtures", async () => {
     const respostas = await Promise.allSettled([
-      listarServicos(cenario("sem-localizacao")),
       buscarMetricas(servico.id, cenario("sem-metricas")),
       buscarMetricas(servico.id, cenario("servico-fora-do-ar")),
       listarServicos(opcoes),
       buscarMetricas(servico.id, opcoes),
       listarRegioes(opcoes),
     ]);
-    for (const resposta of respostas.slice(0, 3)) assert.equal(resposta.status, "rejected");
-    assert.deepEqual(respostas[3], { status: "fulfilled", value: servicos });
-    assert.deepEqual(respostas[4], { status: "fulfilled", value: metricas });
-    assert.deepEqual(respostas[5], { status: "fulfilled", value: { regions: regioes, total: regioes.length } });
+    for (const resposta of respostas.slice(0, 2)) assert.equal(resposta.status, "rejected");
+    assert.deepEqual(respostas[2], { status: "fulfilled", value: servicos });
+    assert.deepEqual(respostas[3], { status: "fulfilled", value: metricas });
+    assert.deepEqual(respostas[4], { status: "fulfilled", value: { regions: regioes, total: regioes.length } });
     assert.deepEqual(await listarServicos(cenario("normal")), servicos);
     assert.deepEqual(await buscarMetricas(servico.id, opcoes), metricas);
   });

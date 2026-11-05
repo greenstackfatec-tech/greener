@@ -3,6 +3,12 @@ import { ErroApi } from "../services/api.ts";
 import { listarServicos, type Servico } from "../services/servicos.ts";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
+import { CartaoEstado } from "../components/CartaoEstado.tsx";
+import { TEXTOS_SITUACAO, rodapeDaSituacao } from "../estadosServico.ts";
+import { haQuanto, numero } from "../formatacao.ts";
+import { useAgora } from "../hooks/useAgora.ts";
+import { useServicos } from "../hooks/useServicos.ts";
+import { situacaoDoServico } from "../services/servicos.ts";
 import "./DashboardPage.css";
 
 function numero(valor: number | null, casas = 1): string {
@@ -18,12 +24,17 @@ function situacao(servico: Servico): "ativo" | "indisponivel" | "sem_metricas" |
 }
 
 export function DashboardPage() {
-  const [servicos, setServicos] = useState<Servico[]>([]);
-  const [carregando, setCarregando] = useState(true);
-  const [atualizando, setAtualizando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
+  const { servicos, carregando, atualizando, erro, atualizadoEm, recarregar } = useServicos();
+  const agora = useAgora();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
+  const { statusColeta, erroMonitoramento, atualizarMonitoramento } = useMonitoramentoColeta();
+  const erroColeta = statusColeta?.monitoramento.situacao === "degradado"
+    ? statusColeta.monitoramento.falhasAtivas.map((falha) =>
+      `${falha.servicoNome ? `${falha.servicoNome}: ` : ""}${falha.mensagem}`,
+    ).join(" ") || "A coleta apresentou falhas. Os dados podem estar desatualizados."
+    : null;
+  const erroExibido = [erro, erroMonitoramento, erroColeta].filter(Boolean).join(" ");
 
   const carregar = useCallback(async (silencioso = false) => {
     if (silencioso) setAtualizando(true); else setCarregando(true);
@@ -50,13 +61,13 @@ export function DashboardPage() {
 }, []);
 
   const contagem = useMemo(() => ({
-    total: servicos.filter((s) => s.status !== "removido").length,
-    ativos: servicos.filter((s) => situacao(s) === "ativo").length,
-    indisponiveis: servicos.filter((s) => situacao(s) === "indisponivel").length,
-    semMetricas: servicos.filter((s) => situacao(s) === "sem_metricas").length,
-  }), [servicos]);
+    total: lista.filter((s) => s.status !== "removido").length,
+    ativos: lista.filter((s) => situacaoDoServico(s) === "ativo").length,
+    indisponiveis: lista.filter((s) => situacaoDoServico(s) === "indisponivel").length,
+    semMetricas: lista.filter((s) => situacaoDoServico(s) === "sem_metricas").length,
+  }), [lista]);
 
-  const filtrados = useMemo(() => servicos.filter((s) => {
+  const filtrados = useMemo(() => lista.filter((s) => {
     const termo = busca.trim().toLocaleLowerCase("pt-BR");
     const corresponde = `${s.nome} ${s.cidade ?? ""} ${s.regiao ?? ""} ${s.pais ?? ""}`.toLocaleLowerCase("pt-BR").includes(termo);
     return corresponde && (filtro === "todos" || situacao(s) === filtro);
@@ -74,13 +85,13 @@ export function DashboardPage() {
     <main className="dash-main">
       <header className="dash-topbar"><div><span className="dash-breadcrumb">GreenER / </span><strong>Visão geral</strong></div><div className="dash-live"><i/> Dados do monitoramento</div></header>
       <section className="dash-content">
-        <div className="dash-heading"><div><p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p><h1>Visão geral</h1><p>Acompanhe o desempenho e o impacto ambiental dos seus serviços.</p></div><button className="dash-refresh" onClick={() => void carregar(true)} disabled={atualizando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button></div>
+        <div className="dash-heading"><div><p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p><h1>Visão geral</h1><p>Acompanhe o desempenho e o impacto ambiental dos seus serviços.</p></div><button className="dash-refresh" onClick={() => { void carregar(true); void atualizarMonitoramento(); }} disabled={atualizando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button></div>
 
         <div className="dash-summary">
-          <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{carregando ? "—" : contagem.total}</strong><em>Serviços cadastrados</em></div></article>
-          <article className="dash-summary-card"><span className="dash-summary-icon green">✓</span><div><small>Ativos</small><strong>{carregando ? "—" : contagem.ativos}</strong><em className="positive">Em operação</em></div></article>
-          <article className="dash-summary-card"><span className="dash-summary-icon red">!</span><div><small>Indisponíveis</small><strong>{carregando ? "—" : contagem.indisponiveis}</strong><em>Sem resposta na coleta</em></div></article>
-          <article className="dash-summary-card"><span className="dash-summary-icon amber">◷</span><div><small>Sem métricas</small><strong>{carregando ? "—" : contagem.semMetricas}</strong><em>Aguardando dados</em></div></article>
+          <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{resumo(contagem.total)}</strong><em>Serviços cadastrados</em></div></article>
+          <article className="dash-summary-card"><span className="dash-summary-icon green">✓</span><div><small>Ativos</small><strong>{resumo(contagem.ativos)}</strong><em className="positive">Em operação</em></div></article>
+          <article className="dash-summary-card"><span className="dash-summary-icon gray">!</span><div><small>Indisponíveis</small><strong>{resumo(contagem.indisponiveis)}</strong><em>Sem resposta na coleta</em></div></article>
+          <article className="dash-summary-card"><span className="dash-summary-icon blue">◷</span><div><small>Sem métricas</small><strong>{resumo(contagem.semMetricas)}</strong><em>Aguardando dados</em></div></article>
         </div>
 
         <section className="dash-panel" id="servicos">

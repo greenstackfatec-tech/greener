@@ -11,6 +11,11 @@ Aplicação React 19 + TypeScript criada com Vite. Telas implementadas: início 
 | `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `indicadores.ts`, `servicos.ts` |
 | `src/assets/` | Imagens usadas pelas telas | `greener-icon.png` |
 | `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts`, `useIndicadores.ts` |
+| `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx`, `DashboardPage.tsx`, `EstadosPage.tsx` |
+| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `GraficoConsumo.tsx`, `CartaoEstado.tsx` |
+| `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `servicos.ts` |
+| `src/assets/` | Imagens usadas pelas telas | `greener-icon.png` |
+| `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts`, `useServicos.ts`, `useAgora.ts` |
 | `src/contexts/` | Estado compartilhado entre componentes | `ProntidaoContext.ts` |
 | `src/providers/` | Provedores de contexto e dependências | `ProntidaoProvider.tsx` |
 
@@ -24,7 +29,8 @@ As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. A
 | `/login` | Login | DW19 | Implementada (JWT, "lembrar de mim", erros e bloqueio por tentativas) |
 | `/cadastro` | Cadastro | DW20 | Página provisória |
 | `/administrativa` | Administrativa | DW21 | Página provisória |
-| `/dashboard` | Dashboard | DW05 | Página provisória |
+| `/dashboard` | Dashboard | DW05, DW07 | Implementada (tabela, indicadores e estados visuais) |
+| `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
 
 O cliente HTTP fica em `src/services/api.ts`. `requisitar<T>(caminho)` (GET) e `enviar<T>(caminho, corpo)` (POST com JSON) fazem as chamadas a partir de `/api`; as telas não usam `fetch` diretamente. Respostas fora de 2xx viram `ErroApi` (com `status`, `codigo` e, no HTTP 429, `tentarNovamenteEmSegundos`). Se houver token salvo, o cliente envia `Authorization: Bearer <token>` automaticamente.
 
@@ -72,3 +78,23 @@ A aplicação abre em `http://localhost:5173`. O Vite encaminha `/api/*` para o 
 ## Docker
 
 O `Dockerfile` usa dois estágios: o Node gera o `dist/` e o Nginx serve os arquivos na porta 80, encaminhando `/api/` ao serviço `backend`. Com o Compose iniciado, acesse `http://localhost:8080` (ou a porta configurada em `FRONTEND_PORT`).
+
+
+## Estados visuais do dashboard (DW07)
+
+Seguem o mock `docs/design/DD07 estados de interface .png`. O componente `CartaoEstado` desenha os seis estados e `/dashboard/estados` (só em desenvolvimento) mostra todos juntos para conferência.
+
+| Estado | Onde aparece no dashboard |
+|---|---|
+| Ativo (verde) | Chip "Ativo" e valor de energia em verde, com "Última coleta há N min". |
+| Indisponível (cinza) | Chip "Indisponível" e traço no lugar da leitura, com "Sem leitura atual". |
+| Sem métricas (azul) | Chip "Sem métricas" e traço azul, com "Aguardando primeira coleta". |
+| Carregando (azul) | Cartão com pontos animados na primeira carga. |
+| Erro de atualização (vermelho) | Sem dados anteriores: cartão de erro com "Tentar de novo". Com dados anteriores: a tabela continua visível, os valores ficam vermelhos e um aviso informa que podem estar desatualizados (RNF04). |
+| Estado vazio (âmbar) | Cartão "Comece adicionando" quando a lista vem vazia. |
+
+O estado de cada serviço sai de `situacaoDoServico()` em `src/services/servicos.ts`. O horário da última atualização é o da última consulta bem-sucedida ao backend.
+
+### Ver o dashboard sem backend
+
+`npm run dev:mock` sobe o frontend com dados de exemplo para `/api/services` (arquivo `mock-servicos.ts`, só em desenvolvimento). Para trocar o cenário, abra `http://localhost:5173/api/__mock?cenario=ok|vazio|erro|lento|rede` e clique em "Atualizar dados" no dashboard. Para ver o erro com dados anteriores (RNF04), deixe em `ok`, mude para `erro` e atualize.

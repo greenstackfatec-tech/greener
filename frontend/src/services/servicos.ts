@@ -4,6 +4,9 @@ export type StatusServico = "ativo" | "indisponivel" | "removido";
 export type StatusColeta = "sucesso" | "sem_metricas" | "indisponivel";
 
 /** Serviço como a tela de dashboard usa. Campo que o backend não enviou fica `null` (nunca 0 nem texto inventado). */
+export type StatusColeta = "sucesso" | "sem_metricas" | "indisponivel" | null;
+
+/** Serviço como o dashboard o consome (GET /api/services). */
 export interface Servico {
   id: number;
   nome: string;
@@ -15,6 +18,10 @@ export interface Servico {
   pais: string | null;
   coletadoEm: string | null;
   statusColeta: StatusColeta | null;
+  regiao: string;
+  pais: string;
+  coletadoEm: string | null;
+  statusColeta: StatusColeta;
   cpuPercentual: number | null;
   memoriaGb: number | null;
   discoGb: number | null;
@@ -75,4 +82,20 @@ export async function listarServicos(signal?: AbortSignal): Promise<Servico[]> {
     throw new Error("Resposta de serviços inválida: esperado um array.");
   }
   return bruto.map(normalizar);
+}
+/** Estado visual de um serviço (RF02, RF05, RF06): os três são distintos na interface. */
+export type Situacao = "ativo" | "indisponivel" | "sem_metricas" | "removido";
+
+export function situacaoDoServico(servico: Servico): Situacao {
+  if (servico.status === "removido") return "removido";
+  if (servico.status === "indisponivel" || servico.statusColeta === "indisponivel") return "indisponivel";
+  if (servico.statusColeta !== "sucesso") return "sem_metricas";
+  return "ativo";
+}
+
+export async function listarServicos(signal?: AbortSignal): Promise<Servico[]> {
+  const dados = await requisitar<unknown>("/services", signal);
+  // Resposta fora do formato esperado conta como falha de atualização (RNF04), não como lista vazia.
+  if (!Array.isArray(dados)) throw new Error("Resposta inesperada do servidor.");
+  return dados as Servico[];
 }
