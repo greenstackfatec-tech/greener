@@ -1,3 +1,5 @@
+import { listarServicos as listarServicosDoRepository } from "./services.repository.ts";
+import type { ServicoComUltimaColeta } from "./services.repository.ts";
 import {
   buscarServicoPorId as buscarServicoPorIdDoRepository,
   listarServicos as listarServicosDoRepository,
@@ -25,7 +27,7 @@ export async function listarServicos(): Promise<ServicoComLocalizacao[]> {
   }));
 // O service guarda as regras de negócio. Por enquanto só repassa ao repository;
 // regras como filtrar ou ordenar serviços entram aqui, sem mexer no controller.
-export async function listarServicos(): Promise<Servico[]> {
+export async function listarServicos(): Promise<ServicoComUltimaColeta[]> {
   return listarServicosDoRepository();
 }
 

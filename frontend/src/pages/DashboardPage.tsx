@@ -3,33 +3,17 @@ import { ErroApi, requisitar } from "../services/api.ts";
 import { useMonitoramentoColeta } from "../hooks/useMonitoramentoColeta.ts";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
+import { CartaoEstado } from "../components/CartaoEstado.tsx";
+import { TEXTOS_SITUACAO, rodapeDaSituacao } from "../estadosServico.ts";
+import { haQuanto, numero } from "../formatacao.ts";
+import { useAgora } from "../hooks/useAgora.ts";
+import { useServicos } from "../hooks/useServicos.ts";
+import { situacaoDoServico } from "../services/servicos.ts";
 import "./DashboardPage.css";
 
-type StatusServico = "ativo" | "indisponivel" | "removido";
-type StatusColeta = "sucesso" | "sem_metricas" | "indisponivel" | null;
-interface Servico {
-  id: number; nome: string; status: StatusServico; cidade: string | null;
-  latitude: number | null; longitude: number | null; regiao: string; pais: string;
-  coletadoEm: string | null; statusColeta: StatusColeta; cpuPercentual: number | null;
-  memoriaGb: number | null; discoGb: number | null; redeGb: number | null;
-  energiaKwh: number | null; emissaoCo2eG: number | null;
-}
-
-function numero(valor: number | null, casas = 1): string {
-  return valor === null || !Number.isFinite(valor) ? "—" : valor.toLocaleString("pt-BR", { maximumFractionDigits: casas });
-}
-function situacao(servico: Servico): "ativo" | "indisponivel" | "sem_metricas" | "removido" {
-  if (servico.status === "removido") return "removido";
-  if (servico.status === "indisponivel" || servico.statusColeta === "indisponivel") return "indisponivel";
-  if (servico.statusColeta !== "sucesso") return "sem_metricas";
-  return "ativo";
-}
-
 export function DashboardPage() {
-  const [servicos, setServicos] = useState<Servico[]>([]);
-  const [carregando, setCarregando] = useState(true);
-  const [atualizando, setAtualizando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
+  const { servicos, carregando, atualizando, erro, atualizadoEm, recarregar } = useServicos();
+  const agora = useAgora();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
   const { statusColeta, erroMonitoramento, atualizarMonitoramento } = useMonitoramentoColeta();
@@ -40,42 +24,110 @@ export function DashboardPage() {
     : null;
   const erroExibido = [erro, erroMonitoramento, erroColeta].filter(Boolean).join(" ");
 
-  const carregar = useCallback(async (silencioso = false) => {
-    if (silencioso) setAtualizando(true); else setCarregando(true);
-    setErro(null);
-    try {
-      const dados = await requisitar<Servico[]>("/services");
-      setServicos(dados);
-    } catch (falha) {
-      setErro(falha instanceof ErroApi ? "Não foi possível carregar os serviços. Verifique a conexão com o servidor." : "Não foi possível conectar ao servidor. Tente novamente.");
-    } finally { setCarregando(false); setAtualizando(false); }
-  }, []);
-
-  useEffect(() => {
-  let ativo = true;
-  requisitar<Servico[]>("/services")
-    .then((dados) => { if (ativo) setServicos(dados); })
-    .catch((falha) => {
-      if (ativo) setErro(falha instanceof ErroApi
-        ? "Não foi possível carregar os serviços. Verifique a conexão com o servidor."
-        : "Não foi possível conectar ao servidor. Tente novamente.");
-    })
-    .finally(() => { if (ativo) setCarregando(false); });
-  return () => { ativo = false; };
-}, []);
+  const lista = useMemo(() => servicos ?? [], [servicos]);
 
   const contagem = useMemo(() => ({
-    total: servicos.filter((s) => s.status !== "removido").length,
-    ativos: servicos.filter((s) => situacao(s) === "ativo").length,
-    indisponiveis: servicos.filter((s) => situacao(s) === "indisponivel").length,
-    semMetricas: servicos.filter((s) => situacao(s) === "sem_metricas").length,
-  }), [servicos]);
+    total: lista.filter((s) => s.status !== "removido").length,
+    ativos: lista.filter((s) => situacaoDoServico(s) === "ativo").length,
+    indisponiveis: lista.filter((s) => situacaoDoServico(s) === "indisponivel").length,
+    semMetricas: lista.filter((s) => situacaoDoServico(s) === "sem_metricas").length,
+  }), [lista]);
 
-  const filtrados = useMemo(() => servicos.filter((s) => {
+  const filtrados = useMemo(() => lista.filter((s) => {
     const termo = busca.trim().toLocaleLowerCase("pt-BR");
     const corresponde = `${s.nome} ${s.cidade ?? ""} ${s.regiao} ${s.pais}`.toLocaleLowerCase("pt-BR").includes(termo);
-    return corresponde && (filtro === "todos" || situacao(s) === filtro);
-  }), [servicos, busca, filtro]);
+    return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
+  }), [lista, busca, filtro]);
+
+  /** Valor mostrado nos cartões de resumo enquanto ainda não há dados. */
+  const resumo = (valor: number) => (servicos === null ? "—" : valor);
+  const ultimaAtualizacao = haQuanto(atualizadoEm, agora);
+
+  let corpo: ReactNode;
+  if (servicos === null) {
+    // Nunca houve resposta válida: carregando, ou erro sem nenhum dado anterior para mostrar.
+    corpo = carregando ? (
+      <div className="dash-estado">
+        <CartaoEstado tom="carregando" titulo="Carregando" selo="Em atualização" descricao="Consultando as métricas mais recentes" rodape="Buscando dados recentes" />
+      </div>
+    ) : (
+      <div className="dash-estado">
+        <CartaoEstado
+          tom="erro"
+          titulo="Erro de atualização"
+          selo="Atenção"
+          descricao={`Falha na coleta mais recente. ${erro ?? ""}`.trim()}
+          valor={null}
+          rodape="Nenhum dado anterior para mostrar"
+          acao={{ rotulo: "Tentar de novo", aoClicar: recarregar }}
+        />
+      </div>
+    );
+  } else if (servicos.length === 0) {
+    corpo = (
+      <div className="dash-estado">
+        <CartaoEstado tom="vazio" titulo="Estado vazio" selo="Primeiro passo" descricao="Nenhum serviço cadastrado" valor="Comece adicionando" rodape="Adicione um serviço para acompanhar métricas" />
+      </div>
+    );
+  } else if (filtrados.length === 0) {
+    corpo = (
+      <div className="dash-empty">
+        <span>⌕</span>
+        <strong>Nenhum serviço encontrado</strong>
+        <p>Ajuste a busca ou o filtro para ver os serviços.</p>
+      </div>
+    );
+  } else {
+    corpo = visao === "cartoes" ? (
+      <div className={erro ? "dash-cartoes desatualizado" : "dash-cartoes"}>
+        {filtrados.map((s) => {
+          const estado = situacaoDoServico(s);
+          const textos = TEXTOS_SITUACAO[estado];
+          return (
+            <CartaoEstado
+              key={s.id}
+              // "Removido" não existe no DD07; usa o tom neutro de "indisponível".
+              tom={estado === "removido" ? "indisponivel" : estado}
+              titulo={s.nome}
+              selo={textos.selo}
+              descricao={textos.descricao}
+              valor={s.energiaKwh === null ? null : `${numero(s.energiaKwh, 4)} kWh`}
+              rodape={`${rodapeDaSituacao(s, estado, agora)} · ${s.cidade || s.regiao}`}
+            />
+          );
+        })}
+      </div>
+    ) : (
+      <div className={erro ? "dash-table-wrap desatualizado" : "dash-table-wrap"}>
+        <table className="dash-table">
+          <thead>
+            <tr><th>Serviço</th><th>Estado</th><th>Localização</th><th>CPU</th><th>RAM</th><th>Disco</th><th>Rede</th><th>Energia</th><th>CO₂e</th></tr>
+          </thead>
+          <tbody>
+            {filtrados.map((s) => {
+              const estado = situacaoDoServico(s);
+              return (
+                <tr key={s.id}>
+                  <td><strong className="dash-service-name">{s.nome}</strong><small className="dash-service-id">ID {s.id}</small></td>
+                  <td><span className={`dash-status ${estado}`}><i />{TEXTOS_SITUACAO[estado].rotulo}</span></td>
+                  <td><span className="dash-location">{s.cidade || s.regiao}</span><small className="dash-country">{s.regiao}, {s.pais}</small></td>
+                  <td>{numero(s.cpuPercentual)}{s.cpuPercentual === null ? "" : "%"}</td>
+                  <td>{s.memoriaGb === null ? "—" : `${numero(s.memoriaGb)} GB`}</td>
+                  <td>{s.discoGb === null ? "—" : `${numero(s.discoGb)} GB`}</td>
+                  <td>{s.redeGb === null ? "—" : `${numero(s.redeGb)} GB`}</td>
+                  <td className="dash-energia" data-situacao={estado}>
+                    <span className="dash-energia-valor">{s.energiaKwh === null ? "—" : `${numero(s.energiaKwh, 4)} kWh`}</span>
+                    <small>{rodapeDaSituacao(s, estado, agora)}</small>
+                  </td>
+                  <td>{s.emissaoCo2eG === null ? "—" : `${numero(s.emissaoCo2eG, 3)} g`}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
   return <div className="dash-shell">
     <aside className="dash-sidebar">
@@ -92,10 +144,10 @@ export function DashboardPage() {
         <div className="dash-heading"><div><p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p><h1>Visão geral</h1><p>Acompanhe o desempenho e o impacto ambiental dos seus serviços.</p></div><button className="dash-refresh" onClick={() => { void carregar(true); void atualizarMonitoramento(); }} disabled={atualizando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button></div>
 
         <div className="dash-summary">
-          <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{carregando ? "—" : contagem.total}</strong><em>Serviços cadastrados</em></div></article>
-          <article className="dash-summary-card"><span className="dash-summary-icon green">✓</span><div><small>Ativos</small><strong>{carregando ? "—" : contagem.ativos}</strong><em className="positive">Em operação</em></div></article>
-          <article className="dash-summary-card"><span className="dash-summary-icon red">!</span><div><small>Indisponíveis</small><strong>{carregando ? "—" : contagem.indisponiveis}</strong><em>Sem resposta na coleta</em></div></article>
-          <article className="dash-summary-card"><span className="dash-summary-icon amber">◷</span><div><small>Sem métricas</small><strong>{carregando ? "—" : contagem.semMetricas}</strong><em>Aguardando dados</em></div></article>
+          <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{resumo(contagem.total)}</strong><em>Serviços cadastrados</em></div></article>
+          <article className="dash-summary-card"><span className="dash-summary-icon green">✓</span><div><small>Ativos</small><strong>{resumo(contagem.ativos)}</strong><em className="positive">Em operação</em></div></article>
+          <article className="dash-summary-card"><span className="dash-summary-icon gray">!</span><div><small>Indisponíveis</small><strong>{resumo(contagem.indisponiveis)}</strong><em>Sem resposta na coleta</em></div></article>
+          <article className="dash-summary-card"><span className="dash-summary-icon blue">◷</span><div><small>Sem métricas</small><strong>{resumo(contagem.semMetricas)}</strong><em>Aguardando dados</em></div></article>
         </div>
 
         <section className="dash-panel" id="servicos">

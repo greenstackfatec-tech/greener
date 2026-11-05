@@ -13,6 +13,21 @@ export interface Servico {
   regiao?: string | null;
 }
 
+/** Serviço com a localização e a última coleta, que é o que o dashboard mostra (RF02, RF05, RF06). */
+export interface ServicoComUltimaColeta extends Servico {
+  regiao: string;
+  pais: string;
+  /** Null quando o serviço ainda não teve nenhuma coleta (o dashboard mostra "sem métricas"). */
+  coletadoEm: Date | null;
+  statusColeta: "sucesso" | "sem_metricas" | "indisponivel" | null;
+  cpuPercentual: number | null;
+  memoriaGb: number | null;
+  discoGb: number | null;
+  redeGb: number | null;
+  energiaKwh: number | null;
+  emissaoCo2eG: number | null;
+}
+
 export interface ServicoParaSalvar {
   idExterno: string;
   nome: string;
@@ -57,6 +72,29 @@ export async function buscarRegiaoId(nome: string, pais: string): Promise<number
 }
 
 // O pg devolve BIGINT e NUMERIC como texto; os casts ::int e ::float8 trazem como number.
+// A última coleta de cada serviço vem do LATERAL; o LEFT JOIN mantém quem ainda não foi coletado.
+export async function listarServicos(): Promise<ServicoComUltimaColeta[]> {
+  const resultado = await consultar<ServicoComUltimaColeta>(
+    `SELECT s.id::int, s.nome, s.status, s.cidade,
+            s.latitude::float8, s.longitude::float8,
+            r.nome AS regiao, r.pais,
+            m.coletado_em AS "coletadoEm",
+            m.status_coleta AS "statusColeta",
+            m.cpu_percentual::float8 AS "cpuPercentual",
+            m.memoria_gb::float8 AS "memoriaGb",
+            m.disco_gb::float8 AS "discoGb",
+            m.rede_gb::float8 AS "redeGb",
+            m.energia_kwh::float8 AS "energiaKwh",
+            m.emissao_co2e_g::float8 AS "emissaoCo2eG"
+     FROM servicos s
+     JOIN regioes r ON r.id = s.regiao_id
+     LEFT JOIN LATERAL (
+       SELECT * FROM metricas_servico
+       WHERE servico_id = s.id
+       ORDER BY coletado_em DESC, id DESC
+       LIMIT 1
+     ) m ON TRUE
+     ORDER BY s.id`,
 export async function listarServicos(): Promise<Servico[]> {
   const resultado = await consultar<Servico>(
     `SELECT s.id::int, s.nome, s.status, s.cidade, s.latitude::float8, s.longitude::float8,
