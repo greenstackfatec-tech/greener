@@ -3,6 +3,8 @@
  * TP06 - Rotina de coleta periódica com intervalo configurável.
  * TP07 - Gravar serviços e coletas no banco.
  * TP09 - Implementar a classe de cálculo e gravar o resultado.
+ * TP14 - Tratamento de erros/timeouts APIs externas com diagnóstico.
+ * TP15 - Localização opcional (região/cidade nulas).
  */
 import {
   buscarAplicacaoId,
@@ -72,7 +74,7 @@ async function coletarEGravarServico(
   informarIntervalo?: (segundos: number) => void,
 ): Promise<ResultadoColeta> {
   const { region, country, region_code: codigoRegiao } = servicoApi.location;
-  // Sem país e região o serviço é gravado sem região (campos nulos).
+  // TP15: sem país/região grava com regiaoId nulo
   const regiaoId = region && country ? await buscarRegiaoId(region, country) : null;
   const servico = await salvarServico({
     idExterno: servicoApi.id,
@@ -95,49 +97,35 @@ async function coletarEGravarServico(
     if (!(erro instanceof ErroApi)) throw erro;
     const falha = registrarFalha(erro, contexto);
     contexto.etapa = "persistencia";
-    // HTTP 404 é reportado sem inserir uma coleta.
     if (erro.statusHttp === 404 || erro.codigoApi === "service_not_found") {
-      return {
-        ...identificacaoServico,
-        status: "indisponivel",
-        resultado: "indisponivel",
-        falha,
-        erro: falha.mensagem,
-      };
+      return { ...identificacaoServico, status: "indisponivel", resultado: "indisponivel", falha, erro: falha.mensagem };
     }
     await gravarColetaIndisponivel(servico.id, intervalo);
-    return {
-      ...identificacaoServico,
-      status: "indisponivel",
-      resultado: "indisponivel",
-      falha,
-      erro: falha.mensagem,
-    };
+    return { ...identificacaoServico, status: "indisponivel", resultado: "indisponivel", falha, erro: falha.mensagem };
   }
   resolverFalha(contexto);
 
   informarIntervalo?.(respostaMetricas.collection_interval_seconds);
   const intervaloSegundos = respostaMetricas.collection_interval_seconds;
   const metricas = respostaMetricas.metrics;
-  const temMetricasValidas =
-    metricas.cpu_percent > 0 ||
-    metricas.memory_gb > 0 ||
-    metricas.disk_gb > 0 ||
-    metricas.network_gb > 0;
+  const temMetricasValidas = metricas.cpu_percent > 0 || metricas.memory_gb > 0 || metricas.disk_gb > 0 || metricas.network_gb > 0;
   if (!temMetricasValidas) {
     contexto.etapa = "persistencia";
     await gravarColetaRecebida(servico.id, respostaMetricas, null, "sem_metricas");
     return { ...identificacaoServico, status: "sem_metricas", resultado: "sem_metricas", intervaloSegundos };
   }
 
-  // Falhas no cálculo não descartam as métricas recebidas.
+  // TP15: sem region_code não calcula CO₂e, mas preserva métricas
   let calculo: CalculoColeta;
   contexto.etapa = "calculo";
+  if (!codigoRegiao) {
+    contexto.etapa = "persistencia";
+    await gravarColetaRecebida(servico.id, respostaMetricas);
+    const falha = registrarFalha(new Error("Serviço sem localização: CO₂e não calculado"), { ...contexto, etapa: "carbono" });
+    return { ...identificacaoServico, status: "sucesso", resultado: "parcial", intervaloSegundos, falha, erro: falha.mensagem };
+  }
   try {
-    calculo = await calculadoraEnergia.calcularParaServico(
-      respostaMetricas,
-      servicoApi.location.region_code,
-    );
+    calculo = await calculadoraEnergia.calcularParaServico(respostaMetricas, codigoRegiao);
     validarCalculo(calculo);
     resolverFalha({ ...contexto, etapa: "carbono" });
     resolverFalha(contexto);
@@ -145,25 +133,8 @@ async function coletarEGravarServico(
     if (erro instanceof ErroConfiguracaoApi) throw erro;
     const falha = registrarFalha(erro, { ...contexto, etapa: erro instanceof ErroApi ? "carbono" : "calculo" });
     contexto.etapa = "persistencia";
-  let calculo: CalculoColeta | undefined;
-  let erroCalculo: string | undefined;
-  if (!codigoRegiao) {
-    erroCalculo = "Serviço sem localização: CO₂e não calculado";
-  } else {
-    try {
-      calculo = await calculadoraEnergia.calcularParaServico(respostaMetricas, codigoRegiao);
-    } catch (erro) {
-      erroCalculo = erro instanceof Error ? erro.message : "Falha ao calcular a coleta";
-    }
-  }
-  if (calculo) {
-    await gravarColetaSucesso(servico, respostaMetricas, calculo.intensidadeCarbono, calculo);
-  } else {
     await gravarColetaRecebida(servico.id, respostaMetricas);
-    return {
-      ...identificacaoServico, status: "sucesso", resultado: "parcial", intervaloSegundos,
-      falha, erro: falha.mensagem,
-    };
+    return { ...identificacaoServico, status: "sucesso", resultado: "parcial", intervaloSegundos, falha, erro: falha.mensagem };
   }
   contexto.etapa = "persistencia";
   await gravarColetaSucesso(servico, respostaMetricas, calculo.intensidadeCarbono, calculo);
@@ -180,7 +151,7 @@ export function coletarServico(
 ): Promise<ResultadoColeta> {
   const anterior = coletasPendentes.get(servico.id);
   const coleta = (async () => {
-    await anterior?.catch(() => {}); // Uma falha anterior não bloqueia a fila.
+    await anterior?.catch(() => {});
     const contexto: ContextoFalha = { etapa: "persistencia", idExterno: servico.id, servicoNome: servico.name };
     monitoramento.iniciarColeta();
     try {
@@ -230,10 +201,7 @@ export async function executarRodadaColeta(): Promise<ResultadoRodadaColeta> {
     erros: 0,
     detalhes: [],
   };
-
-  if (servicosApi.length === 0) {
-    return rodada;
-  }
+  if (servicosApi.length === 0) return rodada;
 
   let aplicacaoId: number;
   const persistencia = monitoramento.iniciar({ etapa: "persistencia" });
@@ -245,47 +213,28 @@ export async function executarRodadaColeta(): Promise<ResultadoRodadaColeta> {
     throw erro;
   }
   const intervalo = await buscarIntervaloAlternativo();
-  const tarefas = servicosApi.map((servicoApi) =>
-    coletarServico(servicoApi, intervalo, undefined, aplicacaoId),
-  );
-
-  // Espera todas as gravações terminarem antes de reportar uma falha.
-  const coletas = await Promise.allSettled(tarefas);
-  const falhas: unknown[] = [];
-
-  for (const coleta of coletas) {
-    if (coleta.status === "rejected") {
-      falhas.push(coleta.reason);
-      continue;
-    }
-
-    const resultado = coleta.value;
-    rodada.detalhes.push(resultado);
-
-    if (resultado.resultado === "completo") {
-      rodada.sucessos++;
-    } else if (resultado.resultado === "parcial") {
-      rodada.parciais++;
-    } else if (resultado.status === "sem_metricas") {
-      rodada.semMetricas++;
-    } else if (resultado.status === "indisponivel") {
-      rodada.indisponiveis++;
-    }
-
-    if (resultado.erro !== undefined) {
+  const tarefas = servicosApi.map((servicoApi) => coletarServico(servicoApi, intervalo, undefined, aplicacaoId));
+  const resultados = await Promise.allSettled(tarefas);
+  for (const coleta of resultados) {
+    if (coleta.status === "fulfilled") {
+      const resultado = coleta.value;
+      rodada.detalhes.push(resultado);
+      if (resultado.resultado === "completo") rodada.sucessos++;
+      else if (resultado.resultado === "parcial") rodada.parciais++;
+      else if (resultado.status === "sem_metricas") rodada.semMetricas++;
+      else if (resultado.status === "indisponivel") rodada.indisponiveis++;
+      if (resultado.falha) rodada.erros++;
+    } else {
       rodada.erros++;
     }
   }
-
-  if (falhas.length > 0) {
-    throw new AggregateError(falhas, "Falha ao persistir a rodada de coleta");
-  }
-
   return rodada;
 }
 
 export const rotinaColeta = criarRotinaColeta({
-  listarServicos: descobrirServicosMonitorados, buscarIntervaloAlternativo, coletarServico,
+  listarServicos: descobrirServicosMonitorados,
+  buscarIntervaloAlternativo,
+  coletarServico,
 });
 
 export function iniciarRotinaColeta(intervaloSegundos: number): () => void {
@@ -293,25 +242,12 @@ export function iniciarRotinaColeta(intervaloSegundos: number): () => void {
   return () => { void rotinaColeta.parar(); };
 }
 
-/**
- * Lista o histórico de coletas de todos os serviços.
- * @returns Lista de coletas
- */
-export async function listarColetas(): Promise<
-  Array<{
-    id: number;
-    servicoId: number;
-    coletadoEm: string;
-    statusColeta: StatusColeta;
-  }>
-> {
+export async function listarColetas(): Promise<Array<{ id: number; servicoId: number; coletadoEm: string; statusColeta: StatusColeta }>> {
   return listarColetasDoRepository();
 }
 
-/** Lista o histórico de coletas de um serviço, com as métricas e o cálculo. */
 export async function listarColetasDoServico(servicoId: number) {
   return buscarHistoricoColetas(servicoId);
 }
 
-/** Exporta tipos para uso externo. */
 export type { StatusColeta };
