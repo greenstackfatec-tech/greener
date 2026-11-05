@@ -195,7 +195,20 @@ xychart-beta
 
 <br>
 
-Registro das daily meetings da Sprint 2 (21/10/2026 a 09/11/2026), com participantes, andamento de cada integrante, impedimentos e avisos.
+| Dia | Data | Renan | Igor | Júlia | Guilherme | Thiago | Fernanda | Obs. |
+|---:|---|---|---|---|---|---|---|---|
+| 1 | 21/10 (qua) | Sprint Planning | Sprint Planning | Sprint Planning | Sprint Planning | Sprint Planning | Sprint Planning |Todos participaram da discussão sobre o planejamento da segunda sprint, alinhando tarefas, prazos, implementações e ações para melhoria contínua. |
+| 2 | 22/10 (qui) | #77 - Iniciou projeto frontend | Atualizar Product Backlog com base na Sprint Planning | #91 - Investigar as APIs do cliente e criar mocks locais | #99 - Iniciou projeto backend | #107 - Definir os estados visuais | #118 e #114 - Criação do Sprtint Backlog a Atas das Dailys | Início da produção |
+| 3 | 23/10 (sex) | | | | | | | |
+| 4 | 26/10 (seg) | | | | | | | |
+| 5 | 27/10 (ter) | | | | | | | |
+| 6 | 28/10 (qua) | | | | | | | |
+| 7 | 29/10 (qui) | | | | | | | |
+| 8 | 30/10 (sex) | | | | | | | |
+| 9 | 02/11 (seg) | | | | | | | |
+| 10 | 03/11 (ter) | | | | | | | |
+| 11 | 04/11 (qua) | | | | | | | |
+| 12 | 05/11 (qui) | | | | | | | |
+| 13 | 06/11 (sex) | | | | | | | |
 
-📄 [Ver atas da Sprint 1 (PDF)](#)
 </details>

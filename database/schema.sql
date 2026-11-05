@@ -86,6 +86,8 @@ CREATE TABLE logs_sistema (
 -- Serviços monitorados. Cada serviço pertence a uma aplicação e a uma região.
 CREATE TABLE servicos (
     id           BIGSERIAL     PRIMARY KEY,
+    -- Id do serviço na API de métricas (ex.: servico-1); é a chave do upsert.
+    id_externo   VARCHAR(100)  UNIQUE,
     aplicacao_id BIGINT        NOT NULL REFERENCES aplicacoes (id),
     regiao_id    BIGINT        NOT NULL REFERENCES regioes (id),
     nome         VARCHAR(120)  NOT NULL,
@@ -107,7 +109,7 @@ CREATE TABLE metricas_servico (
     memoria_gb          NUMERIC(14,6) CHECK (memoria_gb >= 0),
     disco_gb            NUMERIC(14,6) CHECK (disco_gb >= 0),
     rede_gb             NUMERIC(14,6) CHECK (rede_gb >= 0),
-    intervalo_segundos  INTEGER       CHECK (intervalo_segundos > 0),
+    intervalo_segundos  INTEGER       CHECK (intervalo_segundos >= 0),
     status_coleta       VARCHAR(20)   NOT NULL
                         CHECK (status_coleta IN ('sucesso', 'sem_metricas', 'indisponivel')),
     potencia_estimada_w NUMERIC(16,8) CHECK (potencia_estimada_w >= 0),

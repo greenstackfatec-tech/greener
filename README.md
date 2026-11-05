@@ -38,37 +38,85 @@ greener/
 ├── README.md 
 ├── .env.example 
 ├── compose.yaml 
+├── compose.persistence.yaml
 ├── frontend/ 
 │   ├── README.md 
 │   ├── Dockerfile 
+│   ├── nginx.conf 
+│   ├── package.json 
+│   ├── vite.config.ts 
+│   ├── eslint.config.js 
 │   └── src/ 
-│       ├── components/ 
-│       ├── pages/ 
-│       ├── services / 
-│       ├── hooks / 
-│       ├── contexts / 
-│       └── providers/ 
+│       ├── main.tsx 
+│       ├── App.tsx 
+│       ├── pages/          (InicioPage.tsx)
+│       ├── components/     (StatusBackend.tsx)
+│       ├── services/       (api.ts)
+│       ├── hooks/          (useProntidao.ts)
+│       ├── contexts/       (ProntidaoContext.ts)
+│       └── providers/      (ProntidaoProvider.tsx)
 ├── backend/
-│   ├── README.md 
-│   ├── Dockerfile 
-│   └── src/ 
-│       ├── app.ts 
-│       ├── server.ts 
-│       ├── db/ 
-│       │   └── connection.ts 
-│       ├── integrations/ 
+│   ├── README.md
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── tsconfig.json
+│   ├── scripts/
+│   │   └── verify-persistence.ts
+│   └── src/
+│       ├── app.ts
+│       ├── server.ts
+│       ├── db/
+│       │   ├── connection.ts
+│       │   └── migrations.integration.test.ts
+│       ├── integrations/
 │       │   ├── api-client.ts
-        │   ├── carbon-api.ts  
-│       │   └── metrics-api.ts  
-│       └── modules/ 
-│           └── coletas/ 
-│               ├── coletas.routes.ts 
-│               ├── coletas.controller.ts 
-│               ├── coletas.service.ts 
-│               └── coletas.repository.ts 
+│       │   ├── carbon-api.ts
+│       │   └── metrics-api.ts
+│       ├── mocks/
+│       │   ├── app.ts
+│       │   ├── fixtures.ts
+│       │   ├── mocks.test.ts
+│       │   └── server.ts
+│       ├── shared/
+│       │   └── http.ts
+│       └── modules/
+│           ├── auth/
+│           │   ├── auth.routes.ts
+│           │   ├── auth.controller.ts
+│           │   ├── auth.service.ts
+│           │   ├── auth.repository.ts
+│           │   ├── auth.middleware.ts
+│           │   ├── auth.limiter.ts
+│           │   ├── auth.http.ts
+│           │   ├── jwt.ts
+│           │   ├── auth.test.ts
+│           │   └── auth.integration.test.ts
+│           ├── collections/
+│           │   ├── collections.routes.ts
+│           │   ├── collections.controller.ts
+│           │   ├── collections.service.ts
+│           │   ├── collections.repository.ts
+│           │   ├── collections.test.ts
+│           │   └── collections.integration.test.ts
+│           ├── monitoring-settings/
+│           │   ├── monitoring-settings.routes.ts
+│           │   ├── monitoring-settings.controller.ts
+│           │   ├── monitoring-settings.service.ts
+│           │   └── monitoring-settings.repository.ts
+│           └── services/
+│               ├── services.routes.ts
+│               ├── services.controller.ts
+│               ├── services.service.ts
+│               ├── services.repository.ts
+│               ├── services.test.ts
+│               └── services.repository.integration.test.ts
 ├── database/ 
 │   ├── README.md 
-│   └── schema.sql 
+│   ├── schema.sql
+│   ├── seed.sql
+│   └── migrations/
+│       └── 001_persistencia_coletas.sql
 └── docs/
     ├── README.md
     ├── plano-de-entregas.md
@@ -116,7 +164,7 @@ O <b>Plano de Entregas</b> pode ser encontrado <a href="https://github.com/green
   
 ## 🎯 Sprints
 
-| Sprints | Data | Stauts | Relatório | Vídeo |
+| Sprints | Data | Status | Relatório | Vídeo |
 | :---: | :---: | :---: | :--- | :---: |
 | 1 | 19/10/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-1.md) | [Ver vídeo](https://youtu.be/gBj58b91ARw) |
 | 2 | 09/11/2026 | ⬜ | [Indisponível]() | [Indisponível](#) |
@@ -144,8 +192,9 @@ O <b>Sprint Backlog</b> pode ser encontrado <a href="https://github.com/greensta
 
 | Tecnologia | Versão |
 |------------|---------|
-| ![My Skills](https://skillicons.dev/icons?i=react) | v19.2|
-| ![My Skills](https://skillicons.dev/icons?i=ts) | v7.0 |
+| ![My Skills](https://skillicons.dev/icons?i=react) | v19.3|
+| ![My Skills](https://skillicons.dev/icons?i=vite) | v8.3 |
+| ![My Skills](https://skillicons.dev/icons?i=ts) | v7.0 (backend) · v6.0 (frontend) |
 | ![My Skills](https://skillicons.dev/icons?i=nodejs)| v22.16.0 |
 |![My Skills](https://skillicons.dev/icons?i=postgres) | v18.3 |
 | ![My Skills](https://skillicons.dev/icons?i=html)| HTML5 |
@@ -213,6 +262,8 @@ cp .env.example .env
 
 O exemplo usa valores apropriados somente para desenvolvimento local. Troque a senha antes de usar o ambiente em qualquer contexto compartilhado e não versione credenciais reais.
 
+Para usar o login JWT, configure `JWT_SECRET` no `.env` conforme o [README do backend](backend/README.md). Essa chave é obrigatória para autenticar; não é exigida pelas rotas públicas.
+
 ### 3. Validar a configuração do Docker Compose
 
 Na raiz do repositório, execute:
@@ -260,7 +311,9 @@ docker compose logs -f frontend backend database
 
 Os serviços devem aparecer como `healthy` no resultado de `docker compose ps`.
 
-> O frontend atual é um painel mínimo para confirmar a disponibilidade do ambiente. As rotas de produto ainda não estão implementadas no backend.
+> O frontend usa React + TypeScript (Vite) e exibe a disponibilidade do ambiente. O backend oferece rotas de serviços, coletas, configuração e autenticação JWT. Para rodar o frontend fora do Docker, veja o [README do frontend](frontend/README.md).
+
+A coleta periódica inicia automaticamente com o backend. Consulte a [configuração e os comandos de controle](backend/README.md#rotina-periódica--tp06).
 
 ### 6. Encerrar a aplicação
 
