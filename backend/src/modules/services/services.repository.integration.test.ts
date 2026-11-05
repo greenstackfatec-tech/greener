@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { consultar, encerrarConexao } from "../../db/connection.ts";
+import { listarServicos as listarServicosComLocalizacao, NAO_INFORMADO } from "./services.service.ts";
 import {
   buscarAplicacaoId,
   buscarRegiaoId,
@@ -17,10 +18,11 @@ test("repository de serviços com PostgreSQL real", async (t) => {
   const nomeLegado = `Serviço legado ${idExternoLegado}`;
   const nomeRegiao = `Região ${idExterno}`;
   t.after(async () => {
-    await consultar("DELETE FROM servicos WHERE id_externo IN ($1, $2) OR nome = $3", [
+    await consultar("DELETE FROM servicos WHERE id_externo IN ($1, $2, $4) OR nome = $3", [
       idExterno,
       idExternoLegado,
       nomeLegado,
+      `${idExterno}-sem-local`,
     ]);
     await consultar("DELETE FROM regioes WHERE nome = $1", [nomeRegiao]);
     await encerrarConexao();
@@ -235,5 +237,27 @@ test("repository de serviços com PostgreSQL real", async (t) => {
     assert.equal(typeof salvo.id, "number");
     assert.equal(servicos[0]?.nome, "Billing API");
     assert.equal(typeof servicos[0]?.latitude, "number");
+  });
+
+  await t.test("serviço sem região, cidade e coordenadas é salvo nulo e exibido como não informado", async () => {
+    const idSemLocal = `${idExterno}-sem-local`;
+    const salvo = await salvarServico({
+      idExterno: idSemLocal, nome: "Serviço sem localização", aplicacaoId,
+      regiaoId: null, cidade: null, latitude: null, longitude: null,
+    });
+    assert.equal(salvo.cidade, null);
+    assert.equal(salvo.latitude, null);
+    assert.equal(salvo.longitude, null);
+
+    const lido = (await listarServicosComLocalizacao()).find((servico) => servico.id === salvo.id);
+    assert.equal(lido?.pais, null);
+    assert.equal(lido?.latitude, null);
+    assert.deepEqual(lido?.localizacao, {
+      pais: NAO_INFORMADO, regiao: NAO_INFORMADO, cidade: NAO_INFORMADO,
+    });
+
+    const completo = (await listarServicosComLocalizacao())[0];
+    assert.equal(completo?.localizacao.pais, "Brazil");
+    assert.equal(completo?.localizacao.regiao, "Sudeste");
   });
 });

@@ -8,13 +8,16 @@ export interface Servico {
   cidade: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** Vêm da região; nulos quando o serviço não tem localização. */
+  pais?: string | null;
+  regiao?: string | null;
 }
 
 export interface ServicoParaSalvar {
   idExterno: string;
   nome: string;
   aplicacaoId: number;
-  regiaoId: number;
+  regiaoId: number | null;
   cidade: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -56,11 +59,23 @@ export async function buscarRegiaoId(nome: string, pais: string): Promise<number
 // O pg devolve BIGINT e NUMERIC como texto; os casts ::int e ::float8 trazem como number.
 export async function listarServicos(): Promise<Servico[]> {
   const resultado = await consultar<Servico>(
-    `SELECT id::int, nome, status, cidade, latitude::float8, longitude::float8
-     FROM servicos
-     ORDER BY id`,
+    `SELECT s.id::int, s.nome, s.status, s.cidade, s.latitude::float8, s.longitude::float8,
+            r.pais, r.nome AS regiao
+     FROM servicos s
+     LEFT JOIN regioes r ON r.id = s.regiao_id
+     ORDER BY s.id`,
   );
   return resultado.rows;
+}
+
+export async function buscarServicoPorId(id: number): Promise<Servico | null> {
+  const resultado = await consultar<Servico>(
+    `SELECT id::int, nome, status, cidade, latitude::float8, longitude::float8
+     FROM servicos
+     WHERE id = $1`,
+    [id],
+  );
+  return resultado.rows[0] ?? null;
 }
 
 // Upsert pelo id da API: o serviço que já existe é atualizado em vez de duplicado.

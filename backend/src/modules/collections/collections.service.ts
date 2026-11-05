@@ -17,6 +17,7 @@ import {
   gravarColetaRecebida,
   gravarColetaIndisponivel,
   type StatusColeta,
+  buscarHistoricoColetas,
   listarColetas as listarColetasDoRepository,
 } from "./collections.repository.ts";
 import { ErroApi, ErroConfiguracaoApi } from "../../integrations/api-client.ts";
@@ -70,7 +71,9 @@ async function coletarEGravarServico(
   contexto: ContextoFalha,
   informarIntervalo?: (segundos: number) => void,
 ): Promise<ResultadoColeta> {
-  const regiaoId = await buscarRegiaoId(servicoApi.location.region, servicoApi.location.country);
+  const { region, country, region_code: codigoRegiao } = servicoApi.location;
+  // Sem país e região o serviço é gravado sem região (campos nulos).
+  const regiaoId = region && country ? await buscarRegiaoId(region, country) : null;
   const servico = await salvarServico({
     idExterno: servicoApi.id,
     nome: servicoApi.name,
@@ -142,6 +145,20 @@ async function coletarEGravarServico(
     if (erro instanceof ErroConfiguracaoApi) throw erro;
     const falha = registrarFalha(erro, { ...contexto, etapa: erro instanceof ErroApi ? "carbono" : "calculo" });
     contexto.etapa = "persistencia";
+  let calculo: CalculoColeta | undefined;
+  let erroCalculo: string | undefined;
+  if (!codigoRegiao) {
+    erroCalculo = "Serviço sem localização: CO₂e não calculado";
+  } else {
+    try {
+      calculo = await calculadoraEnergia.calcularParaServico(respostaMetricas, codigoRegiao);
+    } catch (erro) {
+      erroCalculo = erro instanceof Error ? erro.message : "Falha ao calcular a coleta";
+    }
+  }
+  if (calculo) {
+    await gravarColetaSucesso(servico, respostaMetricas, calculo.intensidadeCarbono, calculo);
+  } else {
     await gravarColetaRecebida(servico.id, respostaMetricas);
     return {
       ...identificacaoServico, status: "sucesso", resultado: "parcial", intervaloSegundos,
@@ -289,6 +306,11 @@ export async function listarColetas(): Promise<
   }>
 > {
   return listarColetasDoRepository();
+}
+
+/** Lista o histórico de coletas de um serviço, com as métricas e o cálculo. */
+export async function listarColetasDoServico(servicoId: number) {
+  return buscarHistoricoColetas(servicoId);
 }
 
 /** Exporta tipos para uso externo. */
