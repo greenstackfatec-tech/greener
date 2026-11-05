@@ -6,11 +6,19 @@ import { rotasServices } from "./modules/services/services.routes.ts";
 import { rotasCollections } from "./modules/collections/collections.routes.ts";
 import { rotasMonitoringSettings } from "./modules/monitoring-settings/monitoring-settings.routes.ts";
 import { rotasDashboardIndicators } from "./modules/dashboard-indicators/dashboard-indicators.routes.ts";
+import { analyticsRoutes } from "./modules/analytics/analytics.routes.ts";
 import { casarCaminho, responder } from "./shared/http.ts";
 import type { Rota } from "./shared/http.ts";
 
 // Cada módulo entrega a sua lista de rotas; o app só junta todas.
-const rotas: Rota[] = [...rotasServices, ...rotasCollections, ...rotasMonitoringSettings, ...rotasAuth, ...rotasDashboardIndicators];
+const rotas: Rota[] = [
+  ...rotasServices,
+  ...rotasCollections,
+  ...rotasMonitoringSettings,
+  ...rotasAuth,
+  ...rotasDashboardIndicators,
+  ...analyticsRoutes,
+];
 
 export async function tratarRequisicao(
   request: IncomingMessage,
