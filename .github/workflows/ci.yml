@@ -40,5 +40,5 @@ jobs:
           done
           exit 1
       - name: Stop services
-        if: always()
+        if: 'always()'
         run: docker compose down -v

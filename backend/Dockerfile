@@ -13,8 +13,10 @@ ENV NODE_ENV=production
 # Copia dependências de produção
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
+# Copia tsconfig para --experimental-strip-types resolver imports
+COPY --from=build /app/tsconfig.json ./
 # Copia código fonte
-COPY src ./src
+COPY --from=build /app/src ./src
 
 USER node
 EXPOSE 3000

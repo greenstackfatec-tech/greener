@@ -6,7 +6,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copia todo o restante (incluindo tsconfig.json, vite.config.ts, src)
+# Copia tsconfig para o build (project references)
+COPY tsconfig*.json ./
+
+# Copia todo o restante (incluindo vite.config.ts, src)
 COPY . .
 
 # Roda o build
