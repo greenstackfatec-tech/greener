@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ErroApi, requisitar } from "../services/api.ts";
-import { useMonitoramentoColeta } from "../hooks/useMonitoramentoColeta.ts";
+import { ErroApi } from "../services/api.ts";
+import { listarServicos, type Servico } from "../services/servicos.ts";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado } from "../components/CartaoEstado.tsx";
@@ -10,6 +10,18 @@ import { useAgora } from "../hooks/useAgora.ts";
 import { useServicos } from "../hooks/useServicos.ts";
 import { situacaoDoServico } from "../services/servicos.ts";
 import "./DashboardPage.css";
+
+function numero(valor: number | null, casas = 1): string {
+  return valor === null || !Number.isFinite(valor) ? "—" : valor.toLocaleString("pt-BR", { maximumFractionDigits: casas });
+}
+function situacao(servico: Servico): "ativo" | "indisponivel" | "sem_metricas" | "removido" {
+  if (servico.status === "removido") return "removido";
+  if (servico.status === "indisponivel" || servico.statusColeta === "indisponivel") return "indisponivel";
+  // TODO(TP16/#81): enquanto o GET /services não enviar statusColeta, vale o status real do serviço.
+  if (servico.statusColeta === null) return "ativo";
+  if (servico.statusColeta !== "sucesso") return "sem_metricas";
+  return "ativo";
+}
 
 export function DashboardPage() {
   const { servicos, carregando, atualizando, erro, atualizadoEm, recarregar } = useServicos();
@@ -24,7 +36,29 @@ export function DashboardPage() {
     : null;
   const erroExibido = [erro, erroMonitoramento, erroColeta].filter(Boolean).join(" ");
 
-  const lista = useMemo(() => servicos ?? [], [servicos]);
+  const carregar = useCallback(async (silencioso = false) => {
+    if (silencioso) setAtualizando(true); else setCarregando(true);
+    setErro(null);
+    try {
+      const dados = await listarServicos();
+      setServicos(dados);
+    } catch (falha) {
+      setErro(falha instanceof ErroApi ? "Não foi possível carregar os serviços. Verifique a conexão com o servidor." : "Não foi possível conectar ao servidor. Tente novamente.");
+    } finally { setCarregando(false); setAtualizando(false); }
+  }, []);
+
+  useEffect(() => {
+  let ativo = true;
+  listarServicos()
+    .then((dados) => { if (ativo) setServicos(dados); })
+    .catch((falha) => {
+      if (ativo) setErro(falha instanceof ErroApi
+        ? "Não foi possível carregar os serviços. Verifique a conexão com o servidor."
+        : "Não foi possível conectar ao servidor. Tente novamente.");
+    })
+    .finally(() => { if (ativo) setCarregando(false); });
+  return () => { ativo = false; };
+}, []);
 
   const contagem = useMemo(() => ({
     total: lista.filter((s) => s.status !== "removido").length,
@@ -35,99 +69,9 @@ export function DashboardPage() {
 
   const filtrados = useMemo(() => lista.filter((s) => {
     const termo = busca.trim().toLocaleLowerCase("pt-BR");
-    const corresponde = `${s.nome} ${s.cidade ?? ""} ${s.regiao} ${s.pais}`.toLocaleLowerCase("pt-BR").includes(termo);
-    return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
-  }), [lista, busca, filtro]);
-
-  /** Valor mostrado nos cartões de resumo enquanto ainda não há dados. */
-  const resumo = (valor: number) => (servicos === null ? "—" : valor);
-  const ultimaAtualizacao = haQuanto(atualizadoEm, agora);
-
-  let corpo: ReactNode;
-  if (servicos === null) {
-    // Nunca houve resposta válida: carregando, ou erro sem nenhum dado anterior para mostrar.
-    corpo = carregando ? (
-      <div className="dash-estado">
-        <CartaoEstado tom="carregando" titulo="Carregando" selo="Em atualização" descricao="Consultando as métricas mais recentes" rodape="Buscando dados recentes" />
-      </div>
-    ) : (
-      <div className="dash-estado">
-        <CartaoEstado
-          tom="erro"
-          titulo="Erro de atualização"
-          selo="Atenção"
-          descricao={`Falha na coleta mais recente. ${erro ?? ""}`.trim()}
-          valor={null}
-          rodape="Nenhum dado anterior para mostrar"
-          acao={{ rotulo: "Tentar de novo", aoClicar: recarregar }}
-        />
-      </div>
-    );
-  } else if (servicos.length === 0) {
-    corpo = (
-      <div className="dash-estado">
-        <CartaoEstado tom="vazio" titulo="Estado vazio" selo="Primeiro passo" descricao="Nenhum serviço cadastrado" valor="Comece adicionando" rodape="Adicione um serviço para acompanhar métricas" />
-      </div>
-    );
-  } else if (filtrados.length === 0) {
-    corpo = (
-      <div className="dash-empty">
-        <span>⌕</span>
-        <strong>Nenhum serviço encontrado</strong>
-        <p>Ajuste a busca ou o filtro para ver os serviços.</p>
-      </div>
-    );
-  } else {
-    corpo = visao === "cartoes" ? (
-      <div className={erro ? "dash-cartoes desatualizado" : "dash-cartoes"}>
-        {filtrados.map((s) => {
-          const estado = situacaoDoServico(s);
-          const textos = TEXTOS_SITUACAO[estado];
-          return (
-            <CartaoEstado
-              key={s.id}
-              // "Removido" não existe no DD07; usa o tom neutro de "indisponível".
-              tom={estado === "removido" ? "indisponivel" : estado}
-              titulo={s.nome}
-              selo={textos.selo}
-              descricao={textos.descricao}
-              valor={s.energiaKwh === null ? null : `${numero(s.energiaKwh, 4)} kWh`}
-              rodape={`${rodapeDaSituacao(s, estado, agora)} · ${s.cidade || s.regiao}`}
-            />
-          );
-        })}
-      </div>
-    ) : (
-      <div className={erro ? "dash-table-wrap desatualizado" : "dash-table-wrap"}>
-        <table className="dash-table">
-          <thead>
-            <tr><th>Serviço</th><th>Estado</th><th>Localização</th><th>CPU</th><th>RAM</th><th>Disco</th><th>Rede</th><th>Energia</th><th>CO₂e</th></tr>
-          </thead>
-          <tbody>
-            {filtrados.map((s) => {
-              const estado = situacaoDoServico(s);
-              return (
-                <tr key={s.id}>
-                  <td><strong className="dash-service-name">{s.nome}</strong><small className="dash-service-id">ID {s.id}</small></td>
-                  <td><span className={`dash-status ${estado}`}><i />{TEXTOS_SITUACAO[estado].rotulo}</span></td>
-                  <td><span className="dash-location">{s.cidade || s.regiao}</span><small className="dash-country">{s.regiao}, {s.pais}</small></td>
-                  <td>{numero(s.cpuPercentual)}{s.cpuPercentual === null ? "" : "%"}</td>
-                  <td>{s.memoriaGb === null ? "—" : `${numero(s.memoriaGb)} GB`}</td>
-                  <td>{s.discoGb === null ? "—" : `${numero(s.discoGb)} GB`}</td>
-                  <td>{s.redeGb === null ? "—" : `${numero(s.redeGb)} GB`}</td>
-                  <td className="dash-energia" data-situacao={estado}>
-                    <span className="dash-energia-valor">{s.energiaKwh === null ? "—" : `${numero(s.energiaKwh, 4)} kWh`}</span>
-                    <small>{rodapeDaSituacao(s, estado, agora)}</small>
-                  </td>
-                  <td>{s.emissaoCo2eG === null ? "—" : `${numero(s.emissaoCo2eG, 3)} g`}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
+    const corresponde = `${s.nome} ${s.cidade ?? ""} ${s.regiao ?? ""} ${s.pais ?? ""}`.toLocaleLowerCase("pt-BR").includes(termo);
+    return corresponde && (filtro === "todos" || situacao(s) === filtro);
+  }), [servicos, busca, filtro]);
 
   return <div className="dash-shell">
     <aside className="dash-sidebar">
@@ -153,8 +97,8 @@ export function DashboardPage() {
         <section className="dash-panel" id="servicos">
           <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div><span className="dash-count">{filtrados.length} serviços</span></div>
           <div className="dash-toolbar"><label className="dash-search"><span>⌕</span><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço ou localização..." aria-label="Buscar serviço ou localização"/></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Filtrar por estado"><option value="todos">Todos os estados</option><option value="ativo">Ativos</option><option value="indisponivel">Indisponíveis</option><option value="sem_metricas">Sem métricas</option><option value="removido">Removidos</option></select></div>
-          {erroExibido && <div className="dash-feedback error" role="alert"><strong>Não foi possível atualizar</strong><span>{erroExibido}</span>{servicos.length > 0 && <span>Os dados exibidos podem estar desatualizados.</span>}<button onClick={() => { void carregar(true); void atualizarMonitoramento(); }}>Tentar novamente</button></div>}
-          {carregando ? <div className="dash-loading" aria-label="Carregando serviços"><span/><span/><span/></div> : filtrados.length === 0 ? (!erro || servicos.length > 0) && <div className="dash-empty"><span>⌕</span><strong>{servicos.length ? "Nenhum serviço encontrado" : "Nenhum serviço cadastrado"}</strong><p>{servicos.length ? "Ajuste a busca ou o filtro para ver os serviços." : "Os serviços aparecerão aqui assim que forem cadastrados e coletados."}</p></div> : <div className="dash-table-wrap"><table className="dash-table"><thead><tr><th>Serviço</th><th>Estado</th><th>Localização</th><th>CPU</th><th>RAM</th><th>Disco</th><th>Rede</th><th>Energia</th><th>CO₂e</th></tr></thead><tbody>{filtrados.map((s) => { const estado = situacao(s); return <tr key={s.id}><td><strong className="dash-service-name">{s.nome}</strong><small className="dash-service-id">ID {s.id}</small></td><td><span className={`dash-status ${estado}`}><i/>{estado === "ativo" ? "Ativo" : estado === "indisponivel" ? "Indisponível" : estado === "removido" ? "Removido" : "Sem métricas"}</span></td><td><span className="dash-location">{s.cidade || s.regiao}</span><small className="dash-country">{s.regiao}, {s.pais}</small></td><td>{numero(s.cpuPercentual)}{s.cpuPercentual === null ? "" : "%"}</td><td>{s.memoriaGb === null ? "—" : `${numero(s.memoriaGb)} GB`}</td><td>{s.discoGb === null ? "—" : `${numero(s.discoGb)} GB`}</td><td>{s.redeGb === null ? "—" : `${numero(s.redeGb)} GB`}</td><td>{s.energiaKwh === null ? "—" : `${numero(s.energiaKwh, 4)} kWh`}</td><td>{s.emissaoCo2eG === null ? "—" : `${numero(s.emissaoCo2eG, 3)} g`}</td></tr>; })}</tbody></table></div>}
+          {erro && <div className="dash-feedback error" role="alert"><strong>Não foi possível atualizar</strong><span>{erro}</span><button onClick={() => void carregar()}>Tentar novamente</button></div>}
+          {carregando ? <div className="dash-loading" aria-label="Carregando serviços"><span/><span/><span/></div> : !erro && filtrados.length === 0 ? <div className="dash-empty"><span>⌕</span><strong>{servicos.length ? "Nenhum serviço encontrado" : "Nenhum serviço cadastrado"}</strong><p>{servicos.length ? "Ajuste a busca ou o filtro para ver os serviços." : "Os serviços aparecerão aqui assim que forem cadastrados e coletados."}</p></div> : !erro && <div className="dash-table-wrap"><table className="dash-table"><thead><tr><th>Serviço</th><th>Estado</th><th>Localização</th><th>CPU</th><th>RAM</th><th>Disco</th><th>Rede</th><th>Energia</th><th>CO₂e</th></tr></thead><tbody>{filtrados.map((s) => { const estado = situacao(s); return <tr key={s.id}><td><strong className="dash-service-name">{s.nome}</strong><small className="dash-service-id">ID {s.id}</small></td><td><span className={`dash-status ${estado}`}><i/>{estado === "ativo" ? "Ativo" : estado === "indisponivel" ? "Indisponível" : estado === "removido" ? "Removido" : "Sem métricas"}</span></td><td><span className="dash-location">{s.cidade || s.regiao || "—"}</span><small className="dash-country">{[s.regiao, s.pais].filter(Boolean).join(", ")}</small></td><td>{numero(s.cpuPercentual)}{s.cpuPercentual === null ? "" : "%"}</td><td>{s.memoriaGb === null ? "—" : `${numero(s.memoriaGb)} GB`}</td><td>{s.discoGb === null ? "—" : `${numero(s.discoGb)} GB`}</td><td>{s.redeGb === null ? "—" : `${numero(s.redeGb)} GB`}</td><td>{s.energiaKwh === null ? "—" : `${numero(s.energiaKwh, 4)} kWh`}</td><td>{s.emissaoCo2eG === null ? "—" : `${numero(s.emissaoCo2eG, 3)} g`}</td></tr>; })}</tbody></table></div>}
           <div className="dash-table-footer"><span>Valores referentes à coleta mais recente de cada serviço.</span><span>— Dados ainda não disponíveis</span></div>
         </section>
         <p className="dash-footnote">GreenER · Monitoramento de energia e emissões de CO₂e</p>

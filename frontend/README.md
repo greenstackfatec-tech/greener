@@ -6,6 +6,11 @@ Aplicação React 19 + TypeScript criada com Vite. Telas implementadas: início 
 
 | Pasta | Responsabilidade | Conteúdo atual |
 |---|---|---|
+| `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx` |
+| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `ResumoConsumo.tsx` |
+| `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `indicadores.ts`, `servicos.ts` |
+| `src/assets/` | Imagens usadas pelas telas | `greener-icon.png` |
+| `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts`, `useIndicadores.ts` |
 | `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx`, `DashboardPage.tsx`, `EstadosPage.tsx` |
 | `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `GraficoConsumo.tsx`, `CartaoEstado.tsx` |
 | `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `servicos.ts` |
@@ -28,6 +33,21 @@ As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. A
 | `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
 
 O cliente HTTP fica em `src/services/api.ts`. `requisitar<T>(caminho)` (GET) e `enviar<T>(caminho, corpo)` (POST com JSON) fazem as chamadas a partir de `/api`; as telas não usam `fetch` diretamente. Respostas fora de 2xx viram `ErroApi` (com `status`, `codigo` e, no HTTP 429, `tentarNovamenteEmSegundos`). Se houver token salvo, o cliente envia `Authorization: Bearer <token>` automaticamente.
+
+## Dados reais (DW22)
+
+Nenhuma tela tem número ou texto de exemplo fixo no código: o que aparece vem da API ou é mostrado como "—" / mensagem de estado vazio ou de erro. Campo que o backend não envia fica `null` e a tela mostra "—", nunca 0.
+
+| Tela | Fonte | Observação |
+|---|---|---|
+| Login (painel de consumo) | `GET /dashboard/indicadores` | Mostra consumo e emissão totais e serviços ativos/indisponíveis. Tem estados de carregando, erro e "ainda não há coletas". |
+| Dashboard (tabela) | `GET /services` | `services/servicos.ts` valida e normaliza a resposta. |
+
+Pendências que dependem de outras tarefas:
+
+- **TP16 (#81):** `GET /services` devolve só `id`, `nome`, `status`, `cidade`, `latitude` e `longitude`. Região, país, métricas, energia, CO₂e e `statusColeta` aparecem na tela quando o backend enviar esses campos (nomes em `services/servicos.ts`).
+- **TP10:** `GET /dashboard/indicadores` responde 500 na `develop` (erro de SQL: `servicos_ativos` fora do `GROUP BY`). Até corrigir, o painel do login mostra a mensagem de erro.
+- **TP17 / DW11:** o protótipo do login tem um gráfico de barras dos últimos 7 dias. Sem endpoint de histórico por dia, ele não existe; quando houver, ligar em `ResumoConsumo.tsx`.
 
 ## Login
 
