@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ErroApi, requisitar } from "../services/api.ts";
+import { useMonitoramentoColeta } from "../hooks/useMonitoramentoColeta.ts";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import "./DashboardPage.css";
@@ -31,6 +32,13 @@ export function DashboardPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
+  const { statusColeta, erroMonitoramento, atualizarMonitoramento } = useMonitoramentoColeta();
+  const erroColeta = statusColeta?.monitoramento.situacao === "degradado"
+    ? statusColeta.monitoramento.falhasAtivas.map((falha) =>
+      `${falha.servicoNome ? `${falha.servicoNome}: ` : ""}${falha.mensagem}`,
+    ).join(" ") || "A coleta apresentou falhas. Os dados podem estar desatualizados."
+    : null;
+  const erroExibido = [erro, erroMonitoramento, erroColeta].filter(Boolean).join(" ");
 
   const carregar = useCallback(async (silencioso = false) => {
     if (silencioso) setAtualizando(true); else setCarregando(true);
@@ -81,7 +89,7 @@ export function DashboardPage() {
     <main className="dash-main">
       <header className="dash-topbar"><div><span className="dash-breadcrumb">GreenER / </span><strong>Visão geral</strong></div><div className="dash-live"><i/> Dados do monitoramento</div></header>
       <section className="dash-content">
-        <div className="dash-heading"><div><p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p><h1>Visão geral</h1><p>Acompanhe o desempenho e o impacto ambiental dos seus serviços.</p></div><button className="dash-refresh" onClick={() => void carregar(true)} disabled={atualizando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button></div>
+        <div className="dash-heading"><div><p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p><h1>Visão geral</h1><p>Acompanhe o desempenho e o impacto ambiental dos seus serviços.</p></div><button className="dash-refresh" onClick={() => { void carregar(true); void atualizarMonitoramento(); }} disabled={atualizando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button></div>
 
         <div className="dash-summary">
           <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{carregando ? "—" : contagem.total}</strong><em>Serviços cadastrados</em></div></article>
@@ -93,8 +101,8 @@ export function DashboardPage() {
         <section className="dash-panel" id="servicos">
           <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div><span className="dash-count">{filtrados.length} serviços</span></div>
           <div className="dash-toolbar"><label className="dash-search"><span>⌕</span><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço ou localização..." aria-label="Buscar serviço ou localização"/></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Filtrar por estado"><option value="todos">Todos os estados</option><option value="ativo">Ativos</option><option value="indisponivel">Indisponíveis</option><option value="sem_metricas">Sem métricas</option><option value="removido">Removidos</option></select></div>
-          {erro && <div className="dash-feedback error" role="alert"><strong>Não foi possível atualizar</strong><span>{erro}</span><button onClick={() => void carregar()}>Tentar novamente</button></div>}
-          {carregando ? <div className="dash-loading" aria-label="Carregando serviços"><span/><span/><span/></div> : !erro && filtrados.length === 0 ? <div className="dash-empty"><span>⌕</span><strong>{servicos.length ? "Nenhum serviço encontrado" : "Nenhum serviço cadastrado"}</strong><p>{servicos.length ? "Ajuste a busca ou o filtro para ver os serviços." : "Os serviços aparecerão aqui assim que forem cadastrados e coletados."}</p></div> : !erro && <div className="dash-table-wrap"><table className="dash-table"><thead><tr><th>Serviço</th><th>Estado</th><th>Localização</th><th>CPU</th><th>RAM</th><th>Disco</th><th>Rede</th><th>Energia</th><th>CO₂e</th></tr></thead><tbody>{filtrados.map((s) => { const estado = situacao(s); return <tr key={s.id}><td><strong className="dash-service-name">{s.nome}</strong><small className="dash-service-id">ID {s.id}</small></td><td><span className={`dash-status ${estado}`}><i/>{estado === "ativo" ? "Ativo" : estado === "indisponivel" ? "Indisponível" : estado === "removido" ? "Removido" : "Sem métricas"}</span></td><td><span className="dash-location">{s.cidade || s.regiao}</span><small className="dash-country">{s.regiao}, {s.pais}</small></td><td>{numero(s.cpuPercentual)}{s.cpuPercentual === null ? "" : "%"}</td><td>{s.memoriaGb === null ? "—" : `${numero(s.memoriaGb)} GB`}</td><td>{s.discoGb === null ? "—" : `${numero(s.discoGb)} GB`}</td><td>{s.redeGb === null ? "—" : `${numero(s.redeGb)} GB`}</td><td>{s.energiaKwh === null ? "—" : `${numero(s.energiaKwh, 4)} kWh`}</td><td>{s.emissaoCo2eG === null ? "—" : `${numero(s.emissaoCo2eG, 3)} g`}</td></tr>; })}</tbody></table></div>}
+          {erroExibido && <div className="dash-feedback error" role="alert"><strong>Não foi possível atualizar</strong><span>{erroExibido}</span>{servicos.length > 0 && <span>Os dados exibidos podem estar desatualizados.</span>}<button onClick={() => { void carregar(true); void atualizarMonitoramento(); }}>Tentar novamente</button></div>}
+          {carregando ? <div className="dash-loading" aria-label="Carregando serviços"><span/><span/><span/></div> : filtrados.length === 0 ? (!erro || servicos.length > 0) && <div className="dash-empty"><span>⌕</span><strong>{servicos.length ? "Nenhum serviço encontrado" : "Nenhum serviço cadastrado"}</strong><p>{servicos.length ? "Ajuste a busca ou o filtro para ver os serviços." : "Os serviços aparecerão aqui assim que forem cadastrados e coletados."}</p></div> : <div className="dash-table-wrap"><table className="dash-table"><thead><tr><th>Serviço</th><th>Estado</th><th>Localização</th><th>CPU</th><th>RAM</th><th>Disco</th><th>Rede</th><th>Energia</th><th>CO₂e</th></tr></thead><tbody>{filtrados.map((s) => { const estado = situacao(s); return <tr key={s.id}><td><strong className="dash-service-name">{s.nome}</strong><small className="dash-service-id">ID {s.id}</small></td><td><span className={`dash-status ${estado}`}><i/>{estado === "ativo" ? "Ativo" : estado === "indisponivel" ? "Indisponível" : estado === "removido" ? "Removido" : "Sem métricas"}</span></td><td><span className="dash-location">{s.cidade || s.regiao}</span><small className="dash-country">{s.regiao}, {s.pais}</small></td><td>{numero(s.cpuPercentual)}{s.cpuPercentual === null ? "" : "%"}</td><td>{s.memoriaGb === null ? "—" : `${numero(s.memoriaGb)} GB`}</td><td>{s.discoGb === null ? "—" : `${numero(s.discoGb)} GB`}</td><td>{s.redeGb === null ? "—" : `${numero(s.redeGb)} GB`}</td><td>{s.energiaKwh === null ? "—" : `${numero(s.energiaKwh, 4)} kWh`}</td><td>{s.emissaoCo2eG === null ? "—" : `${numero(s.emissaoCo2eG, 3)} g`}</td></tr>; })}</tbody></table></div>}
           <div className="dash-table-footer"><span>Valores referentes à coleta mais recente de cada serviço.</span><span>— Dados ainda não disponíveis</span></div>
         </section>
         <p className="dash-footnote">GreenER · Monitoramento de energia e emissões de CO₂e</p>
