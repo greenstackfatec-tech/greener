@@ -49,34 +49,60 @@ jobs:
     name: Docker compose smoke test
     runs-on: ubuntu-latest
     needs: [backend-typecheck, frontend-typecheck]
+    env:
+      POSTGRES_DB: greener
+      POSTGRES_USER: greener
+      POSTGRES_PASSWORD: greener_dev_only
+      JWT_SECRET: test-secret-key-for-ci-only
+      METRICS_API_URL: https://metrics.unilaunch.org
+      CARBON_API_URL: https://carbon.unilaunch.org
+      API_TIMEOUT_MS: 10000
+      COLLECTIONS_AUTO_START: "true"
     steps:
       - uses: actions/checkout@v4
       - name: Build images
         run: docker compose build
       - name: Start stack
         run: docker compose up -d
-      - name: Wait for healthchecks
+      - name: Wait for database healthy
         run: |
+          echo "Waiting for database to be healthy..."
           for i in {1..30}; do
-            if docker compose ps --format json | jq -e 'all(.Health == "healthy")' > /dev/null 2>&1; then
-              echo "All services healthy"
+            HEALTH=$(docker inspect --format='{{.State.Health.Status}}' greener-database-1 2>/dev/null || echo "starting")
+            echo "Database health: $HEALTH ($i/30)"
+            if [ "$HEALTH" = "healthy" ]; then
+              echo "Database is healthy"
               exit 0
             fi
-            echo "Waiting for healthchecks... ($i/30)"
-            sleep 2
+            sleep 3
           done
-          echo "Timeout: services not healthy"
-          docker compose ps
-          docker compose logs
+          echo "Database failed to become healthy"
+          docker compose logs database
+          exit 1
+      - name: Wait for backend healthy
+        run: |
+          echo "Waiting for backend to be healthy..."
+          for i in {1..30}; do
+            HEALTH=$(docker inspect --format='{{.State.Health.Status}}' greener-backend-1 2>/dev/null || echo "starting")
+            echo "Backend health: $HEALTH ($i/30)"
+            if [ "$HEALTH" = "healthy" ]; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Backend failed to become healthy"
+          docker compose logs backend
           exit 1
       - name: Smoke test backend health/ready
         run: |
-          for i in {1..10}; do
+          echo "Testing backend /health/ready endpoint..."
+          for i in {1..15}; do
             if curl -fsS http://localhost:3000/health/ready | grep -q '"status":"ok"'; then
               echo "Backend health/ready OK"
               exit 0
             fi
-            echo "Retry $i/10..."
+            echo "Retry $i/15..."
             sleep 2
           done
           echo "Backend health/ready failed"
@@ -84,10 +110,15 @@ jobs:
           exit 1
       - name: Smoke test frontend
         run: |
-          if curl -fsS http://localhost:8080/ | grep -q '<html'; then
-            echo "Frontend OK"
-            exit 0
-          fi
+          echo "Testing frontend..."
+          for i in {1..10}; do
+            if curl -fsS http://localhost:8080/ | grep -q '<html'; then
+              echo "Frontend OK"
+              exit 0
+            fi
+            echo "Retry $i/10..."
+            sleep 2
+          done
           echo "Frontend failed"
           docker compose logs frontend
           exit 1
