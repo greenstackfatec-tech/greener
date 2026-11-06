@@ -22,3 +22,13 @@ export function haQuanto(instante: string | number | Date | null | undefined, ag
   if (horas < 24) return `há ${horas} h`;
   return `há ${Math.floor(horas / 24)} d`;
 }
+
+/** Data e hora locais em pt-BR, como "05/11/2026 09:21:34". */
+export function dataHora(instante: number): string {
+  return new Date(instante).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "medium" });
+}
+
+/** Duração em segundos como texto curto: 30 vira "30 s" e 120 vira "2 min". */
+export function duracao(segundos: number): string {
+  return segundos >= 60 && segundos % 60 === 0 ? `${segundos / 60} min` : `${segundos} s`;
+}

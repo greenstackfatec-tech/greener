@@ -3,7 +3,8 @@ import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado } from "../components/CartaoEstado.tsx";
 import { TEXTOS_SITUACAO, rodapeDaSituacao } from "../estadosServico.ts";
-import { haQuanto, numero } from "../formatacao.ts";
+import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
+import { dataHora, duracao, haQuanto, numero } from "../formatacao.ts";
 import { useAgora } from "../hooks/useAgora.ts";
 import { useServicos } from "../hooks/useServicos.ts";
 import { useMonitoramentoColeta } from "../hooks/useMonitoramentoColeta.ts";
@@ -11,7 +12,7 @@ import { situacaoDoServico } from "../services/servicos.ts";
 import "./DashboardPage.css";
 
 export function DashboardPage() {
-  const { servicos, carregando, atualizando, erro, atualizadoEm, recarregar } = useServicos();
+  const { servicos, carregando, atualizando, erro, atualizadoEm, recarregar } = useServicos(INTERVALO_ATUALIZACAO_SEGUNDOS * 1000);
   const agora = useAgora();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
@@ -36,6 +37,11 @@ export function DashboardPage() {
 
   const filtrados = useMemo(() => lista.filter((s) => {
     const termo = busca.trim().toLocaleLowerCase("pt-BR");
+    const corresponde = `${s.nome} ${s.cidade ?? ""} ${s.regiao} ${s.pais}`.toLocaleLowerCase("pt-BR").includes(termo);
+    return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
+  }), [lista, busca, filtro]);
+
+  /** Valor mostrado nos cartões de resumo enquanto ainda não há dados. */
     const corresponde = `${s.nome} ${s.cidade ?? ""} ${s.regiao ?? ""} ${s.pais ?? ""}`.toLocaleLowerCase("pt-BR").includes(termo);
     return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
   }), [lista, busca, filtro]);
@@ -45,6 +51,7 @@ export function DashboardPage() {
 
   let corpo: ReactNode;
   if (servicos === null) {
+    // Nunca houve resposta válida: carregando, ou erro sem nenhum dado anterior para mostrar.
     corpo = carregando ? (
       <div className="dash-estado">
         <CartaoEstado tom="carregando" titulo="Carregando" selo="Em atualização" descricao="Consultando as métricas mais recentes" rodape="Buscando dados recentes" />
@@ -55,6 +62,10 @@ export function DashboardPage() {
           tom="erro"
           titulo="Erro de atualização"
           selo="Atenção"
+          descricao={`Falha na coleta mais recente. ${erro ?? ""}`.trim()}
+          valor={null}
+          rodape="Nenhum dado anterior para mostrar"
+          acao={{ rotulo: "Tentar de novo", aoClicar: recarregar }}
           descricao={`Falha na coleta mais recente. ${erroExibido}`.trim()}
           valor={null}
           rodape="Nenhum dado anterior para mostrar"
@@ -78,6 +89,7 @@ export function DashboardPage() {
     );
   } else {
     corpo = visao === "cartoes" ? (
+      <div className={erro ? "dash-cartoes desatualizado" : "dash-cartoes"}>
       <div className={erroExibido ? "dash-cartoes desatualizado" : "dash-cartoes"}>
         {filtrados.map((s) => {
           const estado = situacaoDoServico(s);
@@ -85,17 +97,20 @@ export function DashboardPage() {
           return (
             <CartaoEstado
               key={s.id}
+              // "Removido" não existe no DD07; usa o tom neutro de "indisponível".
               tom={estado === "removido" ? "indisponivel" : estado}
               titulo={s.nome}
               selo={textos.selo}
               descricao={textos.descricao}
               valor={s.energiaKwh === null ? null : `${numero(s.energiaKwh, 4)} kWh`}
+              rodape={`${rodapeDaSituacao(s, estado, agora)} · ${s.cidade || s.regiao}`}
               rodape={`${rodapeDaSituacao(s, estado, agora)} · ${s.cidade || s.regiao || "—"}`}
             />
           );
         })}
       </div>
     ) : (
+      <div className={erro ? "dash-table-wrap desatualizado" : "dash-table-wrap"}>
       <div className={erroExibido ? "dash-table-wrap desatualizado" : "dash-table-wrap"}>
         <table className="dash-table">
           <thead>
@@ -108,6 +123,7 @@ export function DashboardPage() {
                 <tr key={s.id}>
                   <td><strong className="dash-service-name">{s.nome}</strong><small className="dash-service-id">ID {s.id}</small></td>
                   <td><span className={`dash-status ${estado}`}><i />{TEXTOS_SITUACAO[estado].rotulo}</span></td>
+                  <td><span className="dash-location">{s.cidade || s.regiao}</span><small className="dash-country">{s.regiao}, {s.pais}</small></td>
                   <td><span className="dash-location">{s.cidade || s.regiao || "—"}</span><small className="dash-country">{s.regiao && s.pais ? <>{s.regiao}, {s.pais}</> : s.regiao || s.pais}</small></td>
                   <td>{numero(s.cpuPercentual)}{s.cpuPercentual === null ? "" : "%"}</td>
                   <td>{s.memoriaGb === null ? "—" : `${numero(s.memoriaGb)} GB`}</td>
@@ -141,6 +157,10 @@ export function DashboardPage() {
       <section className="dash-content">
         <div className="dash-heading">
           <div><p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p><h1>Visão geral</h1><p>Acompanhe o desempenho e o impacto ambiental dos seus serviços.</p></div>
+          <div className="dash-heading-acoes">
+            <button className="dash-refresh" onClick={recarregar} disabled={atualizando || carregando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button>
+            <p className="dash-atualizacao">{atualizadoEm === null ? "Aguardando a primeira atualização" : `Última atualização: ${dataHora(atualizadoEm)}`} · Atualiza a cada {duracao(INTERVALO_ATUALIZACAO_SEGUNDOS)}</p>
+          </div>
           <button className="dash-refresh" onClick={atualizar} disabled={atualizando || carregando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button>
         </div>
 
@@ -155,11 +175,15 @@ export function DashboardPage() {
           <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div>{servicos !== null && <span className="dash-count">{filtrados.length} serviços</span>}</div>
           <div className="dash-toolbar"><label className="dash-search"><span>⌕</span><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço ou localização..." aria-label="Buscar serviço ou localização"/></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Filtrar por estado"><option value="todos">Todos os estados</option><option value="ativo">Ativos</option><option value="indisponivel">Indisponíveis</option><option value="sem_metricas">Sem métricas</option><option value="removido">Removidos</option></select><div className="dash-visao" role="group" aria-label="Modo de exibição"><button type="button" aria-pressed={visao === "cartoes"} onClick={() => setVisao("cartoes")}>Cartões</button><button type="button" aria-pressed={visao === "tabela"} onClick={() => setVisao("tabela")}>Tabela</button></div></div>
 
+          {/* Falha com dados já na tela: mantém a tabela e avisa que os valores podem estar desatualizados (RNF04). */}
+          {erro && servicos !== null && (
           {erroExibido && servicos !== null && (
             <div className="dash-aviso-erro" role="alert">
               <i aria-hidden="true" />
               <div>
                 <strong>Erro de atualização</strong>
+                <span>Falha na coleta mais recente. {erro} Os valores abaixo podem estar desatualizados.</span>
+                <small>{ultimaAtualizacao ? `Última atualização ${ultimaAtualizacao}` : "Sem atualização anterior"} · <button type="button" onClick={recarregar}>Tentar de novo</button></small>
                 <span>Falha na coleta mais recente. {erroExibido} Os valores abaixo podem estar desatualizados.</span>
                 <small>{ultimaAtualizacao ? `Última atualização ${ultimaAtualizacao}` : "Sem atualização anterior"} · <button type="button" onClick={atualizar}>Tentar de novo</button></small>
               </div>

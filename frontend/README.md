@@ -4,6 +4,32 @@ O frontend do **GreenER** é a aplicação web utilizada para consultar o estado
 
 Tecnologias principais: **React 19.3.1**, **TypeScript 6.0.3** e **Vite 8.3.5**. No ambiente Docker, a versão de produção é servida pelo Nginx.
 
+| Pasta | Responsabilidade | Conteúdo atual |
+|---|---|---|
+| `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx`, `DashboardPage.tsx`, `EstadosPage.tsx` |
+| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `GraficoConsumo.tsx`, `CartaoEstado.tsx` |
+| `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `servicos.ts` |
+| `src/assets/` | Imagens usadas pelas telas | `greener-icon.png` |
+| `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts`, `useServicos.ts`, `useAgora.ts` |
+| `src/contexts/` | Estado compartilhado entre componentes | `ProntidaoContext.ts` |
+| `src/providers/` | Provedores de contexto e dependências | `ProntidaoProvider.tsx` |
+
+## Telas e rotas
+
+As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. As demais rotas já estão registradas e mostram uma página provisória com o nome da tela, até as tarefas indicadas serem entregues.
+
+| Rota | Tela | Tarefa | Situação |
+|---|---|---|---|
+| `/` | Início | DW18 | Implementada (mostra o status do backend) |
+| `/login` | Login | DW19 | Implementada (JWT, "lembrar de mim", erros e bloqueio por tentativas) |
+| `/cadastro` | Cadastro | DW20 | Página provisória |
+| `/administrativa` | Administrativa | DW21 | Página provisória |
+| `/dashboard` | Dashboard | DW05, DW07 | Implementada (tabela, indicadores e estados visuais) |
+| `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
+
+O cliente HTTP fica em `src/services/api.ts`. `requisitar<T>(caminho)` (GET) e `enviar<T>(caminho, corpo)` (POST com JSON) fazem as chamadas a partir de `/api`; as telas não usam `fetch` diretamente. Respostas fora de 2xx viram `ErroApi` (com `status`, `codigo` e, no HTTP 429, `tentarNovamenteEmSegundos`). Se houver token salvo, o cliente envia `Authorization: Bearer <token>` automaticamente.
+
+## Login
 ## 1. Pré-requisitos
 
 Para desenvolvimento local:
@@ -60,6 +86,7 @@ A tela de login chama `POST /auth/login`. Quando recebe um JWT, o frontend armaz
 
 Quando há token salvo, o cliente HTTP envia `Authorization: Bearer <token>`. A ação de sair remove o token.
 
+Pendências que dependem de outras tarefas: recuperação de senha (sem endpoint), proteção das rotas privadas e logout (DW17/DW21) e redirecionamento de quem já está logado.
 O backend limita tentativas incorretas e pode responder HTTP `429` com `Retry-After`. A tela apresenta o tempo de espera e bloqueia novos envios enquanto a contagem regressiva não termina. A recuperação de senha ainda não possui endpoint implementado.
 
 ### 3.3 Cadastro
@@ -214,4 +241,20 @@ Para iniciar frontend, backend e PostgreSQL juntos, siga a seção Docker do [RE
 
 ---
 
+`npm run dev:mock` sobe o frontend com dados de exemplo para `/api/services` (arquivo `mock-servicos.ts`, só em desenvolvimento). Para trocar o cenário, abra `http://localhost:5173/api/__mock?cenario=ok|vazio|erro|lento|rede` e clique em "Atualizar dados" no dashboard. Para ver o erro com dados anteriores (RNF04), deixe em `ok`, mude para `erro` e atualize.
+
+## Atualização automática (DW08)
+
+O dashboard consulta `/api/services` sozinho, sem recarregar a página, e mostra no topo a **data e hora da última atualização** e o **intervalo** ("Atualiza a cada 30 s").
+
+| Intervalo | Padrão | Onde ajustar |
+|---|---|---|
+| Atualização da interface | 30 s (mínimo 5 s) | `VITE_INTERVALO_ATUALIZACAO_SEGUNDOS` em `frontend/.env` (desenvolvimento) ou `INTERVALO_ATUALIZACAO_SEGUNDOS` no `.env` da raiz (Docker; é aplicado na construção da imagem) |
+| Coleta de métricas no backend | 60 s | chave `intervalo_coleta_segundos` na tabela `configuracoes` |
+
+- O padrão da interface é menor que o da coleta, para cada coleta aparecer pouco depois de acontecer.
+- Busca, filtro e visão (cartões/tabela) não mudam durante a atualização.
+- Se uma atualização falha, a tela mantém os últimos dados com o aviso de erro e tenta de novo no ciclo seguinte.
+- O ciclo é pausado com a aba oculta e retomado, com atualização imediata, ao voltar.
+- O botão "Atualizar dados" continua disponível para atualizar na hora.
 **Green Stack · FATEC Jacareí · Desenvolvimento de Software Multiplataforma · 2026**

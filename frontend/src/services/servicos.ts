@@ -1,6 +1,7 @@
 import { requisitar } from "./api.ts";
 
 export type StatusServico = "ativo" | "indisponivel" | "removido";
+export type StatusColeta = "sucesso" | "sem_metricas" | "indisponivel" | null;
 export type StatusColeta = "sucesso" | "sem_metricas" | "indisponivel";
 
 /** Serviço como o dashboard o consome (GET /api/services). */
@@ -11,6 +12,10 @@ export interface Servico {
   cidade: string | null;
   latitude: number | null;
   longitude: number | null;
+  regiao: string;
+  pais: string;
+  coletadoEm: string | null;
+  statusColeta: StatusColeta;
   regiao: string | null;
   pais: string | null;
   coletadoEm: string | null;
