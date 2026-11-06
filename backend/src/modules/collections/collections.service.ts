@@ -17,7 +17,6 @@ import {
   gravarColetaRecebida,
   gravarColetaSemMetricas,
   gravarColetaIndisponivel,
-  gravarColetaSemMetricas,
   type StatusColeta,
   buscarHistoricoColetas,
   listarColetas as listarColetasDoRepository,
