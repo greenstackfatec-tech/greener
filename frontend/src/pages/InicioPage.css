@@ -17,14 +17,6 @@
   font-family: "Inter Variable", Inter, system-ui, sans-serif;
 }
 
-#root {
-  width: 100%;
-}
-
-body {
-  display: block !important;
-}
-
 .pagina-inicio .inicio-conteudo {
   width: 100%;
   max-width: none;
