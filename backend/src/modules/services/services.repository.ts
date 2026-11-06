@@ -95,7 +95,11 @@ export async function listarServicos(): Promise<ServicoComUltimaColeta[]> {
        LIMIT 1
      ) m ON TRUE
      ORDER BY s.id`,
-export async function listarServicos(): Promise<Servico[]> {
+  );
+  return resultado.rows;
+}
+
+export async function listarServicosSimples(): Promise<Servico[]> {
   const resultado = await consultar<Servico>(
     `SELECT s.id::int, s.nome, s.status, s.cidade, s.latitude::float8, s.longitude::float8,
             r.pais, r.nome AS regiao

@@ -1,4 +1,4 @@
-import type { Plugin } from "vite";
+import type { Plugin, Connect } from "vite";
 
 /**
  * Só para desenvolvimento: responde GET /api/services sem backend nem banco.
@@ -28,7 +28,7 @@ export function mockServicos(): Plugin {
     name: "greener-mock-servicos",
     apply: "serve",
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
+      server.middlewares.use((req: Connect.IncomingMessage & { url?: string; socket?: { destroy(): void } }, res, next) => {
         const url = new URL(req.url ?? "/", "http://localhost");
         const responder = (status: number, corpo: unknown) => {
           res.statusCode = status;
@@ -48,7 +48,7 @@ export function mockServicos(): Plugin {
         }
 
         if (cenario === "rede") {
-          req.socket.destroy();
+          req.socket?.destroy();
           return;
         }
         const entregar = () => {

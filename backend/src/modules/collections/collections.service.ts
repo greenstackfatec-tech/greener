@@ -134,37 +134,42 @@ async function coletarEGravarServico(
   let calculo: CalculoColeta;
   contexto.etapa = "calculo";
   try {
-    calculo = await calculadoraEnergia.calcularParaServico(
-      respostaMetricas,
-      servicoApi.location.region_code,
-    );
+    const regionCode = servicoApi.location.region_code ?? "";
+    calculo = await calculadoraEnergia.calcularParaServico(respostaMetricas, regionCode);
     validarCalculo(calculo);
     resolverFalha({ ...contexto, etapa: "carbono" });
     resolverFalha(contexto);
   } catch (erro) {
     if (erro instanceof ErroConfiguracaoApi) throw erro;
     const falha = registrarFalha(erro, { ...contexto, etapa: erro instanceof ErroApi ? "carbono" : "calculo" });
-    contexto.etapa = "persistencia";
-  let calculo: CalculoColeta | undefined;
-  let erroCalculo: string | undefined;
-  if (!codigoRegiao) {
-    erroCalculo = "Serviço sem localização: CO₂e não calculado";
-  } else {
-    try {
-      calculo = await calculadoraEnergia.calcularParaServico(respostaMetricas, codigoRegiao);
-    } catch (erro) {
-      erroCalculo = erro instanceof Error ? erro.message : "Falha ao calcular a coleta";
+
+    // Fallback: tenta calcular com o region_code original (se houver)
+    let calculoFallback: CalculoColeta | undefined;
+    let erroCalculo: string | undefined;
+    if (!codigoRegiao) {
+      erroCalculo = "Serviço sem localização: CO₂e não calculado";
+    } else {
+      try {
+        const tentativa = await calculadoraEnergia.calcularParaServico(respostaMetricas, codigoRegiao);
+        validarCalculo(tentativa);
+        calculoFallback = tentativa;
+      } catch (erro) {
+        erroCalculo = erro instanceof Error ? erro.message : "Falha ao calcular a coleta";
+      }
+    }
+    if (calculoFallback) {
+      calculo = calculoFallback;
+    } else {
+      contexto.etapa = "persistencia";
+      await gravarColetaRecebida(servico.id, respostaMetricas);
+      return {
+        ...identificacaoServico, status: "sucesso", resultado: "parcial", intervaloSegundos,
+        falha, erro: falha.mensagem,
+      };
     }
   }
-  if (calculo) {
-    await gravarColetaSucesso(servico, respostaMetricas, calculo.intensidadeCarbono, calculo);
-  } else {
-    await gravarColetaRecebida(servico.id, respostaMetricas);
-    return {
-      ...identificacaoServico, status: "sucesso", resultado: "parcial", intervaloSegundos,
-      falha, erro: falha.mensagem,
-    };
-  }
+
+  // Persistência (fora do try-catch do cálculo para não capturar erros de BD como falha de cálculo)
   contexto.etapa = "persistencia";
   await gravarColetaSucesso(servico, respostaMetricas, calculo.intensidadeCarbono, calculo);
   return { ...identificacaoServico, status: "sucesso", resultado: "completo", calculo, intervaloSegundos };
