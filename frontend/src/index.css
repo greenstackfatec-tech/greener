@@ -5,19 +5,20 @@
   background: #f2f7f3;
 }
 
-body {
-  margin: 0;
+html,
+body,
+#root {
+  width: 100%;
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  margin: 0;
 }
 
-main {
-  width: min(34rem, calc(100% - 3rem));
-  padding: 2rem;
-  background: white;
-  border-radius: 1rem;
-  box-shadow: 0 1rem 3rem #18352b14;
+body {
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 h1 {
