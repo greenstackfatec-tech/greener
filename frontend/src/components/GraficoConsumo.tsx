@@ -1,3 +1,5 @@
+import "./GraficoConsumo.css";
+
 // Valores ilustrativos do protótipo (Figma). Não vêm do backend.
 const CONSUMO_7_DIAS = [
   { dia: "Seg", valor: 28, texto: "28" },

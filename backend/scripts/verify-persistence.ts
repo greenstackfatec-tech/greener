@@ -223,6 +223,8 @@ try {
       "src/modules/collections/collections.repository.integration.test.ts",
       "src/modules/collections/collections.integration.test.ts",
       "src/db/migrations.integration.test.ts",
+      "src/db/connection.integration.test.ts",
+      "src/modules/dashboard-indicators/dashboard-indicators.integration.test.ts",
     ],
     {
       cwd: fileURLToPath(new URL("../", import.meta.url)),

@@ -1,5 +1,5 @@
 import { enviar } from "./api.ts";
-import { salvarToken } from "./token.ts";
+import { removerToken, salvarToken } from "./token.ts";
 
 interface RespostaLogin {
   token: string;
@@ -15,4 +15,9 @@ export async function entrar(email: string, senha: string, lembrar: boolean): Pr
     throw new Error("Resposta de login sem token.");
   }
   salvarToken(resposta.token, lembrar);
+}
+
+/** Encerra a sessão: apaga o token do navegador. Quem chama decide para onde levar o usuário. */
+export function sair(): void {
+  removerToken();
 }
