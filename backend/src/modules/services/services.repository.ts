@@ -17,6 +17,7 @@ export interface Servico {
 export interface ServicoComUltimaColeta extends Servico {
   regiao: string | null;
   pais: string | null;
+  /** Null quando o serviço ainda não teve nenhuma coleta (o dashboard mostra "sem métricas"). */
   coletadoEm: Date | null;
   statusColeta: "sucesso" | "sem_metricas" | "indisponivel" | null;
   cpuPercentual: number | null;

@@ -17,6 +17,7 @@ import {
   gravarColetaRecebida,
   gravarColetaSemMetricas,
   gravarColetaIndisponivel,
+  gravarColetaSemMetricas,
   type StatusColeta,
   buscarHistoricoColetas,
   listarColetas as listarColetasDoRepository,
@@ -95,15 +96,10 @@ async function coletarEGravarServico(
   } catch (erro) {
     if (!(erro instanceof ErroApi)) throw erro;
     if (erro.tipo === "http" && erro.statusHttp === 500 && erro.codigoApi === "metrics_missing") {
+      resolverFalha(contexto);
       contexto.etapa = "persistencia";
       await gravarColetaSemMetricas(servico.id, intervalo);
-      resolverFalha({ ...contexto, etapa: "metricas" });
-      return {
-        ...identificacaoServico,
-        status: "sem_metricas",
-        resultado: "sem_metricas",
-        intervaloSegundos: intervalo,
-      };
+      return { ...identificacaoServico, status: "sem_metricas", resultado: "sem_metricas" };
     }
     const falha = registrarFalha(erro, contexto);
     contexto.etapa = "persistencia";

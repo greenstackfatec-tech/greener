@@ -8,6 +8,9 @@ import pg from "pg";
 import { tratarRequisicaoMock } from "../../mocks/app.ts";
 import { metricas, regioes, servicos } from "../../mocks/fixtures.ts";
 import { criarRotinaColeta } from "./collections.scheduler.ts";
+import type { ServicoComUltimaColeta } from "../services/services.repository.ts";
+import type { IndicadoresDashboard } from "../dashboard-indicators/dashboard-indicators.service.ts";
+import type { ResultadoRodadaColeta } from "./collections.types.ts";
 
 test("TP07 grava serviços e coletas com os repositories reais da BD04", async (t) => {
   const schema = `tp07_${randomUUID().replaceAll("-", "")}`;
@@ -25,13 +28,14 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     process.env.PGOPTIONS,
     process.env.METRICS_API_URL,
     process.env.CARBON_API_URL,
+    process.env.API_TIMEOUT_MS,
   ];
   process.env.PGOPTIONS = `-c search_path=${schema}`;
   t.after(async () => {
     for (const pool of pools) if (pool !== administrador) await pool.end();
     await administrador.query(`DROP SCHEMA "${schema}" CASCADE`);
     await administrador.end();
-    ["PGOPTIONS", "METRICS_API_URL", "CARBON_API_URL"].forEach((chave, i) => {
+    ["PGOPTIONS", "METRICS_API_URL", "CARBON_API_URL", "API_TIMEOUT_MS"].forEach((chave, i) => {
       if (anteriores[i] === undefined) delete process.env[chave];
       else process.env[chave] = anteriores[i];
     });
@@ -60,9 +64,21 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     intervaloZero: false,
     intervaloApi: 60,
     cpuPercentual: 25,
+    falhaPrimeiroServico: "" as "" | "http" | "timeout" | "rede" | "sem_metricas",
   };
   const mock = createServer((request, response) => {
     const caminho = new URL(request.url!, "http://localhost").pathname;
+    if (caminho === "/metrics/servico-1" && estado.falhaPrimeiroServico) {
+      if (estado.falhaPrimeiroServico === "rede") request.socket.destroy();
+      else if (estado.falhaPrimeiroServico !== "timeout") {
+        response.writeHead(500, { "content-type": "application/json" });
+        response.end(JSON.stringify({
+          error: estado.falhaPrimeiroServico === "sem_metricas" ? "metrics_missing" : "service_unavailable",
+          message: "Métricas indisponíveis",
+        }));
+      }
+      return;
+    }
     if (
       (estado.semCarbono && caminho.includes("/regions/")) ||
       (estado.falharPrimeiroCarbono && caminho.includes("/regions/BR-SP/"))
@@ -145,7 +161,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
   });
 
   await t.test(
-    "nova rodada atualiza pelo ID externo, acrescenta histórico e preserva status para a TP11",
+    "nova rodada atualiza pelo ID externo, acrescenta histórico e recupera o serviço indisponível",
     async () => {
       await banco.query("UPDATE servicos SET status = 'indisponivel' WHERE id = $1", [idServico]);
       await banco.query(
@@ -164,7 +180,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
         id: idServico,
         nome: cadastro[0].name,
         cidade: "Outra cidade",
-        status: "indisponivel",
+        status: "ativo",
       });
       assert.equal((await buscarHistoricoColetas(idServico)).length, 2);
       const regiao = await banco.query(
@@ -276,8 +292,6 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     assert.equal(coleta.cpuPercentual, 0);
     assert.equal(coleta.memoriaGb, 0);
     assert.ok(coleta.calculadoEm instanceof Date);
-    assert.equal(coleta.energiaKwh, 0);
-    assert.equal(coleta.emissaoCo2eG, 0);
   });
 
   await t.test(
@@ -358,6 +372,126 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       }
     },
   );
+
+  async function consultarEstadoAtual() {
+    const lista = await fetch(`${urlApi}/services`);
+    const indicadores = await fetch(`${urlApi}/dashboard/indicadores`);
+    assert.equal(lista.status, 200);
+    assert.equal(indicadores.status, 200);
+    return {
+      servicos: await lista.json() as ServicoComUltimaColeta[],
+      indicadores: await indicadores.json() as IndicadoresDashboard,
+    };
+  }
+
+  for (const tipo of ["http", "timeout", "rede"] as const) {
+    await t.test(`${tipo} altera apenas o serviço afetado, preserva histórico e recupera contagem e listagem`, async (t) => {
+      t.mock.method(console, "error", () => {});
+      process.env.API_TIMEOUT_MS = "500";
+      assert.equal((await executar()).status, 200);
+      const antes = await consultarEstadoAtual();
+      const historico = await buscarHistoricoColetas(idServico);
+      estado.falhaPrimeiroServico = tipo;
+      try {
+        const inicio = Date.now();
+        const resposta = await executar();
+        assert.equal(resposta.status, 200);
+        const corpo = await resposta.json() as { resultado: string; dados: ResultadoRodadaColeta };
+        assert.equal(corpo.resultado, "parcial");
+        assert.equal(corpo.dados.sucessos, 1);
+        assert.equal(corpo.dados.indisponiveis, 1);
+        assert.equal(corpo.dados.detalhes.find((d) => d.servicoId === idServico)!.falha?.tipo, tipo);
+        const atual = await consultarEstadoAtual();
+        assert.equal(atual.indicadores.servicos_indisponiveis, antes.indicadores.servicos_indisponiveis + 1);
+        assert.equal(atual.indicadores.servicos_ativos, antes.indicadores.servicos_ativos - 1);
+        const servico = atual.servicos.find((s) => s.id === idServico)!;
+        assert.equal(servico.status, "indisponivel");
+        assert.equal(servico.statusColeta, "indisponivel");
+        assert.equal(servico.cpuPercentual, null);
+        assert.equal(servico.energiaKwh, null);
+        const coletas = await buscarHistoricoColetas(idServico);
+        assert.equal(coletas.length, historico.length + 1);
+        assert.deepEqual(coletas.slice(1), historico);
+        const [falha] = coletas;
+        assert.ok(falha.coletadoEm.getTime() >= inicio && falha.coletadoEm.getTime() <= Date.now());
+        assert.equal(falha.statusColeta, "indisponivel");
+        assert.equal(falha.intervaloSegundos, 60);
+        for (const campo of ["cpuPercentual", "memoriaGb", "discoGb", "redeGb", "potenciaEstimadaW", "duracaoSegundos", "energiaKwh", "emissaoCo2eG", "calculadoEm"] as const) {
+          assert.equal(falha[campo], null);
+        }
+        const outroId = corpo.dados.detalhes.find((d) => d.servicoId !== idServico)!.servicoId;
+        assert.equal(atual.servicos.find((s) => s.id === outroId)!.statusColeta, "sucesso");
+        assert.equal((await fetch(`${urlApi}/health/live`)).status, 200);
+        estado.falhaPrimeiroServico = "";
+        assert.equal((await executar()).status, 200);
+        const recuperado = await consultarEstadoAtual();
+        assert.equal(recuperado.indicadores.servicos_indisponiveis, antes.indicadores.servicos_indisponiveis);
+        assert.equal(recuperado.servicos.find((s) => s.id === idServico)!.status, "ativo");
+        assert.equal(recuperado.servicos.find((s) => s.id === idServico)!.statusColeta, "sucesso");
+        const recuperacao = await buscarHistoricoColetas(idServico);
+        assert.equal(recuperacao.length, historico.length + 2);
+        assert.deepEqual(recuperacao.slice(1), coletas);
+      } finally {
+        estado.falhaPrimeiroServico = "";
+      }
+    });
+  }
+
+  await t.test("metrics_missing recupera o cadastro como ativo sem métricas e preserva os campos nulos", async (t) => {
+    t.mock.method(console, "error", () => {});
+    const antes = await consultarEstadoAtual();
+    estado.falhaPrimeiroServico = "http";
+    await executar();
+    estado.falhaPrimeiroServico = "sem_metricas";
+    try {
+      const resposta = await executar();
+      const corpo = await resposta.json() as { dados: ResultadoRodadaColeta };
+      assert.equal(corpo.dados.semMetricas, 1);
+      assert.equal(corpo.dados.indisponiveis, 0);
+      const atual = await consultarEstadoAtual();
+      assert.equal(atual.indicadores.servicos_indisponiveis, antes.indicadores.servicos_indisponiveis);
+      const servico = atual.servicos.find((s) => s.id === idServico)!;
+      assert.equal(servico.status, "ativo");
+      assert.equal(servico.statusColeta, "sem_metricas");
+      const [coleta] = await buscarHistoricoColetas(idServico);
+      assert.equal(coleta.cpuPercentual, null);
+      assert.equal(coleta.energiaKwh, null);
+      assert.equal(coleta.calculadoEm, null);
+    } finally {
+      estado.falhaPrimeiroServico = "";
+    }
+  });
+
+  await t.test("gravação de coleta não reativa nem substitui o estado removido", async (t) => {
+    t.mock.method(console, "error", () => {});
+    await banco.query("UPDATE servicos SET status = 'removido' WHERE id = $1", [idServico]);
+    try {
+      for (const tipo of ["http", "sem_metricas", ""] as const) {
+        estado.falhaPrimeiroServico = tipo;
+        assert.equal((await executar()).status, 200);
+        const atual = await consultarEstadoAtual();
+        assert.equal(atual.servicos.find((s) => s.id === idServico)!.status, "removido");
+      }
+    } finally {
+      estado.falhaPrimeiroServico = "";
+      await banco.query("UPDATE servicos SET status = 'ativo' WHERE id = $1", [idServico]);
+    }
+  });
+
+  await t.test("falha ao atualizar o estado não confirma uma amostra isolada do cadastro", async (t) => {
+    t.mock.method(console, "error", () => {});
+    const historico = await buscarHistoricoColetas(idServico);
+    await banco.query("ALTER TABLE servicos ADD CONSTRAINT teste_estado CHECK (status <> 'indisponivel') NOT VALID");
+    estado.falhaPrimeiroServico = "http";
+    try {
+      assert.equal((await executar()).status, 500);
+      assert.deepEqual(await buscarHistoricoColetas(idServico), historico);
+      assert.equal((await consultarEstadoAtual()).servicos.find((s) => s.id === idServico)!.status, "ativo");
+    } finally {
+      estado.falhaPrimeiroServico = "";
+      await banco.query("ALTER TABLE servicos DROP CONSTRAINT teste_estado");
+    }
+  });
 
   await t.test("TP06 duas coletas automáticas preservam estados diferentes no PostgreSQL", async (t) => {
     const { listarServicos } = await import("../../integrations/metrics-api.ts");
