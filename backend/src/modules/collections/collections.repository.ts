@@ -41,13 +41,22 @@ export interface ColetaParaGravar {
  */
 export async function gravarColeta(coleta: ColetaParaGravar): Promise<number> {
   const sql = `
+    WITH coleta AS (
     INSERT INTO metricas_servico (
       servico_id, coletado_em, cpu_percentual, memoria_gb, disco_gb, rede_gb,
       intervalo_segundos, status_coleta, potencia_estimada_w, duracao_segundos,
       energia_kwh, emissao_co2e_g, calculado_em
     ) VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
               CASE WHEN $8::numeric IS NOT NULL THEN NOW() ELSE NULL END)
-    RETURNING id::int
+    RETURNING id, servico_id
+    ), estado AS (
+      UPDATE servicos s
+      SET status = CASE WHEN $7::text = 'indisponivel' THEN 'indisponivel' ELSE 'ativo' END
+      FROM coleta
+      WHERE s.id = coleta.servico_id AND s.status <> 'removido'
+      RETURNING s.id
+    )
+    SELECT id::int FROM coleta
   `;
 
   const valores = [
