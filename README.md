@@ -34,111 +34,78 @@ Do consumo computacional ao impacto ambiental.
 ## 🧱 Estrutura do projeto
 
 ```
-greener/ 
-├── README.md 
-├── .env.example 
-├── compose.yaml 
-├── compose.persistence.yaml
-├── frontend/ 
-│   ├── README.md 
-│   ├── Dockerfile 
-│   ├── nginx.conf 
-│   ├── package.json 
-│   ├── vite.config.ts 
-│   ├── eslint.config.js 
-│   └── src/ 
-│       ├── main.tsx 
-│       ├── App.tsx 
-│       ├── pages/          (InicioPage.tsx)
-│       ├── components/     (StatusBackend.tsx)
-│       ├── services/       (api.ts)
-│       ├── hooks/          (useProntidao.ts)
-│       ├── contexts/       (ProntidaoContext.ts)
-│       └── providers/      (ProntidaoProvider.tsx)
+greener/
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   └── PULL_REQUEST_TEMPLATE.md
 ├── backend/
-│   ├── README.md
+│   ├── scripts/
+│   ├── src/
+│   │   ├── calculos/
+│   │   ├── db/
+│   │   ├── integrations/
+│   │   ├── mocks/
+│   │   ├── modules/
+│   │   │   ├── auth/
+│   │   │   ├── collections/
+│   │   │   ├── configuracoes/
+│   │   │   ├── dashboard-indicators/
+│   │   │   ├── monitoring-settings/
+│   │   │   ├── resultados/
+│   │   │   └── services/
+│   │   └── shared/
 │   ├── Dockerfile
 │   ├── package.json
 │   ├── package-lock.json
-│   ├── tsconfig.json
-│   ├── scripts/
-│   │   └── verify-persistence.ts
-│   └── src/
-│       ├── app.ts
-│       ├── server.ts
-│       ├── db/
-│       │   ├── connection.ts
-│       │   └── migrations.integration.test.ts
-│       ├── integrations/
-│       │   ├── api-client.ts
-│       │   ├── carbon-api.ts
-│       │   └── metrics-api.ts
-│       ├── mocks/
-│       │   ├── app.ts
-│       │   ├── fixtures.ts
-│       │   ├── mocks.test.ts
-│       │   └── server.ts
-│       ├── shared/
-│       │   └── http.ts
-│       └── modules/
-│           ├── auth/
-│           │   ├── auth.routes.ts
-│           │   ├── auth.controller.ts
-│           │   ├── auth.service.ts
-│           │   ├── auth.repository.ts
-│           │   ├── auth.middleware.ts
-│           │   ├── auth.limiter.ts
-│           │   ├── auth.http.ts
-│           │   ├── jwt.ts
-│           │   ├── auth.test.ts
-│           │   └── auth.integration.test.ts
-│           ├── collections/
-│           │   ├── collections.routes.ts
-│           │   ├── collections.controller.ts
-│           │   ├── collections.service.ts
-│           │   ├── collections.repository.ts
-│           │   ├── collections.test.ts
-│           │   └── collections.integration.test.ts
-│           ├── monitoring-settings/
-│           │   ├── monitoring-settings.routes.ts
-│           │   ├── monitoring-settings.controller.ts
-│           │   ├── monitoring-settings.service.ts
-│           │   └── monitoring-settings.repository.ts
-│           └── services/
-│               ├── services.routes.ts
-│               ├── services.controller.ts
-│               ├── services.service.ts
-│               ├── services.repository.ts
-│               ├── services.test.ts
-│               └── services.repository.integration.test.ts
-├── database/ 
-│   ├── README.md 
+│   ├── README.md
+│   └── tsconfig.json
+├── database/
+│   ├── migrations/
+│   ├── README.md
+│   ├── modelagem_bd.png
 │   ├── schema.sql
-│   ├── seed.sql
-│   └── migrations/
-│       └── 001_persistencia_coletas.sql
-└── docs/
-    ├── README.md
-    ├── plano-de-entregas.md
-    ├── arquitetura.md
-    ├── calculos.md
-    ├── api.md
-    ├── diagramas/
-    │   ├── README.md
-    │   ├── diagrama-casos-de-uso.md
-    │   ├── diagrama-classes.md
-    │   └── diagrama-sequencia.md
-    ├── sprints/
-    │   ├── product-backlog.md
-    │   ├── sprint-1.md
-    │   ├── sprint-2.md
-    │   └── sprint-3.md
-    └── design/
-        ├── greener-circle-logo.png
-        ├── greener-icon.png
-        ├── greener-styleguide.png
-        ├── greenstack-icon.png
-        └── ...
+│   └── seed.sql
+├── docs/
+│   ├── design/
+│   ├── diagramas/
+│   │   ├── README.md
+│   │   ├── diagrama-casos-de-uso.md
+│   │   ├── diagrama-classes.md
+│   │   └── diagrama-sequencia.md
+│   ├── sprints/
+│   ├── README.md
+│   ├── api.md
+│   ├── arquitetura.md
+│   ├── calculos.md
+│   ├── mocks.md
+│   └── plano-de-entregas.md
+├── frontend/
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   ├── contexts/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── providers/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   ├── caminhos.ts
+│   │   ├── estadosServico.ts
+│   │   ├── formatacao.ts
+│   │   ├── rotas.tsx
+│   │   └── ...
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   ├── index.html
+│   ├── package.json
+│   ├── package-lock.json
+│   └── README.md
+├── .env.example
+├── .gitignore
+├── compose.yaml
+├── compose.persistence.yaml
+├── README.md
+└── teste.sql
 ```
 
 <br>
@@ -160,14 +127,29 @@ O <b>Product Backlog</b> pode ser encontrado <a href="https://github.com/greenst
 O <b>Plano de Entregas</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano%20de%20entregas.md">aqui</a>.
 </p>
 
+
+#### Funcionalidades implementadas
+
+- Integração do backend com a API de métricas dos serviços e com a API de intensidade de carbono.
+- Descoberta e consulta dos serviços monitorados.
+- Coleta manual e rotina de coleta periódica, respeitando o intervalo informado para cada serviço.
+- Persistência dos serviços e dos registros de coleta no PostgreSQL.
+- Cálculo estimado de potência, energia e emissão de CO₂e a partir das métricas disponíveis.
+- Consulta do histórico de coletas e dos indicadores consolidados do dashboard.
+- Identificação de estados como ativo, indisponível e sem métricas, de acordo com os dados recebidos.
+- Autenticação de usuários por JWT no backend e tela de login integrada.
+- Interface web com tela inicial para verificar a disponibilidade do backend e do banco e dashboard para consultar os serviços.
+
+Os valores apresentados dependem das respostas das APIs e dos registros disponíveis no banco. Quando um dado não é fornecido, a interface deve indicar a ausência de informação, sem substituir o valor por um número fictício.
+
 <br>
-  
+
 ## 🎯 Sprints
 
 | Sprints | Data | Status | Relatório | Vídeo |
 | :---: | :---: | :---: | :--- | :---: |
 | 1 | 19/10/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-1.md) | [Ver vídeo](https://youtu.be/gBj58b91ARw) |
-| 2 | 09/11/2026 | ⬜ | [Indisponível]() | [Indisponível](#) |
+| 2 | 09/11/2026 | ⌛ | [Indisponível](./docs/sprints/sprint-2.md) | [Indisponível](#) |
 | 3 | 23/11/2026 | ⬜ | [Indisponível]() | [Indisponível](#) |
 
 ### Legenda:
@@ -184,6 +166,16 @@ O <b>Plano de Entregas</b> pode ser encontrado <a href="https://github.com/green
 A primeira sprint contempla atividades de prototipação, estruturação do banco de dados e preparação das integrações com as APIs auxiliares. O estado de cada atividade e as evidências correspondentes devem ser consultados no relatório da sprint.
 <br>
 O <b>Sprint Backlog</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/sprint-1.md">aqui</a>.
+</p>
+
+<br>
+
+## 🎯 Sprint 02: Integração, monitoramento e indicadores ambientais
+
+<p style="text-align: justify;">
+A segunda sprint tem como objetivo consolidar uma versão funcional do GreenER, integrando a coleta periódica de métricas dos serviços, a persistência dos dados no banco e os cálculos estimados de potência, consumo energético e emissões de CO₂e. Também contempla a implementação da autenticação JWT, dos indicadores ambientais consolidados e do dashboard para visualização dos serviços monitorados, seus estados e respectivos dados. 
+<br>
+O andamento das atividades, as entregas, as pendências e as evidências podem ser consultados no <b>Relatório da Sprint 2</b>, disponível <a href="./docs/sprints/sprint-2.md">aqui</a>.
 </p>
 
 <br>
@@ -230,23 +222,25 @@ A <b>documentação completa</b> pode ser encontrada <a href="https://github.com
 
 ### Pré-requisitos
 
-- [Git](https://git-scm.com/downloads)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) no Windows ou macOS, ou Docker Engine com o plugin Docker Compose no Linux.
-- Docker em execução no computador.
+- Git instalado.
+- Docker Desktop no Windows ou Docker Engine com Docker Compose no Linux.
+- Docker em execução.
 
-Não é necessário instalar Node.js ou PostgreSQL diretamente na máquina para executar serviços que estejam configurados corretamente em containers.
+<br>
 
-### 1. Clonar o repositório e acessar a branch `develop`
+### 1. Clonar o repositório
 
 ```bash
 git clone https://github.com/greenstackfatec-tech/greener.git
 cd greener
-git switch develop
+git switch main
 ```
+
+<br>
 
 ### 2. Configurar as variáveis de ambiente
 
-Crie o arquivo `.env` na raiz a partir do exemplo:
+Crie o arquivo `.env` na raiz do projeto a partir do arquivo de exemplo.
 
 **Windows (PowerShell):**
 
@@ -260,9 +254,17 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-O exemplo usa valores apropriados somente para desenvolvimento local. Troque a senha antes de usar o ambiente em qualquer contexto compartilhado e não versione credenciais reais.
+O arquivo `.env.example` contém as configurações iniciais para execução local.
 
-Para usar o login JWT, configure `JWT_SECRET` no `.env` conforme o [README do backend](backend/README.md). Essa chave é obrigatória para autenticar; não é exigida pelas rotas públicas.
+Para habilitar a autenticação JWT, configure a variável `JWT_SECRET` no arquivo `.env`. Gere uma chave com o comando:
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
+```
+
+Copie o valor gerado para `JWT_SECRET`. Não compartilhe nem versione o arquivo `.env`.
+
+<br>
 
 ### 3. Validar a configuração do Docker Compose
 
@@ -272,57 +274,71 @@ Na raiz do repositório, execute:
 docker compose config
 ```
 
-Esse comando valida a configuração do Compose. Se apresentar erro, corrija o `compose.yaml` e as variáveis necessárias antes de continuar.
+Esse comando verifica se a configuração do Docker Compose está válida antes da inicialização dos serviços.
+
+<br>
 
 ### 4. Construir e iniciar os containers
 
-```bash
-docker compose up --build
-```
-
-O Compose inicia PostgreSQL, backend e frontend. O backend aguarda o banco ficar saudável; o frontend aguarda o backend conseguir consultar o banco. Para executar em segundo plano, use:
+Execute:
 
 ```bash
 docker compose up --build -d
 ```
 
+O Docker Compose constrói as imagens e inicia os seguintes serviços:
+
+- **PostgreSQL:** responsável pela persistência dos dados.
+- **Backend:** responsável pelas regras de negócio, integrações, autenticação e coleta de métricas.
+- **Frontend:** interface web utilizada para visualizar as informações do sistema.
+
+O backend aguarda o banco de dados ficar saudável antes de iniciar, enquanto o frontend aguarda a disponibilidade do backend.
+
+<br>
+
 ### 5. Verificar os serviços
 
-Abra o painel de disponibilidade do ambiente em [http://localhost:8080](http://localhost:8080). Os endereços e verificações diretas são:
+Após a inicialização, acesse a aplicação pelo endereço:
 
-| Serviço | Endereço local | Verificação |
+**Frontend:** http://localhost:8080
+
+Os endpoints de verificação do backend são:
+
+| Serviço | Endereço | Resultado esperado |
 |---|---|---|
-| Frontend | `http://localhost:8080` | Painel indica estado do backend e PostgreSQL. |
-| Backend | `http://localhost:3000/health/live` | Deve retornar `{"status":"ok"}`. |
-| Backend + banco | `http://localhost:3000/health/ready` | Deve retornar HTTP 200 e `{"status":"ok","database":"connected"}`. |
-| PostgreSQL | `localhost:5432` | `docker compose exec database pg_isready -U greener -d greener`. |
+| Frontend | `http://localhost:8080` | Interface do GreenER disponível. |
+| Backend | `http://localhost:3000/health/live` | HTTP 200 e `{"status":"ok"}`. |
+| Backend e banco | `http://localhost:3000/health/ready` | HTTP 200 e `{"status":"ok","database":"connected"}`. |
 
-Se alterar as portas no `.env`, use os novos valores correspondentes. Consulte o estado geral dos containers:
+Para verificar o estado dos containers, execute:
 
 ```bash
 docker compose ps
 ```
 
-Para acompanhar os logs por serviço:
+Para acompanhar os registros de execução dos serviços:
 
 ```bash
 docker compose logs -f frontend backend database
 ```
 
-Os serviços devem aparecer como `healthy` no resultado de `docker compose ps`.
+Os containers devem apresentar o estado `healthy` quando as verificações de saúde forem concluídas com sucesso.
 
-> O frontend usa React + TypeScript (Vite) e exibe a disponibilidade do ambiente. O backend oferece rotas de serviços, coletas, configuração e autenticação JWT. Para rodar o frontend fora do Docker, veja o [README do frontend](frontend/README.md).
-
-A coleta periódica inicia automaticamente com o backend. Consulte a [configuração e os comandos de controle](backend/README.md#rotina-periódica--tp06).
+<br>
 
 ### 6. Encerrar a aplicação
+
+Para encerrar os serviços, execute:
 
 ```bash
 docker compose down
 ```
 
-Esse comando encerra e remove os containers da aplicação. Não utilize `docker compose down -v` se quiser preservar os volumes e os dados persistidos do PostgreSQL.
+Esse comando encerra e remove os containers, mas preserva o volume `postgres_data` e os dados persistidos no PostgreSQL.
 
+**Atenção:** não utilize `docker compose down -v` caso queira preservar os dados armazenados no banco.
+
+---
 <br>
 
 ## 👩‍💻 Nossa Equipe
