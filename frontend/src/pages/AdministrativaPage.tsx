@@ -53,7 +53,6 @@ export function AdministrativaPage() {
       </div>
 
       <div className="adm-linha">
-        {/* GraficoConsumo é o mesmo do painel de login; seus estilos (.grafico) estão em LayoutAutenticacao.css. */}
         <div className="adm-card adm-card-grafico">
           <GraficoConsumo />
         </div>
