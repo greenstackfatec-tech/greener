@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import logo from "../assets/greener-icon.png";
 import { ROTAS } from "../caminhos.ts";
-import { GraficoConsumo } from "./GraficoConsumo.tsx";
+import { ResumoConsumo } from "./ResumoConsumo.tsx";
 import "./LayoutAutenticacao.css";
 
 function Logo() {
@@ -34,7 +34,7 @@ export function LayoutAutenticacao({ children }: { children: ReactNode }) {
         <p className="auth-painel-texto">
           Acompanhe o consumo de energia e as emissões de CO₂e dos seus softwares em um só lugar.
         </p>
-        <GraficoConsumo />
+        <ResumoConsumo />
         <p className="auth-painel-subtitulo">Medir é o primeiro passo.</p>
         <p className="auth-painel-apoio">
           Transforme dados de execução em uma visão mais clara do impacto ambiental.
@@ -57,8 +57,6 @@ export function LayoutAutenticacao({ children }: { children: ReactNode }) {
 
         <p className="auth-rodape">
           <span>GreenStack · Projeto acadêmico</span>
-          <span className="auth-rodape-separador"> · </span>
-          <span>Protótipo com dados ilustrativos</span>
         </p>
       </main>
     </div>

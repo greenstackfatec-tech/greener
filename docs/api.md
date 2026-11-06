@@ -504,6 +504,11 @@ Retorna a configuração atual do intervalo alternativo de coleta.
 ```
 
 **Token ausente ou inválido — HTTP 401:**
+- `POST /collections/executar`: executa uma rodada manual e retorna o resumo em `dados`. HTTP `200` inclui `resultado: "completo"`, `"parcial"` ou `"falha"`; `sucesso` é verdadeiro somente no resultado completo. `dados.sucessos` conta cálculos completos e `dados.parciais` conta métricas recebidas sem cálculo; detalhes com falha incluem `falha` e a mensagem compatível em `erro`. Chamadas concorrentes aguardam a coleta anterior do mesmo serviço e produzem novas amostras. Descoberta com timeout responde `504`; rede, HTTP externo ou resposta inválida respondem `502`. Configuração e persistência respondem `500`, com `{ error, message }` público controlado, após aguardar os serviços iniciados.
+- `POST /collections/rotina/iniciar`: exige `Content-Type: application/json`, com `{}` ou `{ "intervaloSegundos": 60 }`. O campo opcional deve ser um número inteiro entre 1 e 2147483 e substitui apenas o intervalo alternativo e de descoberta; a API mantém prioridade. Responde `200` com o estado da rotina e preserva `dados.intervaloSegundos`, equivalente a `dados.intervaloAlternativoSegundos`; `400` para JSON/intervalo inválido ou rotina já ativa/em encerramento; `415` sem o Content-Type adequado.
+- `POST /collections/rotina/parar`: cancela os timers e aguarda as coletas pendentes antes de responder `200`; responde `400` se a rotina já estiver parada. Uma nova chamada de início só é aceita após terminar a parada.
+- `GET /collections/rotina/status`: responde `200` com `sucesso: true` e os campos `executando`, `encerrando`, `coletasEmAndamento`, `intervaloAlternativoSegundos` e `monitoramento` em `dados`. `executando` indica rotina ativa, inclusive aguardando o próximo disparo. `monitoramento` informa `situacao` (`aguardando`, `ok` ou `degradado`), horários de tentativa/sucesso e `falhasAtivas` por etapa e ID externo. É um retrato em memória, reiniciado com o processo, sem disparar consultas externas ou gravar amostras; usa `Cache-Control: no-store`.
+- `GET /collections`: retorna as últimas 100 coletas persistidas. Cada amostra acrescenta uma linha; a anterior permanece no histórico.
 
 ```json
 {

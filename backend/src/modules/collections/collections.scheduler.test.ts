@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { servicos } from "../../mocks/fixtures.ts";
+import { servicos, metricas, regioes } from "../../mocks/fixtures.ts";
+import { calcularColeta } from "../../calculos/calculo-energia.ts";
 import { criarRotinaColeta, INTERVALO_MAXIMO_SEGUNDOS } from "./collections.scheduler.ts";
 
 async function estabilizar() {
@@ -52,7 +53,11 @@ function preparar() {
       if (estado.falharColeta.has(servico.id)) throw new Error("Falha nas métricas");
       informarIntervalo(estado.intervalos.get(servico.id)!);
       if (estado.falharDepoisDoIntervalo) throw new Error("Falha na persistência");
-      return { servicoId: 1, servicoNome: servico.name, status: "sucesso" };
+      const intensidadeCarbono = { ...regioes[0], region_code: regioes[0].code };
+      return {
+        servicoId: 1, servicoNome: servico.name, status: "sucesso", resultado: "completo",
+        calculo: { ...calcularColeta(metricas, intensidadeCarbono), intensidadeCarbono },
+      };
     },
   });
   async function avancar(milissegundos: number) {

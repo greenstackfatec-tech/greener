@@ -52,8 +52,8 @@ Abra os caminhos abaixo após `http://127.0.0.1:4010`:
 - **Sucesso:** `/metrics/servico-1` → `200` com métricas fictícias.
 - **Não encontrado:** `/metrics/inexistente` → `404`.
 - **Serviço fora do ar:** `/cenarios/servico-fora-do-ar/metrics/servico-1` → `500`.
-- **Sem métricas:** `/cenarios/sem-metricas/metrics/servico-1` → `500` com `error` e `message`.
-- **Sem localização:** `/cenarios/sem-localizacao/services/servico-1` → `200` com `location: null`, rejeitado pela integração como `resposta_invalida`.
+- **Sem métricas:** `/cenarios/sem-metricas/metrics/servico-1` → `500` com `error: "metrics_missing"`. A coleta registra `sem_metricas`, mantém o serviço ativo e não calcula consumo ou emissões. Medições válidas iguais a zero continuam sendo sucesso.
+- **Sem localização:** `/cenarios/sem-localizacao/services/servico-1` → `200` com `location: null`, aceito pela integração com todos os campos de localização nulos (TP15).
 
 Use `/services` e `/regions` para consultar os IDs disponíveis. Para aplicar um cenário às integrações, acrescente `/cenarios/NOME` à URL base da API.
 
@@ -61,7 +61,7 @@ O campo `metrics_path` retornado na lista e no detalhe do serviço preserva o ce
 
 **Observações:** dados fictícios e fixos. Em `sem-metricas`, o status e o formato seguem o contrato; os textos são ilustrativos.
 
-**Limite do cenário sem localização:** o OpenAPI exige `location` como objeto e não documenta uma resposta para serviço sem localização. O mock usa `location: null` como injeção de dados inválidos para testar o tratamento dessa falha.
+**Limite do cenário sem localização:** o OpenAPI exige `location` como objeto e não documenta uma resposta para serviço sem localização. O mock usa `location: null` para testar o serviço sem localização, que a integração aceita: o serviço é gravado com região, cidade e coordenadas nulas e a coleta guarda as métricas sem calcular o CO₂e (sem `region_code` não há intensidade de carbono).
 
 <br>
 
