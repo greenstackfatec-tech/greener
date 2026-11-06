@@ -7,6 +7,7 @@ import {
   buscarHistoricoColetas,
   gravarColeta,
   gravarColetaIndisponivel,
+  gravarColetaSemMetricas,
   listarColetas,
 } from "./collections.repository.ts";
 
@@ -63,5 +64,40 @@ test("repository de coletas com PostgreSQL real", async (t) => {
     const coletas = (await listarColetas()).filter((coleta) => coleta.servicoId === servico.id);
     assert.equal(coletas.length, 2);
     assert.equal(typeof coletas[0]?.id, "number");
+  });
+
+  await t.test("ausência registrada recupera disponibilidade sem substituir o histórico", async () => {
+    const antes = await buscarHistoricoColetas(servico.id);
+    await consultar("UPDATE servicos SET status = 'indisponivel' WHERE id = $1", [servico.id]);
+    const id = await gravarColetaSemMetricas(servico.id, 90);
+    const [coleta, ...anteriores] = await buscarHistoricoColetas(servico.id);
+    assert.equal(coleta.id, id);
+    assert.equal(coleta.statusColeta, "sem_metricas");
+    assert.equal(coleta.intervaloSegundos, 90);
+    assert.ok([
+      coleta.cpuPercentual, coleta.memoriaGb, coleta.discoGb, coleta.redeGb,
+      coleta.potenciaEstimadaW, coleta.duracaoSegundos, coleta.energiaKwh,
+      coleta.emissaoCo2eG, coleta.calculadoEm,
+    ].every((valor) => valor === null));
+    assert.deepEqual(anteriores, antes);
+    const cadastro = await consultar("SELECT status FROM servicos WHERE id = $1", [servico.id]);
+    assert.equal(cadastro.rows[0].status, "ativo");
+  });
+
+  await t.test("falha na inserção desfaz a recuperação de disponibilidade", async (t) => {
+    t.mock.method(console, "error", () => {});
+    await consultar("UPDATE servicos SET status = 'indisponivel' WHERE id = $1", [servico.id]);
+    const antes = await buscarHistoricoColetas(servico.id);
+    await assert.rejects(() => gravarColetaSemMetricas(servico.id, -1), /Falha ao persistir/);
+    assert.deepEqual(await buscarHistoricoColetas(servico.id), antes);
+    const cadastro = await consultar("SELECT status FROM servicos WHERE id = $1", [servico.id]);
+    assert.equal(cadastro.rows[0].status, "indisponivel");
+  });
+
+  await t.test("ausência de métricas não reativa um registro removido", async () => {
+    await consultar("UPDATE servicos SET status = 'removido' WHERE id = $1", [servico.id]);
+    await gravarColetaSemMetricas(servico.id, 60);
+    const cadastro = await consultar("SELECT status FROM servicos WHERE id = $1", [servico.id]);
+    assert.equal(cadastro.rows[0].status, "removido");
   });
 });

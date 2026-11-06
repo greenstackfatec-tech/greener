@@ -41,6 +41,10 @@ export interface ColetaParaGravar {
  */
 export async function gravarColeta(coleta: ColetaParaGravar): Promise<number> {
   const sql = `
+    WITH servico_ativo AS (
+      UPDATE servicos SET status = 'ativo'
+      WHERE id = $1 AND status = 'indisponivel' AND $7::text = 'sem_metricas'
+    )
     INSERT INTO metricas_servico (
       servico_id, coletado_em, cpu_percentual, memoria_gb, disco_gb, rede_gb,
       intervalo_segundos, status_coleta, potencia_estimada_w, duracao_segundos,
@@ -196,7 +200,7 @@ export async function buscarHistoricoColetas(
       duracao_segundos, energia_kwh::float8, emissao_co2e_g::float8, calculado_em
     FROM metricas_servico
     WHERE servico_id = $1
-    ORDER BY coletado_em DESC
+    ORDER BY coletado_em DESC, id DESC
     LIMIT $2
   `;
 
@@ -234,7 +238,7 @@ export async function listarColetas(): Promise<
     SELECT
       id::int, servico_id::int, coletado_em, status_coleta
     FROM metricas_servico
-    ORDER BY coletado_em DESC
+    ORDER BY coletado_em DESC, id DESC
     LIMIT 100
   `;
 

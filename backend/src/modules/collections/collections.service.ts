@@ -15,6 +15,7 @@ import { buscarMetricas, listarServicos } from "../../integrations/metrics-api.t
 import {
   gravarColetaSucesso,
   gravarColetaRecebida,
+  gravarColetaSemMetricas,
   gravarColetaIndisponivel,
   type StatusColeta,
   buscarHistoricoColetas,
@@ -93,6 +94,17 @@ async function coletarEGravarServico(
     respostaMetricas = await buscarMetricas(servicoApi.id);
   } catch (erro) {
     if (!(erro instanceof ErroApi)) throw erro;
+    if (erro.tipo === "http" && erro.statusHttp === 500 && erro.codigoApi === "metrics_missing") {
+      contexto.etapa = "persistencia";
+      await gravarColetaSemMetricas(servico.id, intervalo);
+      resolverFalha({ ...contexto, etapa: "metricas" });
+      return {
+        ...identificacaoServico,
+        status: "sem_metricas",
+        resultado: "sem_metricas",
+        intervaloSegundos: intervalo,
+      };
+    }
     const falha = registrarFalha(erro, contexto);
     contexto.etapa = "persistencia";
     // HTTP 404 é reportado sem inserir uma coleta.
@@ -118,25 +130,15 @@ async function coletarEGravarServico(
 
   informarIntervalo?.(respostaMetricas.collection_interval_seconds);
   const intervaloSegundos = respostaMetricas.collection_interval_seconds;
-  const metricas = respostaMetricas.metrics;
-  const temMetricasValidas =
-    metricas.cpu_percent > 0 ||
-    metricas.memory_gb > 0 ||
-    metricas.disk_gb > 0 ||
-    metricas.network_gb > 0;
-  if (!temMetricasValidas) {
-    contexto.etapa = "persistencia";
-    await gravarColetaRecebida(servico.id, respostaMetricas, null, "sem_metricas");
-    return { ...identificacaoServico, status: "sem_metricas", resultado: "sem_metricas", intervaloSegundos };
-  }
 
   // Falhas no cálculo não descartam as métricas recebidas.
   let calculo: CalculoColeta;
   contexto.etapa = "calculo";
   try {
+    if (!codigoRegiao) throw new Error("Serviço sem localização: CO₂e não calculado");
     calculo = await calculadoraEnergia.calcularParaServico(
       respostaMetricas,
-      servicoApi.location.region_code,
+      codigoRegiao,
     );
     validarCalculo(calculo);
     resolverFalha({ ...contexto, etapa: "carbono" });
@@ -145,20 +147,6 @@ async function coletarEGravarServico(
     if (erro instanceof ErroConfiguracaoApi) throw erro;
     const falha = registrarFalha(erro, { ...contexto, etapa: erro instanceof ErroApi ? "carbono" : "calculo" });
     contexto.etapa = "persistencia";
-  let calculo: CalculoColeta | undefined;
-  let erroCalculo: string | undefined;
-  if (!codigoRegiao) {
-    erroCalculo = "Serviço sem localização: CO₂e não calculado";
-  } else {
-    try {
-      calculo = await calculadoraEnergia.calcularParaServico(respostaMetricas, codigoRegiao);
-    } catch (erro) {
-      erroCalculo = erro instanceof Error ? erro.message : "Falha ao calcular a coleta";
-    }
-  }
-  if (calculo) {
-    await gravarColetaSucesso(servico, respostaMetricas, calculo.intensidadeCarbono, calculo);
-  } else {
     await gravarColetaRecebida(servico.id, respostaMetricas);
     return {
       ...identificacaoServico, status: "sucesso", resultado: "parcial", intervaloSegundos,

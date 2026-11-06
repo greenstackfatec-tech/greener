@@ -15,9 +15,8 @@ export interface Servico {
 
 /** Serviço com a localização e a última coleta, que é o que o dashboard mostra (RF02, RF05, RF06). */
 export interface ServicoComUltimaColeta extends Servico {
-  regiao: string;
-  pais: string;
-  /** Null quando o serviço ainda não teve nenhuma coleta (o dashboard mostra "sem métricas"). */
+  regiao: string | null;
+  pais: string | null;
   coletadoEm: Date | null;
   statusColeta: "sucesso" | "sem_metricas" | "indisponivel" | null;
   cpuPercentual: number | null;
@@ -87,20 +86,13 @@ export async function listarServicos(): Promise<ServicoComUltimaColeta[]> {
             m.energia_kwh::float8 AS "energiaKwh",
             m.emissao_co2e_g::float8 AS "emissaoCo2eG"
      FROM servicos s
-     JOIN regioes r ON r.id = s.regiao_id
+     LEFT JOIN regioes r ON r.id = s.regiao_id
      LEFT JOIN LATERAL (
        SELECT * FROM metricas_servico
        WHERE servico_id = s.id
        ORDER BY coletado_em DESC, id DESC
        LIMIT 1
      ) m ON TRUE
-     ORDER BY s.id`,
-export async function listarServicos(): Promise<Servico[]> {
-  const resultado = await consultar<Servico>(
-    `SELECT s.id::int, s.nome, s.status, s.cidade, s.latitude::float8, s.longitude::float8,
-            r.pais, r.nome AS regiao
-     FROM servicos s
-     LEFT JOIN regioes r ON r.id = s.regiao_id
      ORDER BY s.id`,
   );
   return resultado.rows;
