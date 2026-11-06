@@ -15,6 +15,7 @@ import { buscarMetricas, listarServicos } from "../../integrations/metrics-api.t
 import {
   gravarColetaSucesso,
   gravarColetaRecebida,
+  gravarColetaSemMetricas,
   gravarColetaIndisponivel,
   gravarColetaSemMetricas,
   type StatusColeta,

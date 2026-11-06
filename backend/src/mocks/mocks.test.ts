@@ -158,14 +158,13 @@ test("mocks locais atendem os clientes de integração", async (t) => {
     const dados = await resposta.json();
     assert.ok(typeof dados === "object" && dados !== null && "error" in dados && "message" in dados);
     assert.deepEqual(Object.keys(dados).sort(), ["error", "message"]);
-    // O status e o envelope são contratuais; metrics_missing é um código local ilustrativo.
-    assert.equal(typeof dados.error, "string");
+    assert.equal(dados.error, "metrics_missing");
     assert.equal(typeof dados.message, "string");
     await assert.rejects(() => buscarMetricas(servico.id, cenario("sem-metricas")), (erro: unknown) => {
       assert.ok(erro instanceof ErroApi);
       assert.equal(erro.tipo, "http");
       assert.equal(erro.statusHttp, 500);
-      assert.equal(typeof erro.codigoApi, "string");
+      assert.equal(erro.codigoApi, "metrics_missing");
       return true;
     });
   });

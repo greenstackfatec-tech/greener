@@ -3,7 +3,7 @@ import {
   buscarServicoPorId as buscarServicoPorIdDoRepository,
   listarServicos as listarServicosDoRepository,
 } from "./services.repository.ts";
-import type { Servico } from "./services.repository.ts";
+import type { Servico, ServicoComUltimaColeta } from "./services.repository.ts";
 
 export const NAO_INFORMADO = "não informado";
 

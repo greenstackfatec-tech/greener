@@ -52,7 +52,7 @@ Abra os caminhos abaixo após `http://127.0.0.1:4010`:
 - **Sucesso:** `/metrics/servico-1` → `200` com métricas fictícias.
 - **Não encontrado:** `/metrics/inexistente` → `404`.
 - **Serviço fora do ar:** `/cenarios/servico-fora-do-ar/metrics/servico-1` → `500`.
-- **Sem métricas:** `/cenarios/sem-metricas/metrics/servico-1` → `500` com `error` e `message`.
+- **Sem métricas:** `/cenarios/sem-metricas/metrics/servico-1` → `500` com `error: "metrics_missing"`. A coleta registra `sem_metricas`, mantém o serviço ativo e não calcula consumo ou emissões. Medições válidas iguais a zero continuam sendo sucesso.
 - **Sem localização:** `/cenarios/sem-localizacao/services/servico-1` → `200` com `location: null`, aceito pela integração com todos os campos de localização nulos (TP15).
 
 Use `/services` e `/regions` para consultar os IDs disponíveis. Para aplicar um cenário às integrações, acrescente `/cenarios/NOME` à URL base da API.

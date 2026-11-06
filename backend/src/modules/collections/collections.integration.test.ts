@@ -59,7 +59,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
   const estado = {
     semCarbono: false,
     falharPrimeiroCarbono: false,
-    semMetricas: false,
+    indisponivel: false,
     zerarMetricas: false,
     intervaloZero: false,
     intervaloApi: 60,
@@ -86,10 +86,10 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       response.writeHead(503, { "content-type": "application/json" });
       response.end(JSON.stringify({ error: "unavailable", message: "Carbono indisponível" }));
     } else if (caminho.startsWith("/metrics/")) {
-      response.writeHead(estado.semMetricas ? 503 : 200, { "content-type": "application/json" });
+      response.writeHead(estado.indisponivel ? 503 : 200, { "content-type": "application/json" });
       response.end(
         JSON.stringify(
-          estado.semMetricas
+          estado.indisponivel
             ? { error: "service_unavailable", message: "Serviço indisponível" }
             : estado.intervaloZero
               ? { ...metricas, collection_interval_seconds: 0 }
@@ -273,9 +273,9 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
   await t.test(
     "tentativas indisponíveis são registradas sem métricas e sem data de cálculo",
     async () => {
-      estado.semMetricas = true;
+      estado.indisponivel = true;
       assert.equal((await executar()).status, 200);
-      estado.semMetricas = false;
+      estado.indisponivel = false;
       const [coleta] = await buscarHistoricoColetas(idServico);
       assert.equal(coleta.statusColeta, "indisponivel");
       assert.equal(coleta.cpuPercentual, null);
@@ -528,5 +528,83 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     const lista = (await (await fetch(`${urlApi}/collections`)).json()) as { id: number }[];
     assert.ok(lista.some((coleta) => coleta.id === primeira.id));
     assert.ok(lista.some((coleta) => coleta.id === segunda.id));
+  });
+
+  await t.test("mock sem-metricas publica ausência, preserva histórico e recupera no mesmo processo", async () => {
+    const urlOriginal = process.env.METRICS_API_URL;
+    const antes = await buscarHistoricoColetas(idServico);
+    const quantidadeServicos = await banco.query("SELECT count(*)::int AS total FROM servicos");
+    await banco.query("UPDATE servicos SET status = 'indisponivel' WHERE id = $1", [idServico]);
+    try {
+      process.env.METRICS_API_URL = `${urlOriginal}/cenarios/sem-metricas`;
+      const resposta = await executar();
+      assert.equal(resposta.status, 200);
+      const corpo = await resposta.json() as {
+        sucesso: boolean; resultado: string;
+        dados: { totalServicos: number; sucessos: number; parciais: number; semMetricas: number; indisponiveis: number; erros: number };
+      };
+      assert.equal(corpo.sucesso, false);
+      assert.equal(corpo.resultado, "parcial");
+      assert.equal(corpo.dados.totalServicos, 2);
+      assert.equal(corpo.dados.semMetricas, 2);
+      assert.equal(corpo.dados.indisponiveis, 0);
+      assert.equal(corpo.dados.erros, 0);
+      assert.equal(corpo.dados.sucessos, 0);
+      assert.equal(corpo.dados.parciais, 0);
+
+      const [ausencia, ...historico] = await buscarHistoricoColetas(idServico);
+      assert.equal(ausencia.statusColeta, "sem_metricas");
+      assert.equal(ausencia.intervaloSegundos, 60);
+      assert.ok([
+        ausencia.cpuPercentual, ausencia.memoriaGb, ausencia.discoGb, ausencia.redeGb,
+        ausencia.potenciaEstimadaW, ausencia.duracaoSegundos, ausencia.energiaKwh,
+        ausencia.emissaoCo2eG, ausencia.calculadoEm,
+      ].every((valor) => valor === null));
+      assert.deepEqual(historico, antes);
+      const servicosPublicados = await (await fetch(`${urlApi}/services`)).json() as Record<string, unknown>[];
+      const publicado = servicosPublicados.find((servico) => servico.id === idServico);
+      assert.ok(publicado);
+      assert.equal(publicado.status, "ativo");
+      assert.equal(publicado.statusColeta, "sem_metricas");
+      assert.equal(publicado.coletadoEm, ausencia.coletadoEm.toISOString());
+      for (const campo of ["cpuPercentual", "memoriaGb", "discoGb", "redeGb", "energiaKwh", "emissaoCo2eG"]) {
+        assert.equal(publicado[campo], null);
+      }
+      const semLocalizacao = servicosPublicados.find((servico) => servico.nome === servicos[0].name && servico.pais === null);
+      assert.ok(semLocalizacao, "a listagem mantém serviços sem localização");
+      const respostaHistorico = await fetch(`${urlApi}/collections?serviceId=${idServico}`);
+      assert.equal(respostaHistorico.status, 200);
+      const historicoPublicado = await respostaHistorico.json() as Record<string, unknown>[];
+      assert.equal(historicoPublicado[0].id, ausencia.id);
+      assert.equal(historicoPublicado[0].statusColeta, "sem_metricas");
+
+      assert.equal((await executar()).status, 200);
+      const [segundaAusencia, primeiraAusencia] = await buscarHistoricoColetas(idServico);
+      assert.equal(segundaAusencia.statusColeta, "sem_metricas");
+      assert.notEqual(segundaAusencia.id, ausencia.id);
+      assert.deepEqual(primeiraAusencia, ausencia);
+      assert.deepEqual((await banco.query("SELECT count(*)::int AS total FROM servicos")).rows, quantidadeServicos.rows);
+
+      process.env.METRICS_API_URL = urlOriginal;
+      estado.intervaloApi = 60;
+      estado.cpuPercentual = 40;
+      const recuperacao = await (await executar()).json() as { dados: { sucessos: number } };
+      assert.equal(recuperacao.dados.sucessos, 2);
+      const [recuperada, ...anteriores] = await buscarHistoricoColetas(idServico);
+      assert.equal(recuperada.statusColeta, "sucesso");
+      assert.equal(recuperada.cpuPercentual, 40);
+      assert.ok(recuperada.energiaKwh! > 0);
+      assert.deepEqual(anteriores, [segundaAusencia, ausencia, ...antes]);
+      const atualizados = await (await fetch(`${urlApi}/services`)).json() as Record<string, unknown>[];
+      assert.equal(atualizados.find((servico) => servico.id === idServico)?.statusColeta, "sucesso");
+      const status = await (await fetch(`${urlApi}/collections/rotina/status`)).json() as {
+        dados: { monitoramento: { situacao: string; falhasAtivas: unknown[] } };
+      };
+      assert.equal(status.dados.monitoramento.situacao, "ok");
+      assert.deepEqual(status.dados.monitoramento.falhasAtivas, []);
+    } finally {
+      if (urlOriginal === undefined) delete process.env.METRICS_API_URL;
+      else process.env.METRICS_API_URL = urlOriginal;
+    }
   });
 });

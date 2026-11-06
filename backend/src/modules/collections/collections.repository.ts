@@ -205,7 +205,7 @@ export async function buscarHistoricoColetas(
       duracao_segundos, energia_kwh::float8, emissao_co2e_g::float8, calculado_em
     FROM metricas_servico
     WHERE servico_id = $1
-    ORDER BY coletado_em DESC
+    ORDER BY coletado_em DESC, id DESC
     LIMIT $2
   `;
 
@@ -243,7 +243,7 @@ export async function listarColetas(): Promise<
     SELECT
       id::int, servico_id::int, coletado_em, status_coleta
     FROM metricas_servico
-    ORDER BY coletado_em DESC
+    ORDER BY coletado_em DESC, id DESC
     LIMIT 100
   `;
 
