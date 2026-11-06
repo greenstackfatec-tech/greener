@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "mock": "node --experimental-strip-types src/mocks/server.ts",
-    "test": "node --experimental-strip-types --test src/integrations/api-client.test.ts src/mocks/mocks.test.ts src/calculos/calculo-energia.test.ts src/modules/auth/auth.test.ts src/modules/collections/collections.test.ts src/modules/collections/collections.monitoring.test.ts src/modules/collections/collections.controller.test.ts src/modules/collections/collections.scheduler.test.ts src/server.test.ts",
+"test": "node --experimental-strip-types --test src/integrations/api-client.test.ts src/mocks/mocks.test.ts src/calculos/calculo-energia.test.ts src/modules/auth/auth.test.ts src/modules/collections/collections.test.ts src/modules/collections/collections.monitoring.test.ts src/modules/collections/collections.controller.test.ts src/modules/collections/collections.scheduler.test.ts src/server.test.ts",
     "test:integration": "node --experimental-strip-types --test src/modules/auth/auth.integration.test.ts src/modules/services/services.test.ts src/modules/services/services.repository.integration.test.ts src/modules/collections/collections.repository.integration.test.ts src/modules/collections/collections.endpoints.integration.test.ts src/modules/resultados/resultados.repository.integration.test.ts src/modules/dashboard-indicators/dashboard-indicators.integration.test.ts src/db/connection.integration.test.ts",
     "test:collections:integration": "node --experimental-strip-types --test src/modules/collections/collections.integration.test.ts src/db/migrations.integration.test.ts src/db/connection.integration.test.ts",
     "test:persistence": "node --experimental-strip-types scripts/verify-persistence.ts",
@@ -20,6 +20,6 @@
   "devDependencies": {
     "@types/node": "24.19.2",
     "@types/pg": "8.15.5",
-    "typescript": "7.0.2"
+    "typescript": "^7.0.2"
   }
 }

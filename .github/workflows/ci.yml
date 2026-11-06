@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  backend-typecheck:
+    name: Backend typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Typecheck
+        working-directory: backend
+        run: npm run typecheck
+
+  frontend-typecheck:
+    name: Frontend typecheck + lint + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  docker-smoke-test:
+    name: Docker compose smoke test
+    runs-on: ubuntu-latest
+    needs: [backend-typecheck, frontend-typecheck]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: docker compose build
+      - name: Start stack
+        run: docker compose up -d
+      - name: Wait for healthchecks
+        run: |
+          for i in {1..30}; do
+            if docker compose ps --format json | jq -e 'all(.Health == "healthy")' > /dev/null 2>&1; then
+              echo "All services healthy"
+              exit 0
+            fi
+            echo "Waiting for healthchecks... ($i/30)"
+            sleep 2
+          done
+          echo "Timeout: services not healthy"
+          docker compose ps
+          docker compose logs
+          exit 1
+      - name: Smoke test backend health/ready
+        run: |
+          for i in {1..10}; do
+            if curl -fsS http://localhost:3000/health/ready | grep -q '"status":"ok"'; then
+              echo "Backend health/ready OK"
+              exit 0
+            fi
+            echo "Retry $i/10..."
+            sleep 2
+          done
+          echo "Backend health/ready failed"
+          docker compose logs backend
+          exit 1
+      - name: Smoke test frontend
+        run: |
+          if curl -fsS http://localhost:8080/ | grep -q '<html'; then
+            echo "Frontend OK"
+            exit 0
+          fi
+          echo "Frontend failed"
+          docker compose logs frontend
+          exit 1
+      - name: Teardown
+        if: always()
+        run: docker compose down -v
+
+  test:
+    name: Backend unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Run tests
+        working-directory: backend
+        run: npm test

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import { ConsumoPorRecurso } from "../components/ConsumoPorRecurso.tsx";
-import { GraficoConsumo } from "../components/GraficoConsumo.tsx";
+import { ResumoConsumo } from "../components/ResumoConsumo.tsx";
 import { IntervaloColeta } from "../components/IntervaloColeta.tsx";
 import { LayoutAdministrativo } from "../components/LayoutAdministrativo.tsx";
 import { ROTAS } from "../caminhos.ts";
@@ -53,8 +53,9 @@ export function AdministrativaPage() {
       </div>
 
       <div className="adm-linha">
+        {/* ResumoConsumo é o mesmo do painel de login; seus estilos estão em LayoutAutenticacao.css. */}
         <div className="adm-card adm-card-grafico">
-          <GraficoConsumo />
+          <ResumoConsumo />
         </div>
         <ConsumoPorRecurso itens={CONSUMO_POR_RECURSO} />
       </div>
