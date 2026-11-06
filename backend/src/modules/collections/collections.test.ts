@@ -28,6 +28,9 @@ async function preparar(t: TestContext, umServico = false) {
     semCarbono: false,
     falharPrimeiroCarbono: false,
     semMetricas: false,
+    metricasAusentes: false,
+    falhaPrimeiroServico: "" as "" | "http" | "timeout" | "rede",
+    timeoutsCancelados: 0,
     zerarMetricas: false,
     metricas404: false,
     intervaloZero: false,
@@ -76,6 +79,17 @@ async function preparar(t: TestContext, umServico = false) {
   const servidor = createServer((request, response) => {
     const caminho = new URL(request.url!, "http://localhost").pathname;
     caminhos.push(caminho);
+    if (caminho === "/metrics/servico-1" && estado.falhaPrimeiroServico) {
+      if (estado.falhaPrimeiroServico === "timeout") {
+        response.once("close", () => { estado.timeoutsCancelados++; });
+      } else if (estado.falhaPrimeiroServico === "rede") {
+        request.socket.destroy();
+      } else {
+        response.writeHead(500, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: "service_unavailable", message: "Serviço indisponível" }));
+      }
+      return;
+    }
     if (
       (estado.semCarbono && caminho.includes("/regions/")) ||
       (estado.falharPrimeiroCarbono && caminho.includes("/regions/BR-SP/"))
@@ -90,11 +104,14 @@ async function preparar(t: TestContext, umServico = false) {
       response.end(
         JSON.stringify({ error: "service_not_found", message: "Serviço não encontrado" }),
       );
-    } else if (estado.semMetricas && caminho.includes("/metrics/")) {
+    } else if (estado.indisponivel && caminho.includes("/metrics/")) {
       response.writeHead(503, { "content-type": "application/json" });
       response.end(
         JSON.stringify({ error: "service_unavailable", message: "Serviço indisponível" }),
       );
+    } else if (estado.metricasAusentes && caminho.includes("/metrics/")) {
+      response.writeHead(500, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "metrics_missing", message: "Métricas ausentes" }));
     } else if (estado.zerarMetricas && caminho.includes("/metrics/")) {
       response.writeHead(200, { "content-type": "application/json" });
       response.end(
@@ -232,7 +249,7 @@ test("falha no cadastro de um serviço aguarda a gravação dos demais antes de 
 
 test("falha de métricas é persistida sem consultar a API de carbono", async (t) => {
   const { estado, gravacoes, caminhos } = await preparar(t);
-  estado.semMetricas = true;
+  estado.indisponivel = true;
   const resultado = await executarRodadaColeta();
   assert.equal(resultado.indisponiveis, 2);
   assert.equal(gravacoes.length, 2);
@@ -240,13 +257,77 @@ test("falha de métricas é persistida sem consultar a API de carbono", async (t
   assert.ok(!caminhos.some((c) => c.includes("carbon-intensity")));
 });
 
-test("medições zeradas são preservadas sem mudar a classificação existente", async (t) => {
+for (const tipo of ["http", "timeout", "rede"] as const) {
+  test(`${tipo} nas métricas isola o serviço afetado e permite recuperação sem perder histórico`, async (t) => {
+    const { estado, gravacoes, caminhos } = await preparar(t);
+    const anterior = process.env.API_TIMEOUT_MS;
+    process.env.API_TIMEOUT_MS = "500";
+    t.after(() => {
+      if (anterior === undefined) delete process.env.API_TIMEOUT_MS; else process.env.API_TIMEOUT_MS = anterior;
+    });
+    await executarRodadaColeta();
+    const historico = structuredClone(gravacoes);
+    caminhos.length = 0;
+    estado.falhaPrimeiroServico = tipo;
+    const antes = Date.now();
+    const rodada = await executarRodadaColeta();
+    const depois = Date.now();
+    assert.equal(rodada.sucessos, 1);
+    assert.equal(rodada.indisponiveis, 1);
+    assert.equal(rodada.erros, 1);
+    const detalhe = rodada.detalhes.find((d) => d.servicoId === 41)!;
+    assert.equal(detalhe.status, "indisponivel");
+    assert.equal(detalhe.resultado, "indisponivel");
+    assert.equal(detalhe.falha?.tipo, tipo);
+    assert.equal(detalhe.falha?.etapa, "metricas");
+    assert.equal(detalhe.falha?.statusHttp, tipo === "http" ? 500 : undefined);
+    const ocorridoEm = Date.parse(detalhe.falha!.ocorridoEm);
+    assert.ok(ocorridoEm >= antes && ocorridoEm <= depois);
+    assert.deepEqual(gravacoes.slice(0, 2), historico);
+    assert.deepEqual(gravacoes.slice(2).find((g) => g[0] === 41), [
+      41, null, null, null, null, 60, "indisponivel", null, null, null, null,
+    ]);
+    assert.equal(gravacoes.slice(2).find((g) => g[0] === 42)![6], "sucesso");
+    assert.ok(!caminhos.some((c) => c.includes("/regions/BR-SP/")));
+    assert.equal(caminhos.filter((c) => c === "/metrics/servico-1").length, 1);
+    if (tipo === "timeout") {
+      const limite = Date.now() + 1000;
+      while (!estado.timeoutsCancelados && Date.now() < limite) await setTimeout(5);
+      assert.equal(estado.timeoutsCancelados, 1);
+    }
+    estado.falhaPrimeiroServico = "";
+    const recuperacao = await executarRodadaColeta();
+    assert.equal(recuperacao.sucessos, 2);
+    assert.equal(recuperacao.indisponiveis, 0);
+    assert.equal(gravacoes.length, 6);
+    assert.ok(!consultarMonitoramentoColeta().falhasAtivas.some((f) => f.etapa === "metricas"));
+  });
+}
+
+test("metrics_missing mantém o serviço sem métricas e resolve somente sua falha de métricas", async (t) => {
+  const { estado, gravacoes, caminhos } = await preparar(t);
+  estado.semMetricas = true;
+  await executarRodadaColeta();
+  estado.semMetricas = false;
+  estado.metricasAusentes = true;
+  const rodada = await executarRodadaColeta();
+  assert.equal(rodada.semMetricas, 2);
+  assert.equal(rodada.indisponiveis, 0);
+  assert.equal(rodada.erros, 0);
+  assert.ok(gravacoes.slice(2).every((g) => g[6] === "sem_metricas" && g.slice(1, 5).every((v) => v === null)));
+  assert.ok(!caminhos.some((c) => c.includes("carbon-intensity")));
+  assert.ok(!consultarMonitoramentoColeta().falhasAtivas.some((f) => f.etapa === "metricas"));
+});
+
+test("medições zeradas são preservadas como métricas válidas", async (t) => {
   const { estado, gravacoes } = await preparar(t);
   estado.zerarMetricas = true;
   const resultado = await executarRodadaColeta();
-  assert.equal(resultado.semMetricas, 2);
+  assert.equal(resultado.sucessos, 2);
+  assert.equal(resultado.semMetricas, 0);
   assert.equal(gravacoes.length, 2);
   assert.ok(gravacoes.every((g) => g.slice(1, 5).every((valor) => valor === 0)));
+  assert.ok(gravacoes.every((g) => g[6] === "sucesso" && g[9] === 0 && g[10] === 0));
 });
 
 test("HTTP 404 depois da listagem preserva a regra existente de não gravar coleta", async (t) => {
@@ -298,10 +379,10 @@ test("TP06 rotina consulta novamente a API e grava cada novo estado, com recuper
   rotina.iniciar();
   await aguardar(() => gravacoes.length === 1);
   const primeira = structuredClone(gravacoes[0]);
-  estado.semMetricas = true;
+  estado.indisponivel = true;
   await aguardar(() => gravacoes.length === 2);
   assert.equal(gravacoes[1][6], "indisponivel");
-  estado.semMetricas = false;
+  estado.indisponivel = false;
   estado.cpuPercentual = 40;
   await aguardar(() => gravacoes.length === 3);
   await rotina.parar();
@@ -415,7 +496,7 @@ test("erro de configuração na integração não vira indisponibilidade externa
 
 test("falha de persistência preserva o diagnóstico externo e não provoca segunda gravação", async (t) => {
   const { estado, consultas } = await preparar(t, true);
-  estado.semMetricas = true;
+  estado.indisponivel = true;
   estado.falharColeta = true;
   await assert.rejects(executarRodadaColeta, AggregateError);
   const falhas = consultarMonitoramentoColeta().falhasAtivas.filter((f) => f.idExterno === servicos[0].id);
@@ -454,4 +535,124 @@ test("coleta automática publica falha e recuperação no mesmo diagnóstico da 
   await aguardar(() => consultarMonitoramentoColeta().situacao === "ok");
   await rotinaColeta.parar();
   assert.equal(consultarMonitoramentoColeta().falhasAtivas.length, 0);
+});
+
+test("mock sem-metricas mantém serviços ativos sem fabricar medições ou falhas", async (t) => {
+  const { gravacoes, caminhos } = await preparar(t);
+  process.env.METRICS_API_URL += "/cenarios/sem-metricas";
+  const ultimaCompleta = consultarMonitoramentoColeta().ultimaColetaCompletaEm;
+  const rodada = await executarRodadaColeta();
+  assert.equal(rodada.totalServicos, 2);
+  assert.equal(rodada.semMetricas, 2);
+  assert.equal(rodada.indisponiveis, 0);
+  assert.equal(rodada.sucessos, 0);
+  assert.equal(rodada.parciais, 0);
+  assert.equal(rodada.erros, 0);
+  assert.deepEqual(gravacoes.map((g) => g[0]).sort(), [41, 42]);
+  for (const gravacao of gravacoes) {
+    assert.deepEqual(gravacao.slice(1), [null, null, null, null, 60, "sem_metricas", null, null, null, null]);
+  }
+  assert.ok(rodada.detalhes.every((d) => d.resultado === "sem_metricas" && d.erro === undefined && d.falha === undefined && d.calculo === undefined));
+  assert.ok(caminhos.includes("/cenarios/sem-metricas/services"));
+  assert.equal(caminhos.filter((c) => c.includes("/metrics/")).length, 2);
+  assert.ok(!caminhos.some((c) => c.includes("/regions/")));
+  assert.equal(consultarMonitoramentoColeta().situacao, "ok");
+  assert.equal(consultarMonitoramentoColeta().ultimaColetaCompletaEm, ultimaCompleta);
+});
+
+test("serviço sem métricas não impede o sucesso dos demais na mesma rodada", async (t) => {
+  const { estado, gravacoes } = await preparar(t);
+  estado.primeiroSemMetricas = true;
+  const rodada = await executarRodadaColeta();
+  assert.equal(rodada.semMetricas, 1);
+  assert.equal(rodada.sucessos, 1);
+  assert.equal(rodada.indisponiveis, 0);
+  assert.equal(rodada.erros, 0);
+  assert.equal(gravacoes.find((g) => g[0] === 41)?.[6], "sem_metricas");
+  assert.equal(gravacoes.find((g) => g[0] === 42)?.[6], "sucesso");
+});
+
+test("classificação de ausência usa código e status HTTP, independentemente da mensagem", async (t) => {
+  const { estado, gravacoes } = await preparar(t, true);
+  for (const [status, codigo, esperado] of [
+    [500, "metrics_missing", "sem_metricas"],
+    [500, "service_unavailable", "indisponivel"],
+    [500, "internal_error", "indisponivel"],
+    [503, "metrics_missing", "indisponivel"],
+  ] as const) {
+    estado.erroMetricas = { status, codigo, mensagem: "Mensagem variável do servidor" };
+    const rodada = await executarRodadaColeta();
+    assert.equal(rodada.detalhes[0].status, esperado);
+    assert.equal(gravacoes.at(-1)?.[6], esperado);
+    assert.equal(rodada.erros, esperado === "sem_metricas" ? 0 : 1);
+  }
+});
+
+test("ausência confirmada resolve somente a falha de métricas do mesmo serviço", async (t) => {
+  const { estado } = await preparar(t);
+  await executarRodadaColeta();
+  estado.indisponivel = true;
+  await executarRodadaColeta();
+  const ultimaCompleta = consultarMonitoramentoColeta().ultimaColetaCompletaEm;
+  estado.metricasAusentes = true;
+  const resultado = await coletarServico(servicos[0], 90);
+  assert.equal(resultado.intervaloSegundos, 90);
+  assert.equal(resultado.resultado, "sem_metricas");
+  const falhas = consultarMonitoramentoColeta().falhasAtivas;
+  assert.ok(!falhas.some((f) => f.etapa === "metricas" && f.idExterno === servicos[0].id));
+  assert.ok(falhas.some((f) => f.etapa === "metricas" && f.idExterno === servicos[1].id));
+  assert.equal(consultarMonitoramentoColeta().ultimaColetaCompletaEm, ultimaCompleta);
+});
+
+test("falha ao gravar ausência é persistência e permite tentar novamente sem duplicação", async (t) => {
+  const { estado, gravacoes, consultas } = await preparar(t, true);
+  await executarRodadaColeta();
+  gravacoes.length = 0;
+  consultas.length = 0;
+  estado.metricasAusentes = true;
+  estado.falharPrimeiraColeta = true;
+  await assert.rejects(executarRodadaColeta, AggregateError);
+  assert.equal(gravacoes.length, 0);
+  assert.equal(consultas.filter((c) => c.sql.includes("INSERT INTO metricas_servico")).length, 1);
+  const falhas = consultarMonitoramentoColeta().falhasAtivas.filter((f) => f.idExterno === servicos[0].id);
+  assert.ok(falhas.some((f) => f.etapa === "persistencia"));
+  assert.ok(!falhas.some((f) => f.etapa === "metricas"));
+  assert.equal((await executarRodadaColeta()).semMetricas, 1);
+  assert.equal(gravacoes.length, 1);
+  assert.equal(consultarMonitoramentoColeta().situacao, "ok");
+});
+
+test("rotina mantém intervalo e histórico ao passar por sucesso, ausência e recuperação", async (t) => {
+  const { estado, gravacoes } = await preparar(t, true);
+  estado.intervaloApi = 1;
+  const rotina = criarRotinaColeta({
+    listarServicos, buscarIntervaloAlternativo, coletarServico,
+    logger: { log() {}, warn() {}, error() {} },
+  });
+  t.after(() => rotina.parar());
+  async function aguardar(quantidade: number) {
+    const limite = Date.now() + 5000;
+    while (gravacoes.length < quantidade || rotina.status().coletasEmAndamento > 0) {
+      assert.ok(Date.now() < limite, "A coleta não ocorreu no prazo esperado");
+      await setTimeout(10);
+    }
+  }
+  rotina.iniciar();
+  await aguardar(1);
+  const primeira = structuredClone(gravacoes[0]);
+  const ultimaCompleta = consultarMonitoramentoColeta().ultimaColetaCompletaEm;
+  estado.metricasAusentes = true;
+  await aguardar(2);
+  assert.equal(gravacoes[1][6], "sem_metricas");
+  assert.equal(gravacoes[1][5], 1);
+  assert.equal(consultarMonitoramentoColeta().ultimaColetaCompletaEm, ultimaCompleta);
+  assert.equal(rotina.status().executando, true);
+  estado.metricasAusentes = false;
+  estado.cpuPercentual = 40;
+  await aguardar(3);
+  await rotina.parar();
+  assert.deepEqual(gravacoes.map((g) => g[6]), ["sucesso", "sem_metricas", "sucesso"]);
+  assert.deepEqual(gravacoes[0], primeira);
+  assert.equal(gravacoes[2][1], 40);
+  assert.ok(gravacoes.every((g) => g[0] === 41 && g[5] === 1));
 });

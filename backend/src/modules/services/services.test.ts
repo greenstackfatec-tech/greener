@@ -34,7 +34,8 @@ test("GET /services passa por route, controller, service e repository", async (t
     const lista = (await (await fetch(`${baseUrl}/services`)).json()) as Servico[];
     const resposta = await fetch(`${baseUrl}/services/${lista[0].id}`);
     assert.equal(resposta.status, 200);
-    assert.deepEqual(await resposta.json(), lista[0]);
+    const { id, nome, status, cidade, latitude, longitude } = lista[0];
+    assert.deepEqual(await resposta.json(), { id, nome, status, cidade, latitude, longitude });
   });
 
   await t.test("GET /services/:id de serviço que não existe responde 404 em JSON", async () => {

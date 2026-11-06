@@ -131,6 +131,11 @@ Invoke-RestMethod -Uri "http://localhost:3000/collections?serviceId=1"
 ```
 
 Ajuste a porta conforme `BACKEND_PORT` no `.env`.
+- **Métricas e cálculo disponíveis:** grava as métricas e os resultados de potência, energia e CO₂e.
+- **Falha no cálculo ou na consulta de carbono:** preserva as métricas recebidas, com `status_coleta = 'sucesso'`, e deixa os campos de cálculo e `calculado_em` nulos. O detalhe retorna `resultado: "parcial"` e `falha` com etapa, tipo, código e mensagem; `erro` mantém a mesma mensagem para compatibilidade. O status do banco descreve a obtenção das métricas; o campo `resultado` descreve a operação completa.
+- **Métricas ausentes (`500 metrics_missing`):** registra `sem_metricas`, com valores nulos e serviço ativo. Medições iguais a zero continuam válidas.
+- **Timeout, erro de rede ou HTTP 500 ao obter métricas:** registra uma coleta `indisponivel`, sem valores de métricas, e atualiza o status do serviço na mesma operação. A próxima coleta com métricas ou `metrics_missing` restaura o estado ativo, preservando o histórico e serviços removidos. Os demais serviços continuam sendo coletados. HTTP 404 apenas é reportado, sem inserir uma coleta.
+- **Falha ao gravar no banco:** a rodada retorna HTTP 500 depois de aguardar os demais serviços. Gravações já concluídas permanecem no banco; a rodada inteira não é uma única transação.
 
 ## 6. Integrações externas
 
