@@ -191,6 +191,8 @@ Fluxo principal:
 
 Cada serviço utiliza seu próprio `collection_interval_seconds`, quando válido. O intervalo começa a contar após o término da coleta, incluindo cálculo e persistência. Coletas manuais e automáticas do mesmo serviço aguardam a anterior para evitar sobreposição.
 
+Antes de cada ciclo de coleta, a descoberta compara os IDs externos da API com os serviços persistidos da aplicação monitorada. Serviços novos são cadastrados e passam a ser coletados; ausentes recebem `removido`, preservando o cadastro e o histórico; quando reaparecem, são reativados no mesmo registro e voltam a ser coletados, sem reiniciar a rotina. As mudanças e seus horários de detecção ficam em `logs_sistema`, com as ações `servico_incluido`, `servico_removido` e `servico_reativado`. Uma lista válida vazia confirma a ausência dos serviços monitorados; falhas na listagem não provocam remoções.
+
 O diagnóstico da rotina é mantido em memória e pode ser consultado por `GET /collections/rotina/status`. O histórico das coletas permanece no PostgreSQL após a reinicialização do processo.
 
 Veja os métodos, parâmetros e respostas em [`docs/api.md`](../docs/api.md#controle-da-coleta-periódica-tp06--93).
