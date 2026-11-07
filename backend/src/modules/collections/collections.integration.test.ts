@@ -56,6 +56,8 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
   const { tratarRequisicao } = await import("../../app.ts");
   const { buscarHistoricoColetas } = await import("./collections.repository.ts");
   let cadastro = structuredClone(servicos);
+  const chamadasMetricas = new Map<string, number>();
+  let bloquearMetrica: (() => Promise<void>) | undefined;
   const estado = {
     semCarbono: false,
     falharPrimeiroCarbono: false,
@@ -64,10 +66,19 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     intervaloZero: false,
     intervaloApi: 60,
     cpuPercentual: 25,
+    falhaListagem: "",
     falhaPrimeiroServico: "" as "" | "http" | "timeout" | "rede" | "sem_metricas",
   };
-  const mock = createServer((request, response) => {
+  const mock = createServer(async (request, response) => {
     const caminho = new URL(request.url!, "http://localhost").pathname;
+    if (caminho.startsWith("/metrics/")) {
+      chamadasMetricas.set(caminho, (chamadasMetricas.get(caminho) ?? 0) + 1);
+      if (caminho === "/metrics/servico-1" && bloquearMetrica) {
+        const bloquear = bloquearMetrica;
+        bloquearMetrica = undefined;
+        await bloquear();
+      }
+    }
     if (caminho === "/metrics/servico-1" && estado.falhaPrimeiroServico) {
       if (estado.falhaPrimeiroServico === "rede") request.socket.destroy();
       else if (estado.falhaPrimeiroServico !== "timeout") {
@@ -106,8 +117,15 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
         ),
       );
     } else if (caminho === "/services") {
+      if (estado.falhaListagem === "timeout") return;
+      if (estado.falhaListagem === "rede") { request.socket.destroy(); return; }
+      if (estado.falhaListagem === "http") {
+        response.writeHead(503, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: "unavailable", message: "Catálogo indisponível" }));
+        return;
+      }
       response.writeHead(200, { "content-type": "application/json" });
-      response.end(JSON.stringify(cadastro));
+      response.end(estado.falhaListagem === "json" ? "{" : JSON.stringify(cadastro));
     } else {
       tratarRequisicaoMock(request, response);
     }
@@ -464,11 +482,15 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
 
   await t.test("gravação de coleta não reativa nem substitui o estado removido", async (t) => {
     t.mock.method(console, "error", () => {});
+    const { gravarColeta } = await import("./collections.repository.ts");
     await banco.query("UPDATE servicos SET status = 'removido' WHERE id = $1", [idServico]);
     try {
-      for (const tipo of ["http", "sem_metricas", ""] as const) {
-        estado.falhaPrimeiroServico = tipo;
-        assert.equal((await executar()).status, 200);
+      for (const statusColeta of ["indisponivel", "sem_metricas", "sucesso"] as const) {
+        await gravarColeta({
+          servicoId: idServico, statusColeta, intervaloSegundos: 60,
+          cpuPercentual: null, memoriaGb: null, discoGb: null, redeGb: null,
+          potenciaEstimadaW: null, duracaoSegundos: null, energiaKwh: null, emissaoCo2eG: null,
+        });
         const atual = await consultarEstadoAtual();
         assert.equal(atual.servicos.find((s) => s.id === idServico)!.status, "removido");
       }
@@ -606,5 +628,240 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       if (urlOriginal === undefined) delete process.env.METRICS_API_URL;
       else process.env.METRICS_API_URL = urlOriginal;
     }
+  });
+
+  const { rotinaColeta, executarRodadaColeta } = await import("./collections.service.ts");
+  const { sincronizarPresencaServicos } = await import("../services/services.repository.ts");
+  const aplicacaoId = (await banco.query("SELECT id::int FROM aplicacoes WHERE nome = 'GreenER Demo'")).rows[0].id;
+  const eventos = async () => (await banco.query<{
+    acao: string; detalhes: { idExterno: string; servicoId: number; statusAnterior: string | null; statusNovo: string };
+    criado_em: Date;
+  }>("SELECT acao, detalhes, criado_em FROM logs_sistema WHERE detalhes->>'idExterno' IN ('servico-1', 'servico-2') ORDER BY id")).rows;
+  const estadoServico = async (id = idServico) => (await banco.query(
+    "SELECT id::int, id_externo, status, criado_em FROM servicos WHERE id = $1", [id],
+  )).rows[0];
+  async function aguardar(condicao: () => Promise<boolean>) {
+    const limite = Date.now() + 6000;
+    while (!(await condicao())) {
+      assert.ok(Date.now() < limite, "A mudança não foi persistida no prazo esperado");
+      await setTimeout(20);
+    }
+  }
+
+  await t.test("catálogo muda ao vivo: inclui, remove e reativa preservando identidade e histórico", async (t) => {
+    t.mock.method(console, "log", () => {});
+    t.mock.method(console, "warn", () => {});
+    const original = cadastro;
+    const novo = { ...structuredClone(servicos[1]), id: "servico-adicionado", name: "Serviço adicionado" };
+    cadastro = [structuredClone(servicos[0])];
+    estado.intervaloApi = 1;
+    const antes = await estadoServico();
+    const historicoAntes = await buscarHistoricoColetas(idServico);
+    let idNovo: number | undefined;
+    try {
+      assert.equal(rotinaColeta.iniciar(1), true);
+      assert.equal(rotinaColeta.iniciar(1), false);
+      await aguardar(async () => (await buscarHistoricoColetas(idServico)).length > historicoAntes.length);
+      cadastro = [cadastro[0], novo];
+      await aguardar(async () => {
+        const registro = await banco.query("SELECT id::int FROM servicos WHERE id_externo = $1", [novo.id]);
+        idNovo = registro.rows[0]?.id;
+        return idNovo !== undefined && (await buscarHistoricoColetas(idNovo)).length > 0;
+      });
+      assert.equal((await banco.query("SELECT count(*)::int AS total FROM logs_sistema WHERE acao = 'servico_incluido' AND detalhes->>'idExterno' = $1", [novo.id])).rows[0].total, 1);
+      const historicoNovo = await buscarHistoricoColetas(idNovo!);
+      const eventosAntes = (await eventos()).length;
+      cadastro = [novo];
+      await aguardar(async () => (await estadoServico()).status === "removido");
+      await aguardar(async () => rotinaColeta.status().coletasEmAndamento === 0);
+      const historicoRemovido = await buscarHistoricoColetas(idServico);
+      const chamadasRemovido = chamadasMetricas.get("/metrics/servico-1");
+      assert.deepEqual(historicoRemovido.filter((coleta) => historicoAntes.some((anterior) => anterior.id === coleta.id)), historicoAntes);
+      const aposRemocao = await eventos();
+      assert.equal(aposRemocao.length, eventosAntes + 1);
+      assert.equal(aposRemocao.at(-1)?.acao, "servico_removido");
+      await aguardar(async () => (await buscarHistoricoColetas(idNovo!)).length > historicoNovo.length + 1);
+      assert.equal(chamadasMetricas.get("/metrics/servico-1"), chamadasRemovido);
+      assert.deepEqual(await buscarHistoricoColetas(idServico), historicoRemovido);
+      assert.deepEqual(await eventos(), aposRemocao);
+      cadastro = [structuredClone(servicos[0]), novo];
+      await aguardar(async () => (await buscarHistoricoColetas(idServico)).length > historicoRemovido.length);
+      const depois = await estadoServico();
+      assert.equal(depois.id, antes.id);
+      assert.deepEqual(depois.criado_em, antes.criado_em);
+      assert.equal(depois.status, "ativo");
+      assert.deepEqual((await buscarHistoricoColetas(idServico)).filter((coleta) => historicoRemovido.some((anterior) => anterior.id === coleta.id)), historicoRemovido);
+      const aposRetorno = await eventos();
+      assert.equal(aposRetorno.at(-1)?.acao, "servico_reativado");
+      assert.deepEqual(aposRetorno.at(-1)?.detalhes.statusAnterior, "removido");
+      assert.ok(aposRetorno.every((evento) => evento.criado_em instanceof Date));
+      assert.equal(rotinaColeta.status().executando, true);
+      await executarRodadaColeta();
+      assert.deepEqual(await eventos(), aposRetorno);
+    } finally {
+      await rotinaColeta.parar();
+      cadastro = original;
+      estado.intervaloApi = 60;
+    }
+  });
+
+  await t.test("listas inválidas e falhas externas preservam estados e eventos", async (t) => {
+    t.mock.method(console, "error", () => {});
+    assert.equal((await executar()).status, 200);
+    const original = cadastro;
+    const timeoutAnterior = process.env.API_TIMEOUT_MS;
+    const antes = await estadoServico();
+    const registros = await eventos();
+    try {
+      for (const modo of ["http", "timeout", "rede", "json"]) {
+        estado.falhaListagem = modo;
+        process.env.API_TIMEOUT_MS = "100";
+        assert.equal((await executar()).status, modo === "timeout" ? 504 : 502);
+        assert.deepEqual(await estadoServico(), antes);
+        assert.deepEqual(await eventos(), registros);
+      }
+      estado.falhaListagem = "";
+      for (const lista of [
+        [original[0], original[0]],
+        [{ ...original[0], id: " " }],
+        [{ ...original[0], id: "x".repeat(101) }],
+        [original[0], {}],
+      ]) {
+        cadastro = lista as typeof cadastro;
+        assert.equal((await executar()).status, 502);
+        assert.deepEqual(await estadoServico(), antes);
+        assert.deepEqual(await eventos(), registros);
+      }
+    } finally {
+      cadastro = original;
+      estado.falhaListagem = "";
+      if (timeoutAnterior === undefined) delete process.env.API_TIMEOUT_MS;
+      else process.env.API_TIMEOUT_MS = timeoutAnterior;
+    }
+    assert.equal((await executar()).status, 200);
+  });
+
+  await t.test("lista vazia remove uma vez e reaparecimento após ausência reativa o mesmo serviço", async () => {
+    const original = cadastro;
+    const antes = await buscarHistoricoColetas(idServico);
+    const registrosAntes = (await eventos()).length;
+    try {
+      await banco.query("UPDATE servicos SET status = 'indisponivel' WHERE id = $1", [idServico]);
+      cadastro = [];
+      assert.equal((await executar()).status, 200);
+      assert.equal((await estadoServico()).status, "removido");
+      assert.deepEqual(await buscarHistoricoColetas(idServico), antes);
+      const removidos = await eventos();
+      assert.ok(removidos.length > registrosAntes);
+      assert.equal(removidos.filter((evento) => evento.detalhes.idExterno === "servico-1").at(-1)?.detalhes.statusAnterior, "indisponivel");
+      assert.equal((await executar()).status, 200);
+      assert.deepEqual(await eventos(), removidos);
+    } finally { cadastro = original; }
+    assert.equal((await executar()).status, 200);
+    assert.equal((await estadoServico()).id, idServico);
+    assert.equal((await estadoServico()).status, "ativo");
+    assert.ok((await buscarHistoricoColetas(idServico)).length > antes.length);
+  });
+
+  await t.test("transições e inclusões são desfeitas quando o evento não pode ser gravado", async (t) => {
+    t.mock.method(console, "error", () => {});
+    const original = cadastro;
+    const antes = await estadoServico();
+    const registros = await eventos();
+    await banco.query("ALTER TABLE logs_sistema ADD CONSTRAINT teste_evento CHECK (acao NOT IN ('servico_removido', 'servico_reativado', 'servico_incluido')) NOT VALID");
+    try {
+      cadastro = [];
+      assert.equal((await executar()).status, 500);
+      assert.deepEqual(await estadoServico(), antes);
+      assert.deepEqual(await eventos(), registros);
+      await banco.query("UPDATE servicos SET status = 'removido' WHERE id = $1", [idServico]);
+      cadastro = original;
+      assert.equal((await executar()).status, 500);
+      assert.equal((await estadoServico()).status, "removido");
+      await banco.query("UPDATE servicos SET status = 'ativo' WHERE id = $1", [idServico]);
+      cadastro = [...original, { ...structuredClone(servicos[0]), id: "inclusao-sem-evento" }];
+      assert.equal((await executar()).status, 500);
+      assert.equal((await banco.query("SELECT id FROM servicos WHERE id_externo = 'inclusao-sem-evento'")).rowCount, 0);
+    } finally {
+      cadastro = original;
+      await banco.query("ALTER TABLE logs_sistema DROP CONSTRAINT teste_evento");
+      await banco.query("UPDATE servicos SET status = 'ativo' WHERE id = $1", [idServico]);
+    }
+    assert.equal((await executar()).status, 200);
+  });
+
+  await t.test("sincronizações concorrentes e mudanças de nome não duplicam eventos de presença", async () => {
+    const ids = cadastro.map((servico) => servico.id);
+    const antes = (await eventos()).length;
+    await Promise.all(Array.from({ length: 3 }, () =>
+      sincronizarPresencaServicos(aplicacaoId, ids.filter((id) => id !== "servico-1")),
+    ));
+    assert.equal((await eventos()).length, antes + 1);
+    await Promise.all(Array.from({ length: 3 }, () => sincronizarPresencaServicos(aplicacaoId, ids)));
+    const depois = await eventos();
+    assert.equal(depois.length, antes + 2);
+    const original = cadastro;
+    try {
+      cadastro = [...cadastro].reverse().map((servico) => ({ ...servico, name: "Nome compartilhado" }));
+      assert.equal((await executar()).status, 200);
+      assert.deepEqual(await eventos(), depois);
+      assert.equal((await banco.query("SELECT count(*)::int AS total FROM servicos WHERE id_externo IN ('servico-1', 'servico-2')")).rows[0].total, 2);
+    } finally { cadastro = original; }
+  });
+
+  await t.test("sincronização preserva legados, outras aplicações e não aceita conflito de identidade", async () => {
+    const outra = (await banco.query("INSERT INTO aplicacoes (nome) VALUES ('Outra aplicação monitorada') RETURNING id::int")).rows[0].id;
+    const legado = (await banco.query("INSERT INTO servicos (aplicacao_id, nome) VALUES ($1, 'Cadastro legado') RETURNING id::int", [aplicacaoId])).rows[0].id;
+    const externo = (await banco.query("INSERT INTO servicos (aplicacao_id, id_externo, nome) VALUES ($1, 'outra-aplicacao', 'Outro serviço') RETURNING id::int", [outra])).rows[0].id;
+    const antes = await estadoServico();
+    const registros = await eventos();
+    await assert.rejects(sincronizarPresencaServicos(aplicacaoId, ["outra-aplicacao"]), /outra aplicação/);
+    assert.deepEqual(await estadoServico(), antes);
+    assert.deepEqual(await eventos(), registros);
+    await sincronizarPresencaServicos(aplicacaoId, cadastro.map((servico) => servico.id));
+    assert.equal((await estadoServico(legado)).status, "ativo");
+    assert.equal((await estadoServico(externo)).status, "ativo");
+  });
+
+  await t.test("remoção concorrente cancela coletas antigas na fila sem reativar pela amostra pendente", async (t) => {
+    t.mock.method(console, "error", () => {});
+    const original = cadastro;
+    let liberar!: () => void;
+    let metricaIniciada = false;
+    const bloqueio = new Promise<void>((resolve) => { liberar = resolve; });
+    bloquearMetrica = async () => { metricaIniciada = true; await bloqueio; };
+    const primeira = executarRodadaColeta();
+    let segunda: Promise<ResultadoRodadaColeta> | undefined;
+    try {
+      await aguardar(async () => metricaIniciada);
+      const contarCadastros = (await eventos()).length;
+      const consulta = pg.Pool.prototype.query;
+      let cadastroNaFila = false;
+      t.mock.method(pg.Pool.prototype, "query", function (this: pg.Pool, ...args: unknown[]) {
+        const resultado = Reflect.apply(consulta, this, args) as Promise<unknown>;
+        if (String(args[0]).includes("WITH inserido AS") && (args[1] as unknown[])[0] === "servico-1") {
+          return resultado.then((valor) => { cadastroNaFila = true; return valor; });
+        }
+        return resultado;
+      });
+      segunda = executarRodadaColeta();
+      await aguardar(async () => cadastroNaFila);
+      await setTimeout(0);
+      cadastro = original.filter((servico) => servico.id !== "servico-1");
+      await executarRodadaColeta();
+      assert.equal((await estadoServico()).status, "removido");
+      const chamadas = chamadasMetricas.get("/metrics/servico-1");
+      liberar();
+      await Promise.all([primeira, segunda]);
+      assert.equal(chamadasMetricas.get("/metrics/servico-1"), chamadas);
+      assert.equal((await estadoServico()).status, "removido");
+      assert.equal((await eventos()).length, contarCadastros + 1);
+    } finally {
+      liberar();
+      await Promise.allSettled([primeira, ...(segunda ? [segunda] : [])]);
+      cadastro = original;
+      bloquearMetrica = undefined;
+    }
+    assert.equal((await executar()).status, 200);
   });
 });

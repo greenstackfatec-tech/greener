@@ -13,6 +13,7 @@ test("contratos HTTP de coleta, diagnóstico e recuperação", async (t) => {
     if (estado.falharBanco) throw new Error("SQL interno senha=segredo");
     if (sql.includes("FROM aplicacoes")) return { rows: [{ id: 7 }] };
     if (sql.includes("FROM configuracoes")) return { rows: [{ valor: "60" }] };
+    if (sql.includes("WITH anteriores AS MATERIALIZED")) return { rows: [] };
     if (sql.includes("FROM regioes")) return { rows: [{ id: 11 }] };
     if (sql.includes("INSERT INTO servicos")) return { rows: [{ id: parametros[0] === "servico-1" ? 41 : 42, nome: parametros[1] }] };
     if (sql.includes("INSERT INTO metricas_servico")) { estado.gravacoes++; return { rows: [{ id: 1 }] }; }
