@@ -1,4 +1,3 @@
-import type { ServicoComUltimaColeta } from "./services.repository.ts";
 import {
   buscarServicoPorId as buscarServicoPorIdDoRepository,
   listarServicos as listarServicosDoRepository,
