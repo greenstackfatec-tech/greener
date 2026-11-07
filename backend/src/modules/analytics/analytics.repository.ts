@@ -3,7 +3,7 @@
  * Histórico, ranking, comparação e agregações parametrizadas.
  */
 
-import { consultar } from "../../db/connection.ts";
+import { consultar, encerrarConexao } from "../../db/connection.ts";
 
 /* ------------------------------------------------------------------ */
 /* Tipos de saída                                                     */
@@ -52,6 +52,93 @@ export interface ComparacaoServico {
 }
 
 /* ------------------------------------------------------------------ */
+/* Constantes de validação (evita SQL injection via estrutura)        */
+/* ------------------------------------------------------------------ */
+
+const ORDENACAO_PERMITIDA = ["ASC", "DESC"] as const;
+const METRICAS_RANKING = ["energia", "co2e"] as const;
+const GROUPBY_PERMITIDO = ["servico", "regiao", "aplicacao", "dia", "hora"] as const;
+const METRICAS_AGREGACAO = [
+  "energia_kwh",
+  "emissao_co2e_g",
+  "cpu_percentual",
+  "memoria_gb",
+  "disco_gb",
+  "rede_gb",
+] as const;
+
+function validarOrdenacao(v: string): "ASC" | "DESC" {
+  if (!ORDENACAO_PERMITIDA.includes(v as "ASC" | "DESC")) {
+    throw new Error(`Ordenação inválida: ${v}. Use ASC ou DESC.`);
+  }
+  return v as "ASC" | "DESC";
+}
+
+function validarMetricaRanking(v: string): "energia" | "co2e" {
+  if (!METRICAS_RANKING.includes(v as "energia" | "co2e")) {
+    throw new Error(`Métrica de ranking inválida: ${v}. Use 'energia' ou 'co2e'.`);
+  }
+  return v as "energia" | "co2e";
+}
+
+function validarGroupBy(v: string): (typeof GROUPBY_PERMITIDO)[number] {
+  if (!GROUPBY_PERMITIDO.includes(v as (typeof GROUPBY_PERMITIDO)[number])) {
+    throw new Error(`groupBy inválido: ${v}. Use: ${GROUPBY_PERMITIDO.join(", ")}.`);
+  }
+  return v as (typeof GROUPBY_PERMITIDO)[number];
+}
+
+function validarMetricasAgregacao(arr: string[]): (typeof METRICAS_AGREGACAO)[number][] {
+  if (arr.length === 0) throw new Error("Pelo menos uma métrica deve ser informada");
+  const invalidos = arr.filter((m) => !METRICAS_AGREGACAO.includes(m as (typeof METRICAS_AGREGACAO)[number]));
+  if (invalidos.length > 0) {
+    throw new Error(`Métricas inválidas: ${invalidos.join(", ")}. Permitidas: ${METRICAS_AGREGACAO.join(", ")}.`);
+  }
+  return arr as (typeof METRICAS_AGREGACAO)[number][];
+}
+
+function validarCampoOrdenacao(campo: string, groupBy: string): string {
+  // Lista de aliases de saída permitidos por groupBy
+  const camposPorGroupBy: Record<string, string[]> = {
+    servico: ["grupo", "grupo_id", "sum_energia_kwh", "avg_energia_kwh", "min_energia_kwh", "max_energia_kwh", "count_energia_kwh",
+              "sum_emissao_co2e_g", "avg_emissao_co2e_g", "min_emissao_co2e_g", "max_emissao_co2e_g", "count_emissao_co2e_g",
+              "sum_cpu_percentual", "avg_cpu_percentual", "min_cpu_percentual", "max_cpu_percentual", "count_cpu_percentual",
+              "sum_memoria_gb", "avg_memoria_gb", "min_memoria_gb", "max_memoria_gb", "count_memoria_gb",
+              "sum_disco_gb", "avg_disco_gb", "min_disco_gb", "max_disco_gb", "count_disco_gb",
+              "sum_rede_gb", "avg_rede_gb", "min_rede_gb", "max_rede_gb", "count_rede_gb"],
+    regiao: ["grupo", "grupo_id", "sum_energia_kwh", "avg_energia_kwh", "min_energia_kwh", "max_energia_kwh", "count_energia_kwh",
+             "sum_emissao_co2e_g", "avg_emissao_co2e_g", "min_emissao_co2e_g", "max_emissao_co2e_g", "count_emissao_co2e_g",
+             "sum_cpu_percentual", "avg_cpu_percentual", "min_cpu_percentual", "max_cpu_percentual", "count_cpu_percentual",
+             "sum_memoria_gb", "avg_memoria_gb", "min_memoria_gb", "max_memoria_gb", "count_memoria_gb",
+             "sum_disco_gb", "avg_disco_gb", "min_disco_gb", "max_disco_gb", "count_disco_gb",
+             "sum_rede_gb", "avg_rede_gb", "min_rede_gb", "max_rede_gb", "count_rede_gb"],
+    aplicacao: ["grupo", "grupo_id", "sum_energia_kwh", "avg_energia_kwh", "min_energia_kwh", "max_energia_kwh", "count_energia_kwh",
+                "sum_emissao_co2e_g", "avg_emissao_co2e_g", "min_emissao_co2e_g", "max_emissao_co2e_g", "count_emissao_co2e_g",
+                "sum_cpu_percentual", "avg_cpu_percentual", "min_cpu_percentual", "max_cpu_percentual", "count_cpu_percentual",
+                "sum_memoria_gb", "avg_memoria_gb", "min_memoria_gb", "max_memoria_gb", "count_memoria_gb",
+                "sum_disco_gb", "avg_disco_gb", "min_disco_gb", "max_disco_gb", "count_disco_gb",
+                "sum_rede_gb", "avg_rede_gb", "min_rede_gb", "max_rede_gb", "count_rede_gb"],
+    dia: ["grupo", "sum_energia_kwh", "avg_energia_kwh", "min_energia_kwh", "max_energia_kwh", "count_energia_kwh",
+          "sum_emissao_co2e_g", "avg_emissao_co2e_g", "min_emissao_co2e_g", "max_emissao_co2e_g", "count_emissao_co2e_g",
+          "sum_cpu_percentual", "avg_cpu_percentual", "min_cpu_percentual", "max_cpu_percentual", "count_cpu_percentual",
+          "sum_memoria_gb", "avg_memoria_gb", "min_memoria_gb", "max_memoria_gb", "count_memoria_gb",
+          "sum_disco_gb", "avg_disco_gb", "min_disco_gb", "max_disco_gb", "count_disco_gb",
+          "sum_rede_gb", "avg_rede_gb", "min_rede_gb", "max_rede_gb", "count_rede_gb"],
+    hora: ["grupo", "sum_energia_kwh", "avg_energia_kwh", "min_energia_kwh", "max_energia_kwh", "count_energia_kwh",
+           "sum_emissao_co2e_g", "avg_emissao_co2e_g", "min_emissao_co2e_g", "max_emissao_co2e_g", "count_emissao_co2e_g",
+           "sum_cpu_percentual", "avg_cpu_percentual", "min_cpu_percentual", "max_cpu_percentual", "count_cpu_percentual",
+           "sum_memoria_gb", "avg_memoria_gb", "min_memoria_gb", "max_memoria_gb", "count_memoria_gb",
+           "sum_disco_gb", "avg_disco_gb", "min_disco_gb", "max_disco_gb", "count_disco_gb",
+           "sum_rede_gb", "avg_rede_gb", "min_rede_gb", "max_rede_gb", "count_rede_gb"],
+  };
+  const permitidos = camposPorGroupBy[groupBy] ?? [];
+  if (!permitidos.includes(campo)) {
+    throw new Error(`Campo de ordenação inválido para groupBy=${groupBy}: ${campo}. Permitidos: ${permitidos.join(", ")}.`);
+  }
+  return campo;
+}
+
+/* ------------------------------------------------------------------ */
 /* 1. Histórico por serviço e período                                 */
 /* ------------------------------------------------------------------ */
 
@@ -82,6 +169,8 @@ export async function buscarHistoricoPorServico(
     apenasSucesso = true,
   } = params;
 
+  const dir = validarOrdenacao(ordenacao);
+
   const sql = `
     SELECT
       coletado_em AS "coletadoEm",
@@ -100,7 +189,7 @@ export async function buscarHistoricoPorServico(
       AND coletado_em >= $2
       AND coletado_em <= $3
       ${apenasSucesso ? "AND status_coleta = 'sucesso'" : ""}
-    ORDER BY coletado_em ${ordenacao}, id ${ordenacao}
+    ORDER BY coletado_em ${dir}, id ${dir}
     LIMIT $4 OFFSET $5
   `;
 
@@ -133,6 +222,7 @@ export interface RankingParams {
 /**
  * Ranking de serviços por consumo de energia ou emissão de CO₂e num período.
  * Agrega apenas coletas com status 'sucesso' e valores não-nulos.
+ * totalEnergiaKwh SEMPRE soma energia_kwh (independente da métrica de ordenação).
  */
 export async function buscarRankingPorPeriodo(
   params: RankingParams,
@@ -149,8 +239,9 @@ export async function buscarRankingPorPeriodo(
     apenasAtivos = true,
   } = params;
 
-  const colunaOrdenacao = metrica === "energia" ? "total_energia_kwh" : "total_emissao_co2e_g";
-  const colunaSoma = metrica === "energia" ? "energia_kwh" : "emissao_co2e_g";
+  const dir = validarOrdenacao(ordenacao);
+  const metricaValida = validarMetricaRanking(metrica);
+  const colunaOrdenacao = metricaValida === "energia" ? "total_energia_kwh" : "total_emissao_co2e_g";
 
   const filtros: string[] = [
     "ms.status_coleta = 'sucesso'",
@@ -181,7 +272,7 @@ export async function buscarRankingPorPeriodo(
         s.nome,
         r.nome AS regiao,
         r.pais,
-        SUM(ms.${colunaSoma}) AS total_energia_kwh,
+        SUM(ms.energia_kwh) AS total_energia_kwh,
         SUM(ms.emissao_co2e_g) AS total_emissao_co2e_g,
         COUNT(*) AS qtd_coletas,
         AVG(ms.energia_kwh) AS media_energia_kwh,
@@ -203,7 +294,7 @@ export async function buscarRankingPorPeriodo(
       media_energia_kwh::float8 AS "mediaEnergiaKwh",
       media_emissao_co2e_g::float8 AS "mediaEmissaoCo2eG"
     FROM agregado
-    ORDER BY ${colunaOrdenacao} ${ordenacao}
+    ORDER BY ${colunaOrdenacao} ${dir}
     LIMIT $${idx++} OFFSET $${idx}
   `;
 
@@ -218,7 +309,7 @@ export async function buscarRankingPorPeriodo(
 /* ------------------------------------------------------------------ */
 
 export interface ComparacaoParams {
-  servicoIds: number[];        // 2 ou mais IDs
+  servicoIds: number[];        // 2 ou mais IDs distintos
   inicio: Date;
   fim: Date;
   ordenacao?: "ASC" | "DESC";  // default: ordem dos IDs informados
@@ -233,17 +324,21 @@ export async function compararServicosPorPeriodo(
 ): Promise<ComparacaoServico[]> {
   const { servicoIds, inicio, fim, ordenacao } = params;
 
-  if (servicoIds.length < 2) {
-    throw new Error("Comparação requer pelo menos 2 serviços");
+  // Deduplicar e validar
+  const idsUnicos = [...new Set(servicoIds)];
+  if (idsUnicos.length < 2) {
+    throw new Error("Comparação requer pelo menos 2 serviços distintos");
   }
 
-  const placeholders = servicoIds.map((_, i) => `$${i + 4}`).join(", ");
-  const valores: unknown[] = [inicio, fim, servicoIds.length];
-  servicoIds.forEach((id) => valores.push(id));
+  const dir = validarOrdenacao(ordenacao ?? "ASC");
 
-  const ordemSql = ordenacao
-    ? `ORDER BY CASE servico_id ${servicoIds.map((id, i) => `WHEN ${id} THEN ${i}`).join(" ")} END ${ordenacao}`
-    : `ORDER BY CASE servico_id ${servicoIds.map((id, i) => `WHEN ${id} THEN ${i}`).join(" ")} END`;
+  // Parâmetros: $1=inicio, $2=fim, $3... = ids
+  const placeholders = idsUnicos.map((_, i) => `$${i + 3}`).join(", ");
+  const valores: unknown[] = [inicio, fim, ...idsUnicos];
+
+  // ORDER BY CASE usando s.id (compatível com GROUP BY) e parametrizando os IDs no CASE
+  const caseClauses = idsUnicos.map((id, i) => `WHEN $${i + 3} THEN ${i}`).join(" ");
+  const ordemSql = `ORDER BY CASE s.id ${caseClauses} END ${dir}`;
 
   const sql = `
     SELECT
@@ -322,46 +417,47 @@ export async function agregarMetricasPorPeriodo(
     offset = 0,
   } = params;
 
-  if (metricas.length === 0) {
-    throw new Error("Pelo menos uma métrica deve ser informada");
-  }
+  const groupByValido = validarGroupBy(groupBy);
+  const metricasValidas = validarMetricasAgregacao(metricas);
 
-  // Mapeia groupBy para coluna e JOINs necessários
-  const groupByMap: Record<string, { coluna: string; joins: string; select: string }> = {
+  // Mapeia groupBy para coluna, JOINs e SELECT
+  const groupByMap: Record<string, { coluna: string; joins: string; select: string; groupByExtra: string }> = {
     servico: {
       coluna: "s.id",
       joins: "JOIN servicos s ON s.id = ms.servico_id",
       select: "s.id::int AS grupo_id, s.nome AS grupo",
+      groupByExtra: "s.id, s.nome",
     },
     regiao: {
       coluna: "r.id",
       joins: "JOIN servicos s ON s.id = ms.servico_id LEFT JOIN regioes r ON r.id = s.regiao_id",
       select: "r.id::int AS grupo_id, r.nome AS grupo",
+      groupByExtra: "r.id, r.nome",
     },
     aplicacao: {
       coluna: "a.id",
       joins: "JOIN servicos s ON s.id = ms.servico_id JOIN aplicacoes a ON a.id = s.aplicacao_id",
       select: "a.id::int AS grupo_id, a.nome AS grupo",
+      groupByExtra: "a.id, a.nome",
     },
     dia: {
       coluna: "DATE(ms.coletado_em AT TIME ZONE 'UTC')",
       joins: "",
       select: "DATE(ms.coletado_em AT TIME ZONE 'UTC') AS grupo",
+      groupByExtra: "DATE(ms.coletado_em AT TIME ZONE 'UTC')",
     },
     hora: {
       coluna: "DATE_TRUNC('hour', ms.coletado_em AT TIME ZONE 'UTC')",
       joins: "",
       select: "DATE_TRUNC('hour', ms.coletado_em AT TIME ZONE 'UTC') AS grupo",
+      groupByExtra: "DATE_TRUNC('hour', ms.coletado_em AT TIME ZONE 'UTC')",
     },
   };
 
-  const gb = groupByMap[groupBy];
-  if (!gb) {
-    throw new Error(`groupBy inválido: ${groupBy}`);
-  }
+  const gb = groupByMap[groupByValido];
 
   // Constrói SELECT das agregações
-  const aggSelect = metricas
+  const aggSelect = metricasValidas
     .flatMap((m) => [
       `SUM(ms.${m})::float8 AS "sum_${m.replace(".", "_")}"`,
       `AVG(ms.${m})::float8 AS "avg_${m.replace(".", "_")}"`,
@@ -386,6 +482,16 @@ export async function agregarMetricasPorPeriodo(
     where.push(`ms.servico_id IN (${filtros.servicoIds.map(() => `$${idx++}`).join(", ")})`);
     filtros.servicoIds.forEach((id) => valores.push(id));
   }
+
+  // Para dia/hora, se houver filtro por aplicacaoId ou regiaoId, precisa do JOIN com servicos
+  let joins = gb.joins;
+  const precisaJoinServicos = (groupByValido === "dia" || groupByValido === "hora") &&
+    (filtros.aplicacaoId !== undefined || filtros.regiaoId !== undefined);
+
+  if (precisaJoinServicos) {
+    joins = "JOIN servicos s ON s.id = ms.servico_id" + (gb.joins ? " " + gb.joins : "");
+  }
+
   if (filtros.aplicacaoId !== undefined) {
     where.push(`s.aplicacao_id = $${idx++}`);
     valores.push(filtros.aplicacaoId);
@@ -396,22 +502,29 @@ export async function agregarMetricasPorPeriodo(
   }
 
   // Métricas não-nulas
-  metricas.forEach((m) => where.push(`ms.${m} IS NOT NULL`));
+  metricasValidas.forEach((m) => where.push(`ms.${m} IS NOT NULL`));
 
-  const orderBy = ordenacao
-    ? `ORDER BY "${ordenacao.campo}" ${ordenacao.direcao}`
-    : groupBy === "dia" || groupBy === "hora"
-    ? `ORDER BY grupo DESC`
-    : `ORDER BY "sum_${metricas[0].replace(".", "_")}" DESC`;
+  // Ordenação validada
+  let orderBy: string;
+  if (ordenacao) {
+    const campo = validarCampoOrdenacao(ordenacao.campo, groupByValido);
+    const dir = validarOrdenacao(ordenacao.direcao);
+    orderBy = `ORDER BY "${campo}" ${dir}`;
+  } else if (groupByValido === "dia" || groupByValido === "hora") {
+    orderBy = `ORDER BY grupo DESC`;
+  } else {
+    const primeiroSum = `sum_${metricasValidas[0].replace(".", "_")}`;
+    orderBy = `ORDER BY "${primeiroSum}" DESC`;
+  }
 
   const sql = `
     SELECT
       ${gb.select},
       ${aggSelect}
     FROM metricas_servico ms
-    ${gb.joins}
+    ${joins}
     WHERE ${where.join(" AND ")}
-    GROUP BY ${gb.coluna}${groupBy !== "dia" && groupBy !== "hora" ? ", s.nome, r.nome, r.pais, a.nome" : ""}
+    GROUP BY ${gb.groupByExtra}
     ${orderBy}
     LIMIT $${idx++} OFFSET $${idx}
   `;
@@ -423,7 +536,7 @@ export async function agregarMetricasPorPeriodo(
   // Transforma linhas planas no formato agrupado por métrica
   return resultado.rows.map((row) => {
     const metricasAgg: Record<string, number> = {};
-    metricas.forEach((m) => {
+    metricasValidas.forEach((m) => {
       const key = m.replace(".", "_");
       metricasAgg[`sum_${m}`] = row[`sum_${key}`] ?? 0;
       metricasAgg[`avg_${m}`] = row[`avg_${key}`] ?? 0;
@@ -440,10 +553,9 @@ export async function agregarMetricasPorPeriodo(
 }
 
 /* ------------------------------------------------------------------ */
-/* Fechar pool (para testes)                                          */
+/* Fechar pool (usa a função centralizada)                            */
 /* ------------------------------------------------------------------ */
 
 export async function encerrarPool(): Promise<void> {
-  const { criarPool } = await import("../../db/connection.ts");
-  await criarPool().end();
+  await encerrarConexao();
 }
