@@ -39,7 +39,6 @@ export function DashboardPage() {
     return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
   }), [lista, busca, filtro]);
 
-  const resumo = (valor: number) => (servicos === null ? "—" : valor);
   const ultimaAtualizacao = haQuanto(atualizadoEm, agora);
 
   let corpo: ReactNode;
