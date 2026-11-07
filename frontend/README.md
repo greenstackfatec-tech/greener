@@ -7,7 +7,7 @@ Tecnologias principais: **React 19.3.1**, **TypeScript 6.0.3** e **Vite 8.3.5**.
 | Pasta | Responsabilidade | Conteúdo atual |
 |---|---|---|
 | `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx`, `DashboardPage.tsx`, `EstadosPage.tsx` |
-| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `GraficoConsumo.tsx`, `CartaoEstado.tsx` |
+| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `GraficoConsumo.tsx`, `CartaoEstado.tsx`, `CardsIndicadores.tsx` |
 | `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `servicos.ts` |
 | `src/assets/` | Imagens usadas pelas telas | `greener-icon.png` |
 | `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts`, `useServicos.ts`, `useAgora.ts` |
@@ -24,7 +24,7 @@ As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. A
 | `/login` | Login | DW19 | Implementada (JWT, "lembrar de mim", erros e bloqueio por tentativas) |
 | `/cadastro` | Cadastro | DW20 | Página provisória |
 | `/administrativa` | Administrativa | DW21 | Página provisória |
-| `/dashboard` | Dashboard | DW05, DW07 | Implementada (tabela, indicadores e estados visuais) |
+| `/dashboard` | Dashboard | DW05, DW06, DW07 | Implementada (cards de indicadores, tabela e estados visuais) |
 | `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
 
 O cliente HTTP fica em `src/services/api.ts`. `requisitar<T>(caminho)` (GET) e `enviar<T>(caminho, corpo)` (POST com JSON) fazem as chamadas a partir de `/api`; as telas não usam `fetch` diretamente. Respostas fora de 2xx viram `ErroApi` (com `status`, `codigo` e, no HTTP 429, `tentarNovamenteEmSegundos`). Se houver token salvo, o cliente envia `Authorization: Bearer <token>` automaticamente.
@@ -94,6 +94,17 @@ O backend limita tentativas incorretas e pode responder HTTP `429` com `Retry-Af
 O formulário permite alternar entre pessoa física e pessoa jurídica e valida os campos antes do envio. A integração foi preparada para `POST /auth/register`, mas esse endpoint ainda não está implementado no backend. Portanto, o cadastro não deve ser apresentado como funcionalidade concluída de ponta a ponta.
 
 ### 3.4 Dashboard
+
+**Cards de indicadores consolidados (DW06, RF08).** No topo do dashboard, quatro cards mostram consumo total (kWh), emissão total (g CO₂e), serviços ativos e serviços indisponíveis. Os valores vêm de `GET /dashboard/indicadores` (rota pública), consultada por `useIndicadores` e apresentada por `components/CardsIndicadores.tsx`; não há nenhum número fixo no código. Os estados são:
+
+| Estado | O que a tela mostra |
+|---|---|
+| Carregando | Um bloco cinza no lugar de cada número e a legenda “Carregando...”. |
+| Sucesso | Os valores no formato pt-BR. Se consumo e emissão chegam `0`, a legenda avisa “Ainda sem coletas calculadas”, pois o backend devolve `0` quando não há coleta calculada. |
+| Erro, sem dados anteriores | Traço (“—”) em cada card e um aviso com o botão “Tentar de novo”. O erro não vira zero. |
+| Erro, com dados anteriores | Os últimos valores válidos continuam na tela, com aviso de que podem estar desatualizados (RNF04). |
+
+Os cards são atualizados no mesmo intervalo da tabela (seção “Atualização automática”) e também pelo botão “Atualizar dados”. As contagens de ativos e indisponíveis seguem a regra do backend (status do serviço, sem os removidos), então “Serviços ativos” inclui os serviços ativos que ainda não enviaram métricas; já o filtro “Ativos” da tabela só considera os que têm coleta bem-sucedida.
 
 O dashboard consulta os serviços por `GET /services` e apresenta estados, busca textual e filtro por situação. O diagnóstico da rotina é consultado por `GET /collections/rotina/status`.
 
@@ -175,7 +186,7 @@ Na pasta `frontend`, execute:
 npm run dev:mock
 ```
 
-A aplicação ficará disponível em `http://localhost:5173`. O mock atende `GET /api/services`.
+A aplicação ficará disponível em `http://localhost:5173`. O mock atende `GET /api/services` e `GET /api/dashboard/indicadores`. Sem backend, o diagnóstico da coleta (`GET /api/collections/rotina/status`) não é atendido, então o aviso de erro de atualização do painel de serviços aparece no modo mock; isso é esperado.
 
 Para trocar o cenário, abra no navegador:
 

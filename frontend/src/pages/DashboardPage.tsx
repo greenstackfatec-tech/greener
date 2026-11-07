@@ -3,17 +3,15 @@ import { situacaoDoServico } from "../services/servicos.ts";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado } from "../components/CartaoEstado.tsx";
+import { CardsIndicadores } from "../components/CardsIndicadores.tsx";
 import { TEXTOS_SITUACAO, rodapeDaSituacao } from "../estadosServico.ts";
 import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
 import { dataHora, duracao, haQuanto, numero } from "../formatacao.ts";
 import { useAgora } from "../hooks/useAgora.ts";
 import { useServicos } from "../hooks/useServicos.ts";
+import { useIndicadores } from "../hooks/useIndicadores.ts";
 import { useMonitoramentoColeta } from "../hooks/useMonitoramentoColeta.ts";
 import "./DashboardPage.css";
-
-function formatarNumero(valor: number | null, casas = 1): string {
-  return valor === null || !Number.isFinite(valor) ? "—" : valor.toLocaleString("pt-BR", { maximumFractionDigits: casas });
-}
 
 export function DashboardPage() {
   const { servicos, carregando, atualizando, erro, atualizadoEm, recarregar } = useServicos(INTERVALO_ATUALIZACAO_SEGUNDOS * 1000);
@@ -21,6 +19,8 @@ export function DashboardPage() {
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
   const [visao, setVisao] = useState<"cartoes" | "tabela">("tabela");
+  const indicadores = useIndicadores(INTERVALO_ATUALIZACAO_SEGUNDOS * 1000);
+  const recarregarIndicadores = indicadores.recarregar;
   const { statusColeta, erroMonitoramento, atualizarMonitoramento } = useMonitoramentoColeta();
   const erroColeta = statusColeta?.monitoramento.situacao === "degradado"
     ? statusColeta.monitoramento.falhasAtivas.map((falha) =>
@@ -32,17 +32,8 @@ export function DashboardPage() {
   const carregar = useCallback(() => {
     void recarregar();
     void atualizarMonitoramento();
-  }, [recarregar, atualizarMonitoramento]);
-
-  const contagem = useMemo(() => {
-    const lista = servicos ?? [];
-    return {
-      total: lista.filter((s) => s.status !== "removido").length,
-      ativos: lista.filter((s) => situacaoDoServico(s) === "ativo").length,
-      indisponiveis: lista.filter((s) => situacaoDoServico(s) === "indisponivel").length,
-      semMetricas: lista.filter((s) => situacaoDoServico(s) === "sem_metricas").length,
-    };
-  }, [servicos]);
+    recarregarIndicadores();
+  }, [recarregar, atualizarMonitoramento, recarregarIndicadores]);
 
   const filtrados = useMemo(() => {
     const lista = servicos ?? [];
@@ -160,12 +151,8 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="dash-summary">
-            <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{formatarNumero(contagem.total, 0)}</strong><em>Serviços cadastrados</em></div></article>
-            <article className="dash-summary-card"><span className="dash-summary-icon green">✓</span><div><small>Ativos</small><strong>{formatarNumero(contagem.ativos, 0)}</strong><em className="positive">Em operação</em></div></article>
-            <article className="dash-summary-card"><span className="dash-summary-icon gray">!</span><div><small>Indisponíveis</small><strong>{formatarNumero(contagem.indisponiveis, 0)}</strong><em>Sem resposta na coleta</em></div></article>
-            <article className="dash-summary-card"><span className="dash-summary-icon blue">◷</span><div><small>Sem métricas</small><strong>{formatarNumero(contagem.semMetricas, 0)}</strong><em>Aguardando dados</em></div></article>
-          </div>
+          {/* Indicadores consolidados vindos do backend (DW06 / RF08). */}
+          <CardsIndicadores estado={indicadores} aoTentarDeNovo={recarregarIndicadores} />
 
           <section className="dash-panel" id="servicos">
             <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div><span className="dash-count">{filtrados.length} serviços</span></div>
