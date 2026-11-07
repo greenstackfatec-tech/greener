@@ -97,43 +97,31 @@ function validarMetricasAgregacao(arr: string[]): (typeof METRICAS_AGREGACAO)[nu
   return arr as (typeof METRICAS_AGREGACAO)[number][];
 }
 
-function validarCampoOrdenacao(campo: string, groupBy: string): string {
-  // Lista de aliases de saída permitidos por groupBy
-  const camposPorGroupBy: Record<string, string[]> = {
-    servico: ["grupo", "grupo_id", "sum_energia_kwh", "avg_energia_kwh", "min_energia_kwh", "max_energia_kwh", "count_energia_kwh",
-              "sum_emissao_co2e_g", "avg_emissao_co2e_g", "min_emissao_co2e_g", "max_emissao_co2e_g", "count_emissao_co2e_g",
-              "sum_cpu_percentual", "avg_cpu_percentual", "min_cpu_percentual", "max_cpu_percentual", "count_cpu_percentual",
-              "sum_memoria_gb", "avg_memoria_gb", "min_memoria_gb", "max_memoria_gb", "count_memoria_gb",
-              "sum_disco_gb", "avg_disco_gb", "min_disco_gb", "max_disco_gb", "count_disco_gb",
-              "sum_rede_gb", "avg_rede_gb", "min_rede_gb", "max_rede_gb", "count_rede_gb"],
-    regiao: ["grupo", "grupo_id", "sum_energia_kwh", "avg_energia_kwh", "min_energia_kwh", "max_energia_kwh", "count_energia_kwh",
-             "sum_emissao_co2e_g", "avg_emissao_co2e_g", "min_emissao_co2e_g", "max_emissao_co2e_g", "count_emissao_co2e_g",
-             "sum_cpu_percentual", "avg_cpu_percentual", "min_cpu_percentual", "max_cpu_percentual", "count_cpu_percentual",
-             "sum_memoria_gb", "avg_memoria_gb", "min_memoria_gb", "max_memoria_gb", "count_memoria_gb",
-             "sum_disco_gb", "avg_disco_gb", "min_disco_gb", "max_disco_gb", "count_disco_gb",
-             "sum_rede_gb", "avg_rede_gb", "min_rede_gb", "max_rede_gb", "count_rede_gb"],
-    aplicacao: ["grupo", "grupo_id", "sum_energia_kwh", "avg_energia_kwh", "min_energia_kwh", "max_energia_kwh", "count_energia_kwh",
-                "sum_emissao_co2e_g", "avg_emissao_co2e_g", "min_emissao_co2e_g", "max_emissao_co2e_g", "count_emissao_co2e_g",
-                "sum_cpu_percentual", "avg_cpu_percentual", "min_cpu_percentual", "max_cpu_percentual", "count_cpu_percentual",
-                "sum_memoria_gb", "avg_memoria_gb", "min_memoria_gb", "max_memoria_gb", "count_memoria_gb",
-                "sum_disco_gb", "avg_disco_gb", "min_disco_gb", "max_disco_gb", "count_disco_gb",
-                "sum_rede_gb", "avg_rede_gb", "min_rede_gb", "max_rede_gb", "count_rede_gb"],
-    dia: ["grupo", "sum_energia_kwh", "avg_energia_kwh", "min_energia_kwh", "max_energia_kwh", "count_energia_kwh",
-          "sum_emissao_co2e_g", "avg_emissao_co2e_g", "min_emissao_co2e_g", "max_emissao_co2e_g", "count_emissao_co2e_g",
-          "sum_cpu_percentual", "avg_cpu_percentual", "min_cpu_percentual", "max_cpu_percentual", "count_cpu_percentual",
-          "sum_memoria_gb", "avg_memoria_gb", "min_memoria_gb", "max_memoria_gb", "count_memoria_gb",
-          "sum_disco_gb", "avg_disco_gb", "min_disco_gb", "max_disco_gb", "count_disco_gb",
-          "sum_rede_gb", "avg_rede_gb", "min_rede_gb", "max_rede_gb", "count_rede_gb"],
-    hora: ["grupo", "sum_energia_kwh", "avg_energia_kwh", "min_energia_kwh", "max_energia_kwh", "count_energia_kwh",
-           "sum_emissao_co2e_g", "avg_emissao_co2e_g", "min_emissao_co2e_g", "max_emissao_co2e_g", "count_emissao_co2e_g",
-           "sum_cpu_percentual", "avg_cpu_percentual", "min_cpu_percentual", "max_cpu_percentual", "count_cpu_percentual",
-           "sum_memoria_gb", "avg_memoria_gb", "min_memoria_gb", "max_memoria_gb", "count_memoria_gb",
-           "sum_disco_gb", "avg_disco_gb", "min_disco_gb", "max_disco_gb", "count_disco_gb",
-           "sum_rede_gb", "avg_rede_gb", "min_rede_gb", "max_rede_gb", "count_rede_gb"],
-  };
-  const permitidos = camposPorGroupBy[groupBy] ?? [];
+function construirCamposPermitidosOrdenacao(groupBy: string, metricas: string[]): string[] {
+  // Campos base sempre disponíveis
+  const base = groupBy === "dia" || groupBy === "hora"
+    ? ["grupo"]
+    : ["grupo", "grupo_id"];
+
+  // Para cada métrica solicitada, adiciona sum, avg, min, max, count
+  const metricasFields = metricas.flatMap((m) => {
+    const key = m.replace(".", "_");
+    return [
+      `sum_${key}`,
+      `avg_${key}`,
+      `min_${key}`,
+      `max_${key}`,
+      `count_${key}`,
+    ];
+  });
+
+  return [...base, ...metricasFields];
+}
+
+function validarCampoOrdenacao(campo: string, groupBy: string, metricas: string[]): string {
+  const permitidos = construirCamposPermitidosOrdenacao(groupBy, metricas);
   if (!permitidos.includes(campo)) {
-    throw new Error(`Campo de ordenação inválido para groupBy=${groupBy}: ${campo}. Permitidos: ${permitidos.join(", ")}.`);
+    throw new Error(`Campo de ordenação inválido para groupBy=${groupBy} com métricas [${metricas.join(", ")}]: ${campo}. Permitidos: ${permitidos.join(", ")}.`);
   }
   return campo;
 }
@@ -507,7 +495,7 @@ export async function agregarMetricasPorPeriodo(
   // Ordenação validada
   let orderBy: string;
   if (ordenacao) {
-    const campo = validarCampoOrdenacao(ordenacao.campo, groupByValido);
+    const campo = validarCampoOrdenacao(ordenacao.campo, groupByValido, metricasValidas);
     const dir = validarOrdenacao(ordenacao.direcao);
     orderBy = `ORDER BY "${campo}" ${dir}`;
   } else if (groupByValido === "dia" || groupByValido === "hora") {
