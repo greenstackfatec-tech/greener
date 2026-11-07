@@ -98,7 +98,7 @@ async function coletarEGravarServico(
       resolverFalha(contexto);
       contexto.etapa = "persistencia";
       await gravarColetaSemMetricas(servico.id, intervalo);
-      return { ...identificacaoServico, status: "sem_metricas", resultado: "sem_metricas" };
+      return { ...identificacaoServico, status: "sem_metricas", resultado: "sem_metricas", intervaloSegundos: intervalo };
     }
     const falha = registrarFalha(erro, contexto);
     contexto.etapa = "persistencia";
@@ -130,11 +130,10 @@ async function coletarEGravarServico(
   let calculo: CalculoColeta;
   contexto.etapa = "calculo";
   try {
-    if (!codigoRegiao) throw new Error("Serviço sem localização: CO₂e não calculado");
-    calculo = await calculadoraEnergia.calcularParaServico(
-      respostaMetricas,
-      codigoRegiao,
-    );
+    if (!codigoRegiao) {
+      throw new Error("Serviço sem localização: CO₂e não calculado");
+    }
+    calculo = await calculadoraEnergia.calcularParaServico(respostaMetricas, codigoRegiao);
     validarCalculo(calculo);
     resolverFalha({ ...contexto, etapa: "carbono" });
     resolverFalha(contexto);
@@ -148,6 +147,8 @@ async function coletarEGravarServico(
       falha, erro: falha.mensagem,
     };
   }
+
+  // Persistência (fora do try-catch do cálculo para não capturar erros de BD como falha de cálculo)
   contexto.etapa = "persistencia";
   await gravarColetaSucesso(servico, respostaMetricas, calculo.intensidadeCarbono, calculo);
   return { ...identificacaoServico, status: "sucesso", resultado: "completo", calculo, intervaloSegundos };

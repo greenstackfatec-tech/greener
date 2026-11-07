@@ -99,6 +99,17 @@ export async function listarServicos(): Promise<ServicoComUltimaColeta[]> {
   return resultado.rows;
 }
 
+export async function listarServicosSimples(): Promise<Servico[]> {
+  const resultado = await consultar<Servico>(
+    `SELECT s.id::int, s.nome, s.status, s.cidade, s.latitude::float8, s.longitude::float8,
+            r.pais, r.nome AS regiao
+     FROM servicos s
+     LEFT JOIN regioes r ON r.id = s.regiao_id
+     ORDER BY s.id`,
+  );
+  return resultado.rows;
+}
+
 export async function buscarServicoPorId(id: number): Promise<Servico | null> {
   const resultado = await consultar<Servico>(
     `SELECT id::int, nome, status, cidade, latitude::float8, longitude::float8

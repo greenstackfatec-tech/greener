@@ -1,4 +1,4 @@
-import type { Plugin } from "vite";
+import type { Plugin, Connect } from "vite";
 
 /**
  * Só para desenvolvimento: responde GET /api/services sem backend nem banco.
@@ -7,10 +7,6 @@ import type { Plugin } from "vite";
  */
 type Cenario = "ok" | "vazio" | "erro" | "lento" | "rede";
 const CENARIOS: Cenario[] = ["ok", "vazio", "erro", "lento", "rede"];
-
-/** Só o que o middleware usa de req/res; evita depender dos tipos de node:http, que variam entre ambientes. */
-interface Requisicao { url?: string; socket: { destroy(): void } }
-interface Resposta { statusCode: number; setHeader(nome: string, valor: string): void; end(corpo?: string): void }
 
 function servicos() {
   const minutosAtras = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
@@ -33,7 +29,7 @@ export function mockServicos(): Plugin {
     name: "greener-mock-servicos",
     apply: "serve",
     configureServer(server) {
-      const tratar = (req: Requisicao, res: Resposta, next: () => void) => {
+      server.middlewares.use((req: Connect.IncomingMessage & { url?: string; socket?: { destroy(): void } }, res, next) => {
         const url = new URL(req.url ?? "/", "http://localhost");
         const responder = (status: number, corpo: unknown) => {
           res.statusCode = status;
@@ -53,7 +49,7 @@ export function mockServicos(): Plugin {
         }
 
         if (cenario === "rede") {
-          req.socket.destroy();
+          req.socket?.destroy();
           return;
         }
         const entregar = () => {
@@ -62,8 +58,7 @@ export function mockServicos(): Plugin {
         };
         if (cenario === "lento") setTimeout(entregar, 3000);
         else entregar();
-      };
-      server.middlewares.use(tratar as never);
+      });
     },
   };
 }

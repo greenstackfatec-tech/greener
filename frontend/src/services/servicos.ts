@@ -74,6 +74,7 @@ export async function listarServicos(signal?: AbortSignal): Promise<Servico[]> {
   }
   return bruto.map(normalizar);
 }
+
 /** Estado visual de um serviço (RF02, RF05, RF06): os três são distintos na interface. */
 export type Situacao = "ativo" | "indisponivel" | "sem_metricas" | "removido";
 
@@ -83,4 +84,3 @@ export function situacaoDoServico(servico: Servico): Situacao {
   if (servico.statusColeta !== "sucesso") return "sem_metricas";
   return "ativo";
 }
-

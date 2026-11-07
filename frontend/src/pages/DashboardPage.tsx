@@ -7,9 +7,9 @@ import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
 import { dataHora, duracao, haQuanto, numero } from "../formatacao.ts";
 import { useAgora } from "../hooks/useAgora.ts";
 import { useServicos } from "../hooks/useServicos.ts";
-import { localizacaoDoServico, NAO_INFORMADO } from "../localizacao.ts";
 import { useMonitoramentoColeta } from "../hooks/useMonitoramentoColeta.ts";
 import { situacaoDoServico } from "../services/servicos.ts";
+import { localizacaoDoServico, NAO_INFORMADO } from "../localizacao.ts";
 import "./DashboardPage.css";
 
 export function DashboardPage() {
@@ -42,13 +42,11 @@ export function DashboardPage() {
     return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
   }), [lista, busca, filtro]);
 
-  /** Valor mostrado nos cartões de resumo enquanto ainda não há dados. */
   const resumo = (valor: number) => (servicos === null ? "—" : valor);
   const ultimaAtualizacao = haQuanto(atualizadoEm, agora);
 
   let corpo: ReactNode;
   if (servicos === null) {
-    // Nunca houve resposta válida: carregando, ou erro sem nenhum dado anterior para mostrar.
     corpo = carregando ? (
       <div className="dash-estado">
         <CartaoEstado tom="carregando" titulo="Carregando" selo="Em atualização" descricao="Consultando as métricas mais recentes" rodape="Buscando dados recentes" />
@@ -89,7 +87,6 @@ export function DashboardPage() {
           return (
             <CartaoEstado
               key={s.id}
-              // "Removido" não existe no DD07; usa o tom neutro de "indisponível".
               tom={estado === "removido" ? "indisponivel" : estado}
               titulo={s.nome}
               selo={textos.selo}
@@ -136,54 +133,56 @@ export function DashboardPage() {
     );
   }
 
-  return <div className="dash-shell">
-    <aside className="dash-sidebar">
-      <a className="dash-brand" href={ROTAS.inicio}><img src={logo} alt=""/><span>GreenER</span></a>
-      <p className="dash-nav-label">MENU PRINCIPAL</p>
-      <a className="dash-nav-item dash-nav-active" href={ROTAS.dashboard}><span>▦</span> Visão geral</a>
-      <a className="dash-nav-item" href="#servicos"><span>▤</span> Serviços</a>
-      <div className="dash-sidebar-bottom"><span className="dash-avatar">GE</span><span><strong>GreenER</strong><small>Monitoramento ambiental</small></span></div>
-    </aside>
+  return (
+    <div className="dash-shell">
+      <aside className="dash-sidebar">
+        <a className="dash-brand" href={ROTAS.inicio}><img src={logo} alt=""/><span>GreenER</span></a>
+        <p className="dash-nav-label">MENU PRINCIPAL</p>
+        <a className="dash-nav-item dash-nav-active" href={ROTAS.dashboard}><span>▦</span> Visão geral</a>
+        <a className="dash-nav-item" href="#servicos"><span>▤</span> Serviços</a>
+        <div className="dash-sidebar-bottom"><span className="dash-avatar">GE</span><span><strong>GreenER</strong><small>Monitoramento ambiental</small></span></div>
+      </aside>
 
-    <main className="dash-main">
-      <header className="dash-topbar"><div><span className="dash-breadcrumb">GreenER / </span><strong>Visão geral</strong></div><div className="dash-live"><i/> Dados do monitoramento</div></header>
-      <section className="dash-content">
-        <div className="dash-heading">
-          <div><p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p><h1>Visão geral</h1><p>Acompanhe o desempenho e o impacto ambiental dos seus serviços.</p></div>
-          <div className="dash-heading-acoes">
-            <button className="dash-refresh" onClick={atualizar} disabled={atualizando || carregando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button>
-            <p className="dash-atualizacao">{atualizadoEm === null ? "Aguardando a primeira atualização" : `Última atualização: ${dataHora(atualizadoEm)}`} · Atualiza a cada {duracao(INTERVALO_ATUALIZACAO_SEGUNDOS)}</p>
-          </div>
-        </div>
-
-        <div className="dash-summary">
-          <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{resumo(contagem.total)}</strong><em>Serviços cadastrados</em></div></article>
-          <article className="dash-summary-card"><span className="dash-summary-icon green">✓</span><div><small>Ativos</small><strong>{resumo(contagem.ativos)}</strong><em className="positive">Em operação</em></div></article>
-          <article className="dash-summary-card"><span className="dash-summary-icon gray">!</span><div><small>Indisponíveis</small><strong>{resumo(contagem.indisponiveis)}</strong><em>Sem resposta na coleta</em></div></article>
-          <article className="dash-summary-card"><span className="dash-summary-icon blue">◷</span><div><small>Sem métricas</small><strong>{resumo(contagem.semMetricas)}</strong><em>Aguardando dados</em></div></article>
-        </div>
-
-        <section className="dash-panel" id="servicos">
-          <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div>{servicos !== null && <span className="dash-count">{filtrados.length} serviços</span>}</div>
-          <div className="dash-toolbar"><label className="dash-search"><span>⌕</span><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço ou localização..." aria-label="Buscar serviço ou localização"/></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Filtrar por estado"><option value="todos">Todos os estados</option><option value="ativo">Ativos</option><option value="indisponivel">Indisponíveis</option><option value="sem_metricas">Sem métricas</option><option value="removido">Removidos</option></select><div className="dash-visao" role="group" aria-label="Modo de exibição"><button type="button" aria-pressed={visao === "cartoes"} onClick={() => setVisao("cartoes")}>Cartões</button><button type="button" aria-pressed={visao === "tabela"} onClick={() => setVisao("tabela")}>Tabela</button></div></div>
-
-          {/* Falha com dados já na tela: mantém a tabela e avisa que os valores podem estar desatualizados (RNF04). */}
-          {erroExibido && servicos !== null && (
-            <div className="dash-aviso-erro" role="alert">
-              <i aria-hidden="true" />
-              <div>
-                <strong>Erro de atualização</strong>
-                <span>Falha na coleta mais recente. {erroExibido} Os valores abaixo podem estar desatualizados.</span>
-                <small>{ultimaAtualizacao ? `Última atualização ${ultimaAtualizacao}` : "Sem atualização anterior"} · <button type="button" onClick={atualizar}>Tentar de novo</button></small>
-              </div>
+      <main className="dash-main">
+        <header className="dash-topbar"><div><span className="dash-breadcrumb">GreenER / </span><strong>Visão geral</strong></div><div className="dash-live"><i/> Dados do monitoramento</div></header>
+        <section className="dash-content">
+          <div className="dash-heading">
+            <div><p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p><h1>Visão geral</h1><p>Acompanhe o desempenho e o impacto ambiental dos seus serviços.</p></div>
+            <div className="dash-heading-acoes">
+              <button className="dash-refresh" onClick={atualizar} disabled={atualizando || carregando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button>
+              <p className="dash-atualizacao">{atualizadoEm === null ? "Aguardando a primeira atualização" : `Última atualização: ${dataHora(atualizadoEm)}`} · Atualiza a cada {duracao(INTERVALO_ATUALIZACAO_SEGUNDOS)}</p>
             </div>
-          )}
+          </div>
 
-          {corpo}
-          <div className="dash-table-footer"><span>Valores referentes à coleta mais recente de cada serviço.</span><span>— Dados ainda não disponíveis</span></div>
+          <div className="dash-summary">
+            <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{resumo(contagem.total)}</strong><em>Serviços cadastrados</em></div></article>
+            <article className="dash-summary-card"><span className="dash-summary-icon green">✓</span><div><small>Ativos</small><strong>{resumo(contagem.ativos)}</strong><em className="positive">Em operação</em></div></article>
+            <article className="dash-summary-card"><span className="dash-summary-icon gray">!</span><div><small>Indisponíveis</small><strong>{resumo(contagem.indisponiveis)}</strong><em>Sem resposta na coleta</em></div></article>
+            <article className="dash-summary-card"><span className="dash-summary-icon blue">◷</span><div><small>Sem métricas</small><strong>{resumo(contagem.semMetricas)}</strong><em>Aguardando dados</em></div></article>
+          </div>
+
+          <section className="dash-panel" id="servicos">
+            <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div>{servicos !== null && <span className="dash-count">{filtrados.length} serviços</span>}</div>
+            <div className="dash-toolbar"><label className="dash-search"><span>⌕</span><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço ou localização..." aria-label="Buscar serviço ou localização"/></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Filtrar por estado"><option value="todos">Todos os estados</option><option value="ativo">Ativos</option><option value="indisponivel">Indisponíveis</option><option value="sem_metricas">Sem métricas</option><option value="removido">Removidos</option></select><div className="dash-visao" role="group" aria-label="Modo de exibição"><button type="button" aria-pressed={visao === "cartoes"} onClick={() => setVisao("cartoes")}>Cartões</button><button type="button" aria-pressed={visao === "tabela"} onClick={() => setVisao("tabela")}>Tabela</button></div></div>
+
+            {/* Falha com dados já na tela: mantém a tabela e avisa que os valores podem estar desatualizados (RNF04). */}
+            {erroExibido && servicos !== null && (
+              <div className="dash-aviso-erro" role="alert">
+                <i aria-hidden="true" />
+                <div>
+                  <strong>Erro de atualização</strong>
+                  <span>Falha na coleta mais recente. {erroExibido} Os valores abaixo podem estar desatualizados.</span>
+                  <small>{ultimaAtualizacao ? `Última atualização ${ultimaAtualizacao}` : "Sem atualização anterior"} · <button type="button" onClick={atualizar}>Tentar de novo</button></small>
+                </div>
+              </div>
+            )}
+
+            {corpo}
+            <div className="dash-table-footer"><span>Valores referentes à coleta mais recente de cada serviço.</span><span>— Dados ainda não disponíveis</span></div>
+          </section>
+          <p className="dash-footnote">GreenER · Monitoramento de energia e emissões de CO₂e</p>
         </section>
-        <p className="dash-footnote">GreenER · Monitoramento de energia e emissões de CO₂e</p>
-      </section>
-    </main>
-  </div>;
+      </main>
+    </div>
+  );
 }

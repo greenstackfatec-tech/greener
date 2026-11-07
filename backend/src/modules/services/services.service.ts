@@ -3,8 +3,7 @@ import {
   buscarServicoPorId as buscarServicoPorIdDoRepository,
   listarServicos as listarServicosDoRepository,
 } from "./services.repository.ts";
-import { montarLocalizacao } from "./services.localizacao.ts";
-import type { LocalizacaoExibida } from "./services.localizacao.ts";
+import { montarLocalizacao, type LocalizacaoExibida } from "./services.localizacao.ts";
 
 export { NAO_INFORMADO } from "./services.localizacao.ts";
 
