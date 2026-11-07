@@ -51,7 +51,7 @@ export function criarRotinaColeta(dependencias: DependenciasRotina) {
     timer = undefined;
     if (!ativo) return;
     let proxima = descobrindo ? Infinity : proximaDescoberta;
-    for (const entrada of servicos.values()) {
+    if (!descobrindo) for (const entrada of servicos.values()) {
       if (entrada.presente && !entrada.emExecucao) proxima = Math.min(proxima, entrada.proximaEm);
     }
     if (Number.isFinite(proxima)) {
@@ -72,6 +72,7 @@ export function criarRotinaColeta(dependencias: DependenciasRotina) {
 
   function descobrirServicos() {
     descobrindo = true;
+    let descobertaValida = false;
     acompanhar(async () => {
       const carregarIntervalo = async () => {
         if (intervaloInformado !== undefined) return;
@@ -102,9 +103,16 @@ export function criarRotinaColeta(dependencias: DependenciasRotina) {
       for (const [id, entrada] of servicos) {
         if (!entrada.presente && !entrada.emExecucao) servicos.delete(id);
       }
+      descobertaValida = true;
+      for (const entrada of servicos.values()) {
+        if (entrada.presente && !entrada.emExecucao && entrada.proximaEm <= agora()) coletar(entrada);
+      }
     }, () => {
       descobrindo = false;
       proximaDescoberta = agora() + intervaloAlternativo * 1000;
+      if (!descobertaValida) for (const entrada of servicos.values()) {
+        if (entrada.proximaEm <= agora()) entrada.proximaEm = proximaDescoberta;
+      }
     });
   }
 
@@ -139,11 +147,11 @@ export function criarRotinaColeta(dependencias: DependenciasRotina) {
 
   function disparar() {
     timer = undefined;
-    if (!ativo) return;
-    if (!descobrindo && proximaDescoberta <= agora()) descobrirServicos();
-    for (const entrada of servicos.values()) {
-      if (entrada.presente && !entrada.emExecucao && entrada.proximaEm <= agora()) coletar(entrada);
-    }
+    if (!ativo || descobrindo) return;
+    const coletaVencida = [...servicos.values()].some((entrada) =>
+      entrada.presente && !entrada.emExecucao && entrada.proximaEm <= agora(),
+    );
+    if (proximaDescoberta <= agora() || coletaVencida) descobrirServicos();
     agendar();
   }
 

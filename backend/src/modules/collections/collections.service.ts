@@ -8,6 +8,8 @@ import {
   buscarAplicacaoId,
   buscarRegiaoId,
   salvarServico,
+  sincronizarPresencaServicos,
+  type Servico,
 } from "../services/services.repository.ts";
 import type { Servico as ServicoApi, RespostaMetricas } from "../../integrations/metrics-api.ts";
 import { calculadoraEnergia } from "../../calculos/calculo-energia.ts";
@@ -21,7 +23,7 @@ import {
   buscarHistoricoColetas,
   listarColetas as listarColetasDoRepository,
 } from "./collections.repository.ts";
-import { ErroApi, ErroConfiguracaoApi } from "../../integrations/api-client.ts";
+import { ErroApi, ErroConfiguracaoApi, respostaInvalida } from "../../integrations/api-client.ts";
 import { buscarIntervaloColetaSegundos } from "../configuracoes/configuracoes.repository.ts";
 import { criarRotinaColeta, INTERVALO_PADRAO_SEGUNDOS, intervaloAgendavel } from "./collections.scheduler.ts";
 import { criarMonitoramentoColeta } from "./collections.monitoring.ts";
@@ -46,10 +48,67 @@ function resolverFalha(contexto: ContextoFalha) {
   monitoramento.concluir(monitoramento.iniciar(contexto));
 }
 
-async function descobrirServicosMonitorados(): Promise<ServicoApi[]> {
+interface PresencaServico { presente: boolean }
+const presencas = new Map<string, Map<string, PresencaServico>>();
+const cadastrosDescobertos = new WeakMap<ServicoApi, {
+  presenca: PresencaServico;
+  cadastro: PromiseSettledResult<Servico>;
+}>();
+const descobertas = new Map<string, Promise<ServicoApi[]>>();
+class ColetaCancelada extends Error {}
+
+async function salvarCadastroServico(servicoApi: ServicoApi, aplicacaoId: number, registrarInclusao = false) {
+  const { region, country } = servicoApi.location;
+  const regiaoId = region && country ? await buscarRegiaoId(region, country) : null;
+  return salvarServico({
+    idExterno: servicoApi.id, nome: servicoApi.name, aplicacaoId, regiaoId,
+    cidade: servicoApi.location.city, latitude: servicoApi.location.latitude,
+    longitude: servicoApi.location.longitude,
+  }, registrarInclusao);
+}
+
+function descobrirServicosMonitorados(): Promise<ServicoApi[]> {
+  const origem = process.env.METRICS_API_URL ?? "padrao";
+  const pendente = descobertas.get(origem);
+  if (pendente) return pendente;
+  const descoberta = sincronizarCatalogo(origem).finally(() => {
+    if (descobertas.get(origem) === descoberta) descobertas.delete(origem);
+  });
+  descobertas.set(origem, descoberta);
+  return descoberta;
+}
+
+async function sincronizarCatalogo(origem: string): Promise<ServicoApi[]> {
   const tentativa = monitoramento.iniciar({ etapa: "descoberta" });
   try {
     const servicos = await listarServicos();
+    const ids = servicos.map((servico) => servico.id);
+    if (ids.some((id) => !id.trim() || [...id].length > 100) || new Set(ids).size !== ids.length) {
+      return respostaInvalida("identificadores dos serviços");
+    }
+    const aplicacaoId = await buscarAplicacaoId("GreenER Demo");
+    const persistencia = monitoramento.iniciar({ etapa: "persistencia" });
+    try {
+      await sincronizarPresencaServicos(aplicacaoId, ids);
+      monitoramento.concluir(persistencia);
+    } catch (erro) {
+      registrarFalha(erro, { etapa: "persistencia" }, persistencia);
+      throw erro;
+    }
+    const catalogo = presencas.get(origem) ?? new Map<string, PresencaServico>();
+    presencas.set(origem, catalogo);
+    const presentes = new Set(ids);
+    for (const [id, presenca] of catalogo) {
+      if (!presentes.has(id)) { presenca.presente = false; catalogo.delete(id); }
+    }
+    const cadastros = await Promise.allSettled(servicos.map((servico) =>
+      salvarCadastroServico(servico, aplicacaoId, true),
+    ));
+    servicos.forEach((servico, indice) => {
+      const presenca = catalogo.get(servico.id) ?? { presente: true };
+      catalogo.set(servico.id, presenca);
+      cadastrosDescobertos.set(servico, { presenca, cadastro: cadastros[indice] });
+    });
     monitoramento.descobertaValida(tentativa, servicos.map((servico) => servico.id));
     return servicos;
   } catch (erro) {
@@ -72,18 +131,10 @@ async function coletarEGravarServico(
   contexto: ContextoFalha,
   informarIntervalo?: (segundos: number) => void,
 ): Promise<ResultadoColeta> {
-  const { region, country, region_code: codigoRegiao } = servicoApi.location;
-  // Sem país e região o serviço é gravado sem região (campos nulos).
-  const regiaoId = region && country ? await buscarRegiaoId(region, country) : null;
-  const servico = await salvarServico({
-    idExterno: servicoApi.id,
-    nome: servicoApi.name,
-    aplicacaoId,
-    regiaoId,
-    cidade: servicoApi.location.city,
-    latitude: servicoApi.location.latitude,
-    longitude: servicoApi.location.longitude,
-  });
+  const { region_code: codigoRegiao } = servicoApi.location;
+  const cadastro = cadastrosDescobertos.get(servicoApi)?.cadastro;
+  if (cadastro?.status === "rejected") throw cadastro.reason;
+  const servico = cadastro?.value ?? await salvarCadastroServico(servicoApi, aplicacaoId);
   const identificacaoServico = { servicoId: servico.id, servicoNome: servico.nome };
   contexto.servicoId = servico.id;
   contexto.servicoNome = servico.nome;
@@ -165,16 +216,23 @@ export function coletarServico(
   const anterior = coletasPendentes.get(servico.id);
   const coleta = (async () => {
     await anterior?.catch(() => {}); // Uma falha anterior não bloqueia a fila.
+    if (cadastrosDescobertos.get(servico)?.presenca.presente === false) {
+      throw new ColetaCancelada("Serviço removido antes do início da coleta");
+    }
     const contexto: ContextoFalha = { etapa: "persistencia", idExterno: servico.id, servicoNome: servico.name };
     monitoramento.iniciarColeta();
     try {
       const id = aplicacaoId ?? await buscarAplicacaoId("GreenER Demo");
+      if (cadastrosDescobertos.get(servico)?.presenca.presente === false) {
+        throw new ColetaCancelada("Serviço removido antes do início da coleta");
+      }
       const resultado = await coletarEGravarServico(servico, id, intervalo, contexto, informarIntervalo);
       resolverFalha({ ...contexto, etapa: "persistencia" });
       resolverFalha({ ...contexto, etapa: "configuracao" });
       monitoramento.concluirColeta(servico.id, resultado.resultado === "completo");
       return resultado;
     } catch (erro) {
+      if (erro instanceof ColetaCancelada) throw erro;
       registrarFalha(erro, { ...contexto, etapa: erro instanceof ErroConfiguracaoApi ? "configuracao" : contexto.etapa });
       throw erro;
     }
@@ -239,6 +297,7 @@ export async function executarRodadaColeta(): Promise<ResultadoRodadaColeta> {
 
   for (const coleta of coletas) {
     if (coleta.status === "rejected") {
+      if (coleta.reason instanceof ColetaCancelada) { rodada.totalServicos--; continue; }
       falhas.push(coleta.reason);
       continue;
     }

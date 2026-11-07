@@ -47,6 +47,7 @@ async function preparar(t: TestContext, umServico = false) {
     consultas.push({ sql, parametros });
     if (sql.includes("FROM aplicacoes")) return { rows: [{ id: 7 }] };
     if (sql.includes("FROM configuracoes")) return { rows: [{ valor: "60" }] };
+    if (sql.includes("WITH anteriores AS MATERIALIZED")) return { rows: [] };
     if (sql.includes("FROM regioes"))
       return { rows: [{ id: parametros[1] === "Brazil" ? 11 : 12 }] };
     if (sql.includes("INSERT INTO servicos")) {
@@ -378,14 +379,16 @@ test("intervalo zero aceito pela API é preservado com duração e energia iguai
   assert.equal(gravacoes[0][10], 0);
 });
 
-test("lista de serviços vazia conclui sem consultas ou gravações no banco", async (t) => {
+test("lista de serviços vazia sincroniza a presença sem gravar amostras", async (t) => {
   const { estado, consultas } = await preparar(t);
   estado.listaVazia = true;
   const resultado = await executarRodadaColeta();
   assert.equal(resultado.totalServicos, 0);
   assert.equal(resultado.erros, 0);
   assert.deepEqual(resultado.detalhes, []);
-  assert.equal(consultas.length, 0);
+  assert.equal(consultas.length, 2);
+  assert.deepEqual(consultas[1].parametros, [7, []]);
+  assert.ok(consultas[1].sql.includes("WITH anteriores AS MATERIALIZED"));
 });
 
 test("TP06 rotina consulta novamente a API e grava cada novo estado, com recuperação de falha", async (t) => {
