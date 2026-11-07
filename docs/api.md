@@ -92,7 +92,7 @@ Retorna os serviços cadastrados no GreenER, incluindo seus dados de identifica�
 
 **Autenticação:** não exige.
 
-**Resposta de sucesso — HTTP 200:** array de serviços. A implementação inclui os dados de localização disponíveis e um objeto `localizacao` com valores de apresentação. Quando a origem não informa a localização, os campos estruturados podem ser `null` e os campos de apresentação recebem `"não informado"`.
+**Resposta de sucesso — HTTP 200:** array de serviços. A implementação inclui os dados de localização disponíveis e um objeto `localizacao` com valores de apresentação. Quando a origem não informa a localização, os campos estruturados (`pais`, `regiao`, `cidade`, `latitude` e `longitude`) são `null` e os campos de apresentação de `localizacao` recebem `"Não informado"`, individualmente: um serviço com país e região, mas sem cidade, traz `"cidade": "Não informado"` e mantém os demais valores (RF12). Texto vazio ou só com espaços também é tratado como ausente.
 
 ```json
 [

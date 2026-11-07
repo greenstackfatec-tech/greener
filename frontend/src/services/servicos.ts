@@ -1,7 +1,7 @@
 import { requisitar } from "./api.ts";
 
 export type StatusServico = "ativo" | "indisponivel" | "removido";
-export type StatusColeta = "sucesso" | "sem_metricas" | "indisponivel" | null;
+export type StatusColeta = "sucesso" | "sem_metricas" | "indisponivel";
 
 /** Serviço como o dashboard o consome (GET /api/services). */
 export interface Servico {
@@ -11,10 +11,11 @@ export interface Servico {
   cidade: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** Vêm da região; nulos quando o serviço não tem localização (a tela mostra "Não informado", RF12). */
   regiao: string | null;
   pais: string | null;
   coletadoEm: string | null;
-  statusColeta: StatusColeta;
+  statusColeta: StatusColeta | null;
   cpuPercentual: number | null;
   memoriaGb: number | null;
   discoGb: number | null;
@@ -73,6 +74,7 @@ export async function listarServicos(signal?: AbortSignal): Promise<Servico[]> {
   }
   return bruto.map(normalizar);
 }
+
 /** Estado visual de um serviço (RF02, RF05, RF06): os três são distintos na interface. */
 export type Situacao = "ativo" | "indisponivel" | "sem_metricas" | "removido";
 

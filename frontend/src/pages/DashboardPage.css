@@ -33,3 +33,4 @@
 .dash-heading-acoes{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .dash-atualizacao{margin:0;font-size:11px;color:#616b63;text-align:right}
 @media(max-width:700px){.dash-heading-acoes{align-items:flex-start}.dash-atualizacao{text-align:left}}
+.dash-table td.dash-location{font-weight:550;color:#4b5d50}.dash-table td.dash-sem-info{font-style:italic;color:#98a29a}
