@@ -2,11 +2,13 @@ import { useMemo, useState, type ReactNode } from "react";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado } from "../components/CartaoEstado.tsx";
+import { CardsIndicadores } from "../components/CardsIndicadores.tsx";
 import { TEXTOS_SITUACAO, rodapeDaSituacao } from "../estadosServico.ts";
 import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
 import { dataHora, duracao, haQuanto, numero } from "../formatacao.ts";
 import { useAgora } from "../hooks/useAgora.ts";
 import { useServicos } from "../hooks/useServicos.ts";
+import { useIndicadores } from "../hooks/useIndicadores.ts";
 import { useMonitoramentoColeta } from "../hooks/useMonitoramentoColeta.ts";
 import { situacaoDoServico } from "../services/servicos.ts";
 import { localizacaoDoServico, NAO_INFORMADO } from "../localizacao.ts";
@@ -18,6 +20,8 @@ export function DashboardPage() {
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
   const [visao, setVisao] = useState<"cartoes" | "tabela">("cartoes");
+  const indicadores = useIndicadores(INTERVALO_ATUALIZACAO_SEGUNDOS * 1000);
+  const recarregarIndicadores = indicadores.recarregar;
   const { statusColeta, erroMonitoramento, atualizarMonitoramento } = useMonitoramentoColeta();
   const erroColeta = statusColeta?.monitoramento.situacao === "degradado"
     ? statusColeta.monitoramento.falhasAtivas.map((falha) =>
@@ -25,16 +29,9 @@ export function DashboardPage() {
     ).join(" ") || "A coleta apresentou falhas. Os dados podem estar desatualizados."
     : null;
   const erroExibido = [erro, erroMonitoramento, erroColeta].filter(Boolean).join(" ");
-  const atualizar = () => { recarregar(); atualizarMonitoramento(); };
+  const atualizar = () => { recarregar(); atualizarMonitoramento(); recarregarIndicadores(); };
 
   const lista = useMemo(() => servicos ?? [], [servicos]);
-
-  const contagem = useMemo(() => ({
-    total: lista.filter((s) => s.status !== "removido").length,
-    ativos: lista.filter((s) => situacaoDoServico(s) === "ativo").length,
-    indisponiveis: lista.filter((s) => situacaoDoServico(s) === "indisponivel").length,
-    semMetricas: lista.filter((s) => situacaoDoServico(s) === "sem_metricas").length,
-  }), [lista]);
 
   const filtrados = useMemo(() => lista.filter((s) => {
     const termo = busca.trim().toLocaleLowerCase("pt-BR");
@@ -42,7 +39,6 @@ export function DashboardPage() {
     return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
   }), [lista, busca, filtro]);
 
-  const resumo = (valor: number) => (servicos === null ? "—" : valor);
   const ultimaAtualizacao = haQuanto(atualizadoEm, agora);
 
   let corpo: ReactNode;
@@ -154,12 +150,8 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="dash-summary">
-            <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{resumo(contagem.total)}</strong><em>Serviços cadastrados</em></div></article>
-            <article className="dash-summary-card"><span className="dash-summary-icon green">✓</span><div><small>Ativos</small><strong>{resumo(contagem.ativos)}</strong><em className="positive">Em operação</em></div></article>
-            <article className="dash-summary-card"><span className="dash-summary-icon gray">!</span><div><small>Indisponíveis</small><strong>{resumo(contagem.indisponiveis)}</strong><em>Sem resposta na coleta</em></div></article>
-            <article className="dash-summary-card"><span className="dash-summary-icon blue">◷</span><div><small>Sem métricas</small><strong>{resumo(contagem.semMetricas)}</strong><em>Aguardando dados</em></div></article>
-          </div>
+          {/* Indicadores consolidados vindos do backend (DW06 / RF08). */}
+          <CardsIndicadores estado={indicadores} aoTentarDeNovo={recarregarIndicadores} />
 
           <section className="dash-panel" id="servicos">
             <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div>{servicos !== null && <span className="dash-count">{filtrados.length} serviços</span>}</div>

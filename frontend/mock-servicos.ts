@@ -1,7 +1,8 @@
 import type { Plugin, Connect } from "vite";
 
 /**
- * Só para desenvolvimento: responde GET /api/services sem backend nem banco.
+ * Só para desenvolvimento: responde GET /api/services e GET /api/dashboard/indicadores
+ * sem backend nem banco.
  * Ligado por `npm run dev:mock`. Para trocar o cenário, abra no navegador
  * http://localhost:5173/api/__mock?cenario=ok|vazio|erro|lento|rede e clique em "Atualizar dados".
  */
@@ -21,6 +22,19 @@ function servicos() {
     { id: 5, nome: "Notifications", status: "ativo", statusColeta: null, coletadoEm: null, ...vazio, ...base, cidade: null, latitude: null, longitude: null, regiao: null, pais: null },
     { id: 6, nome: "Legacy Cron", status: "removido", statusColeta: null, coletadoEm: null, ...vazio, ...base },
   ];
+}
+
+/** Mesma regra do backend: totais da última coleta bem-sucedida; contagens por status do serviço (sem removidos). */
+function indicadores(zerados: boolean) {
+  const lista = zerados ? [] : servicos();
+  const comColeta = lista.filter((s) => s.statusColeta === "sucesso");
+  const soma = (campo: "energiaKwh" | "emissaoCo2eG") => comColeta.reduce((total, s) => total + (s[campo] ?? 0), 0);
+  return {
+    consumo_total_kwh: Number(soma("energiaKwh").toFixed(8)),
+    emissao_total_co2e_g: Number(soma("emissaoCo2eG").toFixed(8)),
+    servicos_ativos: lista.filter((s) => s.status === "ativo").length,
+    servicos_indisponiveis: lista.filter((s) => s.status === "indisponivel").length,
+  };
 }
 
 export function mockServicos(): Plugin {
@@ -43,7 +57,8 @@ export function mockServicos(): Plugin {
           responder(200, { cenario, opcoes: CENARIOS });
           return;
         }
-        if (url.pathname !== "/api/services") {
+        const ehIndicadores = url.pathname === "/api/dashboard/indicadores";
+        if (url.pathname !== "/api/services" && !ehIndicadores) {
           next();
           return;
         }
@@ -54,6 +69,7 @@ export function mockServicos(): Plugin {
         }
         const entregar = () => {
           if (cenario === "erro") responder(502, { error: "bad_gateway", message: "Mock: backend fora do ar" });
+          else if (ehIndicadores) responder(200, indicadores(cenario === "vazio"));
           else responder(200, cenario === "vazio" ? [] : servicos());
         };
         if (cenario === "lento") setTimeout(entregar, 3000);
