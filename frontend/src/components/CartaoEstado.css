@@ -43,6 +43,13 @@
 .cartao-estado-selo { background: var(--tom-fundo); color: var(--tom-texto); border-radius: 6px; padding: 5px 9px; font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; white-space: nowrap; }
 .cartao-estado-descricao { margin: 6px 0 0; font-size: 12px; color: #616b63; }
 
+/* Localização do serviço (RF12): três campos lado a lado; "Não informado" fica apagado. */
+.cartao-estado-local { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 0; }
+.cartao-estado-local > div { min-width: 0; }
+.cartao-estado-local dt { font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #8a958d; }
+.cartao-estado-local dd { margin: 3px 0 0; font-size: 12px; font-weight: 550; color: #33463a; overflow-wrap: anywhere; }
+.cartao-estado-local dd.sem-info { font-weight: 400; font-style: italic; color: #98a29a; }
+
 .cartao-estado-valor { min-height: 30px; margin: 10px 0 12px; display: flex; align-items: center; }
 .cartao-estado-valor strong { font-size: 25px; line-height: 1.1; font-weight: 700; letter-spacing: -0.4px; color: var(--tom); }
 .cartao-estado-traco { display: block; width: 24px; height: 3px; border-radius: 2px; background: var(--tom); opacity: 0.85; }

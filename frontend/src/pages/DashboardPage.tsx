@@ -1,5 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { situacaoDoServico } from "../services/servicos.ts";
+import { useMemo, useState, type ReactNode } from "react";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado } from "../components/CartaoEstado.tsx";
@@ -9,18 +8,16 @@ import { dataHora, duracao, haQuanto, numero } from "../formatacao.ts";
 import { useAgora } from "../hooks/useAgora.ts";
 import { useServicos } from "../hooks/useServicos.ts";
 import { useMonitoramentoColeta } from "../hooks/useMonitoramentoColeta.ts";
+import { situacaoDoServico } from "../services/servicos.ts";
+import { localizacaoDoServico, NAO_INFORMADO } from "../localizacao.ts";
 import "./DashboardPage.css";
-
-function formatarNumero(valor: number | null, casas = 1): string {
-  return valor === null || !Number.isFinite(valor) ? "—" : valor.toLocaleString("pt-BR", { maximumFractionDigits: casas });
-}
 
 export function DashboardPage() {
   const { servicos, carregando, atualizando, erro, atualizadoEm, recarregar } = useServicos(INTERVALO_ATUALIZACAO_SEGUNDOS * 1000);
   const agora = useAgora();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
-  const [visao, setVisao] = useState<"cartoes" | "tabela">("tabela");
+  const [visao, setVisao] = useState<"cartoes" | "tabela">("cartoes");
   const { statusColeta, erroMonitoramento, atualizarMonitoramento } = useMonitoramentoColeta();
   const erroColeta = statusColeta?.monitoramento.situacao === "degradado"
     ? statusColeta.monitoramento.falhasAtivas.map((falha) =>
@@ -28,32 +25,25 @@ export function DashboardPage() {
     ).join(" ") || "A coleta apresentou falhas. Os dados podem estar desatualizados."
     : null;
   const erroExibido = [erro, erroMonitoramento, erroColeta].filter(Boolean).join(" ");
+  const atualizar = () => { recarregar(); atualizarMonitoramento(); };
 
-  const carregar = useCallback(() => {
-    void recarregar();
-    void atualizarMonitoramento();
-  }, [recarregar, atualizarMonitoramento]);
+  const lista = useMemo(() => servicos ?? [], [servicos]);
 
-  const contagem = useMemo(() => {
-    const lista = servicos ?? [];
-    return {
-      total: lista.filter((s) => s.status !== "removido").length,
-      ativos: lista.filter((s) => situacaoDoServico(s) === "ativo").length,
-      indisponiveis: lista.filter((s) => situacaoDoServico(s) === "indisponivel").length,
-      semMetricas: lista.filter((s) => situacaoDoServico(s) === "sem_metricas").length,
-    };
-  }, [servicos]);
+  const contagem = useMemo(() => ({
+    total: lista.filter((s) => s.status !== "removido").length,
+    ativos: lista.filter((s) => situacaoDoServico(s) === "ativo").length,
+    indisponiveis: lista.filter((s) => situacaoDoServico(s) === "indisponivel").length,
+    semMetricas: lista.filter((s) => situacaoDoServico(s) === "sem_metricas").length,
+  }), [lista]);
 
-  const filtrados = useMemo(() => {
-    const lista = servicos ?? [];
+  const filtrados = useMemo(() => lista.filter((s) => {
     const termo = busca.trim().toLocaleLowerCase("pt-BR");
-    return lista.filter((s) => {
-      const corresponde = `${s.nome} ${s.cidade ?? ""} ${s.regiao ?? ""} ${s.pais ?? ""}`.toLocaleLowerCase("pt-BR").includes(termo);
-      return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
-    });
-  }, [servicos, busca, filtro]);
+    const corresponde = `${s.nome} ${s.cidade ?? ""} ${s.regiao ?? ""} ${s.pais ?? ""}`.toLocaleLowerCase("pt-BR").includes(termo);
+    return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
+  }), [lista, busca, filtro]);
 
-  const ultimaAtualizacao = atualizadoEm ? haQuanto(atualizadoEm, agora) : null;
+  const resumo = (valor: number) => (servicos === null ? "—" : valor);
+  const ultimaAtualizacao = haQuanto(atualizadoEm, agora);
 
   let corpo: ReactNode;
   if (servicos === null) {
@@ -70,7 +60,7 @@ export function DashboardPage() {
           descricao={`Falha na coleta mais recente. ${erroExibido}`.trim()}
           valor={null}
           rodape="Nenhum dado anterior para mostrar"
-          acao={{ rotulo: "Tentar de novo", aoClicar: carregar }}
+          acao={{ rotulo: "Tentar de novo", aoClicar: atualizar }}
         />
       </div>
     );
@@ -102,7 +92,8 @@ export function DashboardPage() {
               selo={textos.selo}
               descricao={textos.descricao}
               valor={s.energiaKwh === null ? null : `${numero(s.energiaKwh, 4)} kWh`}
-              rodape={`${rodapeDaSituacao(s, estado, agora)} · ${s.cidade || s.regiao || "—"}`}
+              rodape={rodapeDaSituacao(s, estado, agora)}
+              localizacao={localizacaoDoServico(s)}
             />
           );
         })}
@@ -111,16 +102,19 @@ export function DashboardPage() {
       <div className={erroExibido ? "dash-table-wrap desatualizado" : "dash-table-wrap"}>
         <table className="dash-table">
           <thead>
-            <tr><th>Serviço</th><th>Estado</th><th>Localização</th><th>CPU</th><th>RAM</th><th>Disco</th><th>Rede</th><th>Energia</th><th>CO₂e</th></tr>
+            <tr><th>Serviço</th><th>Estado</th><th>País</th><th>Região</th><th>Cidade</th><th>CPU</th><th>RAM</th><th>Disco</th><th>Rede</th><th>Energia</th><th>CO₂e</th></tr>
           </thead>
           <tbody>
             {filtrados.map((s) => {
               const estado = situacaoDoServico(s);
+              const local = localizacaoDoServico(s);
               return (
                 <tr key={s.id}>
                   <td><strong className="dash-service-name">{s.nome}</strong><small className="dash-service-id">ID {s.id}</small></td>
                   <td><span className={`dash-status ${estado}`}><i />{TEXTOS_SITUACAO[estado].rotulo}</span></td>
-                  <td><span className="dash-location">{s.cidade || s.regiao || "—"}</span><small className="dash-country">{[s.regiao, s.pais].filter(Boolean).join(", ")}</small></td>
+                  {([local.pais, local.regiao, local.cidade] as const).map((texto, i) => (
+                    <td key={i} className={texto === NAO_INFORMADO ? "dash-sem-info" : "dash-location"}>{texto}</td>
+                  ))}
                   <td>{numero(s.cpuPercentual)}{s.cpuPercentual === null ? "" : "%"}</td>
                   <td>{s.memoriaGb === null ? "—" : `${numero(s.memoriaGb)} GB`}</td>
                   <td>{s.discoGb === null ? "—" : `${numero(s.discoGb)} GB`}</td>
@@ -155,34 +149,21 @@ export function DashboardPage() {
           <div className="dash-heading">
             <div><p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p><h1>Visão geral</h1><p>Acompanhe o desempenho e o impacto ambiental dos seus serviços.</p></div>
             <div className="dash-heading-acoes">
-              <button className="dash-refresh" onClick={carregar} disabled={atualizando || carregando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button>
-              {atualizadoEm !== null && <p className="dash-atualizacao">Última atualização: {dataHora(atualizadoEm)} · Atualiza a cada {duracao(INTERVALO_ATUALIZACAO_SEGUNDOS)}</p>}
+              <button className="dash-refresh" onClick={atualizar} disabled={atualizando || carregando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button>
+              <p className="dash-atualizacao">{atualizadoEm === null ? "Aguardando a primeira atualização" : `Última atualização: ${dataHora(atualizadoEm)}`} · Atualiza a cada {duracao(INTERVALO_ATUALIZACAO_SEGUNDOS)}</p>
             </div>
           </div>
 
           <div className="dash-summary">
-            <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{formatarNumero(contagem.total, 0)}</strong><em>Serviços cadastrados</em></div></article>
-            <article className="dash-summary-card"><span className="dash-summary-icon green">✓</span><div><small>Ativos</small><strong>{formatarNumero(contagem.ativos, 0)}</strong><em className="positive">Em operação</em></div></article>
-            <article className="dash-summary-card"><span className="dash-summary-icon gray">!</span><div><small>Indisponíveis</small><strong>{formatarNumero(contagem.indisponiveis, 0)}</strong><em>Sem resposta na coleta</em></div></article>
-            <article className="dash-summary-card"><span className="dash-summary-icon blue">◷</span><div><small>Sem métricas</small><strong>{formatarNumero(contagem.semMetricas, 0)}</strong><em>Aguardando dados</em></div></article>
+            <article className="dash-summary-card"><span className="dash-summary-icon green">▤</span><div><small>Serviços monitorados</small><strong>{resumo(contagem.total)}</strong><em>Serviços cadastrados</em></div></article>
+            <article className="dash-summary-card"><span className="dash-summary-icon green">✓</span><div><small>Ativos</small><strong>{resumo(contagem.ativos)}</strong><em className="positive">Em operação</em></div></article>
+            <article className="dash-summary-card"><span className="dash-summary-icon gray">!</span><div><small>Indisponíveis</small><strong>{resumo(contagem.indisponiveis)}</strong><em>Sem resposta na coleta</em></div></article>
+            <article className="dash-summary-card"><span className="dash-summary-icon blue">◷</span><div><small>Sem métricas</small><strong>{resumo(contagem.semMetricas)}</strong><em>Aguardando dados</em></div></article>
           </div>
 
           <section className="dash-panel" id="servicos">
-            <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div><span className="dash-count">{filtrados.length} serviços</span></div>
-            <div className="dash-toolbar">
-              <label className="dash-search"><span>⌕</span><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço ou localização..." aria-label="Buscar serviço ou localização"/></label>
-              <select value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Filtrar por estado">
-                <option value="todos">Todos os estados</option>
-                <option value="ativo">Ativos</option>
-                <option value="indisponivel">Indisponíveis</option>
-                <option value="sem_metricas">Sem métricas</option>
-                <option value="removido">Removidos</option>
-              </select>
-              <div className="dash-visao" role="group" aria-label="Modo de exibição">
-                <button type="button" aria-pressed={visao === "cartoes"} onClick={() => setVisao("cartoes")}>Cartões</button>
-                <button type="button" aria-pressed={visao === "tabela"} onClick={() => setVisao("tabela")}>Tabela</button>
-              </div>
-            </div>
+            <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div>{servicos !== null && <span className="dash-count">{filtrados.length} serviços</span>}</div>
+            <div className="dash-toolbar"><label className="dash-search"><span>⌕</span><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço ou localização..." aria-label="Buscar serviço ou localização"/></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Filtrar por estado"><option value="todos">Todos os estados</option><option value="ativo">Ativos</option><option value="indisponivel">Indisponíveis</option><option value="sem_metricas">Sem métricas</option><option value="removido">Removidos</option></select><div className="dash-visao" role="group" aria-label="Modo de exibição"><button type="button" aria-pressed={visao === "cartoes"} onClick={() => setVisao("cartoes")}>Cartões</button><button type="button" aria-pressed={visao === "tabela"} onClick={() => setVisao("tabela")}>Tabela</button></div></div>
 
             {/* Falha com dados já na tela: mantém a tabela e avisa que os valores podem estar desatualizados (RNF04). */}
             {erroExibido && servicos !== null && (
@@ -191,7 +172,7 @@ export function DashboardPage() {
                 <div>
                   <strong>Erro de atualização</strong>
                   <span>Falha na coleta mais recente. {erroExibido} Os valores abaixo podem estar desatualizados.</span>
-                  <small>{ultimaAtualizacao ? `Última atualização ${ultimaAtualizacao}` : "Sem atualização anterior"} · <button type="button" onClick={carregar}>Tentar de novo</button></small>
+                  <small>{ultimaAtualizacao ? `Última atualização ${ultimaAtualizacao}` : "Sem atualização anterior"} · <button type="button" onClick={atualizar}>Tentar de novo</button></small>
                 </div>
               </div>
             )}
