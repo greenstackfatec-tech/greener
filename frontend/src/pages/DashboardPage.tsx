@@ -102,7 +102,7 @@ export function DashboardPage() {
               selo={textos.selo}
               descricao={textos.descricao}
               valor={s.energiaKwh === null ? null : `${numero(s.energiaKwh, 4)} kWh`}
-              rodape={`${rodapeDaSituacao(s, estado, agora)} · {s.cidade || s.regiao || "—"}`}
+              rodape={`${rodapeDaSituacao(s, estado, agora)} · ${s.cidade || s.regiao || "—"}`}
             />
           );
         })}
