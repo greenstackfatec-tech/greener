@@ -97,3 +97,10 @@
     justify-content: space-between;
   }
 }
+
+/* Alvos de toque de 44 px; margens reduzidas na mesma medida para manter o espaçamento do Figma. */
+@media (max-width: 1023px) {
+  .login-opcoes { gap: 8px; margin-top: 16px; }
+  .login-lembrar, .login-esqueci { min-height: 44px; }
+  .login-enviar { margin-top: 12px; }
+}

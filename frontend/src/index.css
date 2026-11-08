@@ -10,11 +10,13 @@ body,
 #root {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
 }
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   display: block;
 }
 

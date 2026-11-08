@@ -252,6 +252,101 @@ Para iniciar frontend, backend e PostgreSQL juntos, siga a seção Docker do [RE
 
 ---
 
+## Responsividade
+
+As telas são feitas para celular, tablet e desktop (RNF01). A referência visual do celular são as imagens `docs/design/*-mobile.png`, todas com 390 px de largura. Nesta primeira versão, a responsividade foi verificada manualmente; o frontend ainda não tem testes automatizados de interface.
+
+### Breakpoints
+
+| Largura | Onde é usada | O que muda |
+|---|---|---|
+| até 359 px | Início, Administrativa | Telas muito estreitas: o status da prévia volta a uma coluna e o valor dos indicadores diminui para 28 px. |
+| até 640 px | Início | Celular: cabeçalho só com "Entrar", título de 32 px em 390 px, botões em coluna e prévia compacta. |
+| até 700 px | Dashboard | Celular: menu lateral só com ícones (62 px), cartões em uma coluna e filtros empilhados. |
+| até 900 px | Início | Tablet: hero e etapas em uma coluna. |
+| até 1023 px | Login, Cadastro, Administrativa | Celular e tablet: campos de 16 px e alvos de toque de 44 px. O layout de desktop começa em 1024 px. |
+| até 1100 px | Dashboard | Tablet: menu lateral de 205 px e indicadores em duas colunas. |
+
+Login, Cadastro e Administrativa são escritos primeiro para o celular. Os estilos de desktop ficam em `@media (min-width: 1024px)`. Ao criar uma tela nova, siga o mesmo padrão e reaproveite esses pontos de quebra, em vez de criar valores novos.
+
+### Regras de legibilidade e toque
+
+- **Texto:** no celular, nenhum texto visível com menos de 12 px (0,75 rem). No Dashboard, essa regra vale até 700 px; em tablet ele mantém a densidade do desktop.
+- **Campos de formulário:** 16 px no celular e no tablet. Com menos que isso, o Safari do iPhone dá zoom automático ao focar o campo.
+- **Alvos de toque:** botões, links de ação, campos e itens de menu com no mínimo 44 px de altura. Quando o visual do Figma é menor, a área de toque é ampliada sem mudar o layout (por exemplo, com `::after` ou `min-height` compensado na margem).
+- **Altura da tela:** use `min-height: 100vh` seguido de `min-height: 100dvh`. O `dvh` considera a barra de endereço do navegador no celular.
+
+### Tamanhos de teste
+
+Confira cada tela em **320, 360, 390, 768 e 1024 px**:
+
+| Largura | Representa |
+|---|---|
+| 320 px | Celulares pequenos (limite inferior) |
+| 360 px | Celulares Android comuns |
+| 390 px | Tamanho do Figma (iPhone) |
+| 768 px | Tablet em pé |
+| 1024 px | Tablet deitado e início do desktop |
+
+Em cada tamanho, verifique:
+
+1. Não há rolagem horizontal na página (a tabela do Dashboard rola dentro do próprio contêiner).
+2. Nada fica cortado ou sobreposto.
+3. Em 390 px, o visual segue o protótipo em `docs/design/`.
+4. Os textos continuam legíveis e os botões, fáceis de tocar.
+
+### Como testar
+
+Todos os comandos abaixo partem da pasta `frontend`.
+
+**1. Instalar e subir com dados de exemplo (sem backend):**
+
+```bash
+npm ci
+npm run dev:mock
+```
+
+Abra `http://localhost:5173`. Para trocar o cenário do Dashboard, acesse `http://localhost:5173/api/__mock?cenario=ok|vazio|erro|lento|rede` e clique em "Atualizar dados". O aviso de erro de atualização no modo mock é esperado (veja a seção do modo mock).
+
+**2. Simular o celular no navegador:** abra o DevTools (`F12`), ative a barra de dispositivos (`Ctrl+Shift+M`), escolha "Responsive" e percorra os tamanhos de teste em `/`, `/login`, `/cadastro`, `/administrativa` e `/dashboard`.
+
+**3. Ver a tela Administrativa sem backend.** A rota `/administrativa` exige token. Para conferir só o layout, rode no console do navegador (`F12 > Console`):
+
+```js
+sessionStorage.setItem("greener.token","x."+btoa(JSON.stringify({exp:Math.floor(Date.now()/1000)+3600}))+".x")
+```
+
+Esse token é falso e serve apenas para testar a interface no seu computador. Não o salve em arquivo e não o inclua em PR, print ou log. O backend continua recusando-o.
+
+**4. Testar no celular de verdade** (única forma de confirmar o zoom do iPhone). Com o celular na mesma rede Wi-Fi do computador:
+
+```bash
+npm run dev:mock -- --host
+```
+
+Abra no celular o endereço da linha `Network` que o Vite mostra no terminal, por exemplo `http://192.168.0.25:5173`. Para usar dados reais, suba o backend (seção Docker do README principal) e use `npm run dev -- --host`.
+
+**5. Testar com Docker (build de produção, servido pelo Nginx).** Na raiz do repositório, com o `.env` criado a partir do `.env.example` e o `JWT_SECRET` preenchido:
+
+```bash
+docker compose up --build -d
+```
+
+A aplicação fica em `http://localhost:8080`. Para encerrar, use `docker compose down` (sem `-v`, para preservar o banco).
+
+**6. Checagens antes de abrir o Pull Request:**
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+npm test
+```
+
+`npm test` cobre apenas `servicos` e `indicadores`, não as telas. Anexe ao PR capturas de tela de pelo menos dois tamanhos (por exemplo, 390 e 768 px), sem tokens nem dados pessoais.
+
+---
+
 `npm run dev:mock` sobe o frontend com dados de exemplo para `/api/services` (arquivo `mock-servicos.ts`, só em desenvolvimento). Para trocar o cenário, abra `http://localhost:5173/api/__mock?cenario=ok|vazio|erro|lento|rede` e clique em "Atualizar dados" no dashboard. Para ver o erro com dados anteriores (RNF04), deixe em `ok`, mude para `erro` e atualize.
 
 ## Atualização automática (DW08)
