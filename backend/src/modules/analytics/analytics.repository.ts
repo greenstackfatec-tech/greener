@@ -553,8 +553,8 @@ export async function agregarMetricasPorPeriodo(
   if (ordenacao) {
     const campo = validarCampoOrdenacao(ordenacao.campo, groupByValido, metricasValidas);
     const dir = validarOrdenacao(ordenacao.direcao);
-    const desempate = groupByValido !== "dia" && groupByValido !== "hora" && campo !== "grupo_id"
-      ? ", grupo_id ASC NULLS LAST" : "";
+    const campoDesempate = groupByValido === "dia" || groupByValido === "hora" ? "grupo" : "grupo_id";
+    const desempate = campo !== campoDesempate ? `, ${campoDesempate} ASC NULLS LAST` : "";
     orderBy = `ORDER BY "${campo}" ${dir}${desempate}`;
   } else if (groupByValido === "dia" || groupByValido === "hora") {
     orderBy = `ORDER BY grupo DESC`;

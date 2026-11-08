@@ -663,6 +663,47 @@ test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
     assert.deepEqual(hora.map((a) => a.metricas.sum_energia_kwh), [0.2, 0.1]);
   });
 
+  for (const groupBy of ["dia", "hora"] as const) {
+    await t.test(`paginação por ${groupBy} preserva 30 grupos empatados em páginas de um item`, async () => {
+      const servico = await banco.query<{ id: string }>(
+        "INSERT INTO servicos (aplicacao_id, regiao_id, nome) VALUES ($1, $2, $3) RETURNING id",
+        [appA, rSudesteId, `Paginação por ${groupBy}`],
+      );
+      const servicoId = Number(servico.rows[0].id);
+      const intervaloMs = groupBy === "dia" ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000;
+      const inicio = new Date("2026-12-01T00:00:00Z");
+      const coletas = Array.from({ length: 30 }, (_, i) => new Date(inicio.getTime() + i * intervaloMs));
+      await banco.query(
+        `INSERT INTO metricas_servico (servico_id, coletado_em, status_coleta, energia_kwh)
+         SELECT $1, coletado_em, 'sucesso', 1
+         FROM UNNEST($2::timestamptz[]) AS coletas(coletado_em)`,
+        [servicoId, coletas],
+      );
+      const params = {
+        inicio, fim: coletas[29], groupBy, metricas: ["energia_kwh"], filtros: { servicoIds: [servicoId] },
+      } satisfies AgregacaoParams;
+      const esperados = coletas.map((coleta) => groupBy === "dia"
+        ? coleta.toISOString().slice(0, 10) : coleta.toISOString().replace(".000Z", "Z"));
+
+      for (const direcao of ["ASC", "DESC"] as const) {
+        const ordenacao = { campo: "sum_energia_kwh", direcao };
+        const todos = await agregarMetricasPorPeriodo({ ...params, ordenacao, limite: 30 });
+        assert.equal(todos.length, 30);
+        assert.ok(todos.every((linha) => linha.metricas.sum_energia_kwh === 1));
+        const grupos: Array<string | null> = [];
+        for (let offset = 0; offset < 30; offset += 1) {
+          const pagina = await agregarMetricasPorPeriodo({ ...params, ordenacao, limite: 1, offset });
+          assert.equal(pagina.length, 1);
+          grupos.push(pagina[0].grupo);
+        }
+        assert.equal(new Set(grupos).size, 30, `Paginação por ${groupBy} (${direcao}) repetiu grupos`);
+        assert.deepEqual(grupos, esperados);
+        assert.deepEqual(grupos, todos.map((linha) => linha.grupo));
+        assert.deepEqual(await agregarMetricasPorPeriodo({ ...params, ordenacao, limite: 1, offset: 30 }), []);
+      }
+    });
+  }
+
   await t.test("limite zero e offset além dos dados retornam páginas vazias", async () => {
     for (const pagina of [{ limite: 0 }, { offset: 1000 }]) {
       assert.deepEqual(await buscarHistoricoPorServico({ ...periodoBorda, servicoId: idA, ...pagina }), []);
