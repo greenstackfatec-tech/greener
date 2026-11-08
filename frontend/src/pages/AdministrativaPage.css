@@ -325,3 +325,11 @@
     gap: 24px;
   }
 }
+
+@media (max-width: 1023px) {
+  /* O cartão já tem recuo; o ResumoConsumo trazia o próprio (24 + 24 px). */
+  .adm-card-grafico .resumo { padding: 0; border-radius: 0; background: none; }
+}
+@media (max-width: 359px) {
+  .adm-indicador-valor { font-size: 28px; line-height: 36px; }
+}
