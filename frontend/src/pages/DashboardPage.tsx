@@ -145,7 +145,7 @@ export function DashboardPage() {
           <div className="dash-heading">
             <div><p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p><h1>Visão geral</h1><p>Acompanhe o desempenho e o impacto ambiental dos seus serviços.</p></div>
             <div className="dash-heading-acoes">
-              <button className="dash-refresh" onClick={atualizar} disabled={atualizando || carregando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button>
+              <button className="dash-refresh" aria-label="Atualizar dados" onClick={atualizar} disabled={atualizando || carregando}>↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span></button>
               <p className="dash-atualizacao">{atualizadoEm === null ? "Aguardando a primeira atualização" : `Última atualização: ${dataHora(atualizadoEm)}`} · Atualiza a cada {duracao(INTERVALO_ATUALIZACAO_SEGUNDOS)}</p>
             </div>
           </div>
