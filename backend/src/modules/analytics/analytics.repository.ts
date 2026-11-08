@@ -66,6 +66,43 @@ const METRICAS_AGREGACAO = [
   "disco_gb",
   "rede_gb",
 ] as const;
+type Agrupamento = (typeof GROUPBY_PERMITIDO)[number];
+type MetricaAgregacao = (typeof METRICAS_AGREGACAO)[number];
+type CampoAgregado = `${"sum" | "avg" | "min" | "max" | "count"}_${MetricaAgregacao}`;
+
+function validarPeriodo(inicio: Date, fim: Date): void {
+  if (!(inicio instanceof Date) || !Number.isFinite(inicio.getTime()) ||
+      !(fim instanceof Date) || !Number.isFinite(fim.getTime())) {
+    throw new TypeError("Início e fim devem ser datas válidas");
+  }
+  if (inicio > fim) throw new RangeError("Início deve ser anterior ou igual ao fim");
+}
+
+function validarId(id: number, campo: string): void {
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new TypeError(`${campo} deve ser um inteiro positivo seguro`);
+  }
+}
+
+function validarIds(ids: number[], campo: string): number[] {
+  if (!Array.isArray(ids)) throw new TypeError(`${campo} deve ser uma lista de IDs`);
+  for (const id of ids) validarId(id, campo);
+  return [...new Set(ids)];
+}
+
+function validarPaginacao(limite: number, offset: number): void {
+  for (const [campo, valor] of [["limite", limite], ["offset", offset]] as const) {
+    if (!Number.isSafeInteger(valor) || valor < 0) {
+      throw new TypeError(`${campo} deve ser um inteiro não negativo seguro`);
+    }
+  }
+}
+
+function validarBooleano(valor: boolean | undefined, campo: string): void {
+  if (valor !== undefined && typeof valor !== "boolean") {
+    throw new TypeError(`${campo} deve ser booleano`);
+  }
+}
 
 function validarOrdenacao(v: string): "ASC" | "DESC" {
   if (!ORDENACAO_PERMITIDA.includes(v as "ASC" | "DESC")) {
@@ -88,13 +125,14 @@ function validarGroupBy(v: string): (typeof GROUPBY_PERMITIDO)[number] {
   return v as (typeof GROUPBY_PERMITIDO)[number];
 }
 
-function validarMetricasAgregacao(arr: string[]): (typeof METRICAS_AGREGACAO)[number][] {
+function validarMetricasAgregacao(arr: string[]): MetricaAgregacao[] {
+  if (!Array.isArray(arr)) throw new TypeError("Métricas devem ser uma lista");
   if (arr.length === 0) throw new Error("Pelo menos uma métrica deve ser informada");
   const invalidos = arr.filter((m) => !METRICAS_AGREGACAO.includes(m as (typeof METRICAS_AGREGACAO)[number]));
   if (invalidos.length > 0) {
     throw new Error(`Métricas inválidas: ${invalidos.join(", ")}. Permitidas: ${METRICAS_AGREGACAO.join(", ")}.`);
   }
-  return arr as (typeof METRICAS_AGREGACAO)[number][];
+  return [...new Set(arr)] as MetricaAgregacao[];
 }
 
 function construirCamposPermitidosOrdenacao(groupBy: string, metricas: string[]): string[] {
@@ -157,6 +195,10 @@ export async function buscarHistoricoPorServico(
     apenasSucesso = true,
   } = params;
 
+  validarPeriodo(inicio, fim);
+  validarId(servicoId, "servicoId");
+  validarPaginacao(limite, offset);
+  validarBooleano(apenasSucesso, "apenasSucesso");
   const dir = validarOrdenacao(ordenacao);
 
   const sql = `
@@ -227,6 +269,11 @@ export async function buscarRankingPorPeriodo(
     apenasAtivos = true,
   } = params;
 
+  validarPeriodo(inicio, fim);
+  validarPaginacao(limite, offset);
+  validarBooleano(apenasAtivos, "apenasAtivos");
+  if (aplicacaoId !== undefined) validarId(aplicacaoId, "aplicacaoId");
+  if (regiaoId !== undefined) validarId(regiaoId, "regiaoId");
   const dir = validarOrdenacao(ordenacao);
   const metricaValida = validarMetricaRanking(metrica);
   const colunaOrdenacao = metricaValida === "energia" ? "total_energia_kwh" : "total_emissao_co2e_g";
@@ -272,23 +319,24 @@ export async function buscarRankingPorPeriodo(
       GROUP BY s.id, s.nome, r.nome, r.pais
     )
     SELECT
-      servico_id::int AS "servicoId",
+      servico_id::float8 AS "servicoId",
       nome,
       regiao,
       pais,
       total_energia_kwh::float8 AS "totalEnergiaKwh",
       total_emissao_co2e_g::float8 AS "totalEmissaoCo2eG",
-      qtd_coletas::int AS "qtdColetas",
+      qtd_coletas::float8 AS "qtdColetas",
       media_energia_kwh::float8 AS "mediaEnergiaKwh",
       media_emissao_co2e_g::float8 AS "mediaEmissaoCo2eG"
     FROM agregado
-    ORDER BY ${colunaOrdenacao} ${dir}
+    ORDER BY ${colunaOrdenacao} ${dir}, servico_id ASC
     LIMIT $${idx++} OFFSET $${idx}
   `;
 
   valores.push(limite, offset);
 
   const resultado = await consultar<RankingItem>(sql, valores);
+  for (const linha of resultado.rows) validarId(linha.servicoId, "servicoId");
   return resultado.rows;
 }
 
@@ -312,31 +360,26 @@ export async function compararServicosPorPeriodo(
 ): Promise<ComparacaoServico[]> {
   const { servicoIds, inicio, fim, ordenacao } = params;
 
+  validarPeriodo(inicio, fim);
   // Deduplicar e validar
-  const idsUnicos = [...new Set(servicoIds)];
+  const idsUnicos = validarIds(servicoIds, "servicoIds");
   if (idsUnicos.length < 2) {
     throw new Error("Comparação requer pelo menos 2 serviços distintos");
   }
 
-  const dir = validarOrdenacao(ordenacao ?? "ASC");
+  const dir = validarOrdenacao(ordenacao === undefined ? "ASC" : ordenacao);
 
-  // Parâmetros: $1=inicio, $2=fim, $3... = ids
-  const placeholders = idsUnicos.map((_, i) => `$${i + 3}`).join(", ");
-  const valores: unknown[] = [inicio, fim, ...idsUnicos];
-
-  // ORDER BY CASE usando s.id (compatível com GROUP BY) e parametrizando os IDs no CASE
-  const caseClauses = idsUnicos.map((id, i) => `WHEN $${i + 3} THEN ${i}`).join(" ");
-  const ordemSql = `ORDER BY CASE s.id ${caseClauses} END ${dir}`;
+  const valores: unknown[] = [inicio, fim, idsUnicos];
 
   const sql = `
     SELECT
-      s.id::int AS "servicoId",
+      s.id::float8 AS "servicoId",
       s.nome,
       r.nome AS regiao,
       r.pais,
       SUM(ms.energia_kwh)::float8 AS "totalEnergiaKwh",
       SUM(ms.emissao_co2e_g)::float8 AS "totalEmissaoCo2eG",
-      COUNT(*)::int AS "qtdColetas",
+      COUNT(*)::float8 AS "qtdColetas",
       AVG(ms.energia_kwh)::float8 AS "mediaEnergiaKwh",
       AVG(ms.emissao_co2e_g)::float8 AS "mediaEmissaoCo2eG",
       MIN(ms.energia_kwh)::float8 AS "minEnergiaKwh",
@@ -346,17 +389,18 @@ export async function compararServicosPorPeriodo(
     FROM metricas_servico ms
     JOIN servicos s ON s.id = ms.servico_id
     LEFT JOIN regioes r ON r.id = s.regiao_id
-    WHERE ms.servico_id IN (${placeholders})
+    WHERE ms.servico_id = ANY($3::bigint[])
       AND ms.status_coleta = 'sucesso'
       AND ms.energia_kwh IS NOT NULL
       AND ms.emissao_co2e_g IS NOT NULL
       AND ms.coletado_em >= $1
       AND ms.coletado_em <= $2
     GROUP BY s.id, s.nome, r.nome, r.pais
-    ${ordemSql}
+    ORDER BY array_position($3::bigint[], s.id) ${dir}
   `;
 
   const resultado = await consultar<ComparacaoServico>(sql, valores);
+  for (const linha of resultado.rows) validarId(linha.servicoId, "servicoId");
   return resultado.rows;
 }
 
@@ -367,8 +411,8 @@ export async function compararServicosPorPeriodo(
 export interface AgregacaoParams {
   inicio: Date;
   fim: Date;
-  groupBy: "servico" | "regiao" | "aplicacao" | "dia" | "hora";
-  metricas: ("energia_kwh" | "emissao_co2e_g" | "cpu_percentual" | "memoria_gb" | "disco_gb" | "rede_gb")[];
+  groupBy: Agrupamento;
+  metricas: MetricaAgregacao[];
   filtros?: {
     servicoIds?: number[];
     aplicacaoId?: number;
@@ -381,10 +425,15 @@ export interface AgregacaoParams {
 }
 
 export interface LinhaAgregacao {
-  grupo: string;              // valor do groupBy (ex.: nome do serviço, data, hora)
-  grupoId?: number;           // ID quando groupBy é servico/regiao/aplicacao
+  grupo: string | null;       // dia/hora em UTC; null quando a região é desconhecida
+  grupoId?: number | null;    // ID quando groupBy é servico/regiao/aplicacao
   metricas: Record<string, number>; // soma, media, min, max, count por métrica
 }
+
+type LinhaAgregacaoBanco = {
+  grupo: string | null;
+  grupo_id?: number | null;
+} & Record<CampoAgregado, number>;
 
 /**
  * Consulta genérica de agregação com groupBy, filtros e ordenação parametrizados.
@@ -405,39 +454,46 @@ export async function agregarMetricasPorPeriodo(
     offset = 0,
   } = params;
 
+  validarPeriodo(inicio, fim);
+  validarPaginacao(limite, offset);
+  if (typeof filtros !== "object" || filtros === null || Array.isArray(filtros)) {
+    throw new TypeError("Filtros devem ser um objeto");
+  }
+  validarBooleano(filtros.apenasSucesso, "apenasSucesso");
+  if (filtros.aplicacaoId !== undefined) validarId(filtros.aplicacaoId, "aplicacaoId");
+  if (filtros.regiaoId !== undefined) validarId(filtros.regiaoId, "regiaoId");
+  const servicoIds = filtros.servicoIds === undefined ? undefined : validarIds(filtros.servicoIds, "servicoIds");
+  if (ordenacao !== undefined && (typeof ordenacao !== "object" || ordenacao === null || Array.isArray(ordenacao))) {
+    throw new TypeError("Ordenação deve ser um objeto");
+  }
   const groupByValido = validarGroupBy(groupBy);
   const metricasValidas = validarMetricasAgregacao(metricas);
 
   // Mapeia groupBy para coluna, JOINs e SELECT
-  const groupByMap: Record<string, { coluna: string; joins: string; select: string; groupByExtra: string }> = {
+  const groupByMap: Record<Agrupamento, { joins: string; select: string; groupByExtra: string }> = {
     servico: {
-      coluna: "s.id",
       joins: "JOIN servicos s ON s.id = ms.servico_id",
-      select: "s.id::int AS grupo_id, s.nome AS grupo",
+      select: "s.id::float8 AS grupo_id, s.nome AS grupo",
       groupByExtra: "s.id, s.nome",
     },
     regiao: {
-      coluna: "r.id",
       joins: "JOIN servicos s ON s.id = ms.servico_id LEFT JOIN regioes r ON r.id = s.regiao_id",
-      select: "r.id::int AS grupo_id, r.nome AS grupo",
+      select: "r.id::float8 AS grupo_id, r.nome AS grupo",
       groupByExtra: "r.id, r.nome",
     },
     aplicacao: {
-      coluna: "a.id",
       joins: "JOIN servicos s ON s.id = ms.servico_id JOIN aplicacoes a ON a.id = s.aplicacao_id",
-      select: "a.id::int AS grupo_id, a.nome AS grupo",
+      select: "a.id::float8 AS grupo_id, a.nome AS grupo",
       groupByExtra: "a.id, a.nome",
     },
     dia: {
-      coluna: "DATE(ms.coletado_em AT TIME ZONE 'UTC')",
       joins: "",
-      select: "DATE(ms.coletado_em AT TIME ZONE 'UTC') AS grupo",
+      select: "TO_CHAR(DATE(ms.coletado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS grupo",
       groupByExtra: "DATE(ms.coletado_em AT TIME ZONE 'UTC')",
     },
     hora: {
-      coluna: "DATE_TRUNC('hour', ms.coletado_em AT TIME ZONE 'UTC')",
       joins: "",
-      select: "DATE_TRUNC('hour', ms.coletado_em AT TIME ZONE 'UTC') AS grupo",
+      select: `TO_CHAR(DATE_TRUNC('hour', ms.coletado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS grupo`,
       groupByExtra: "DATE_TRUNC('hour', ms.coletado_em AT TIME ZONE 'UTC')",
     },
   };
@@ -451,7 +507,7 @@ export async function agregarMetricasPorPeriodo(
       `AVG(ms.${m})::float8 AS "avg_${m.replace(".", "_")}"`,
       `MIN(ms.${m})::float8 AS "min_${m.replace(".", "_")}"`,
       `MAX(ms.${m})::float8 AS "max_${m.replace(".", "_")}"`,
-      `COUNT(ms.${m})::int AS "count_${m.replace(".", "_")}"`,
+      `COUNT(ms.${m})::float8 AS "count_${m.replace(".", "_")}"`,
     ])
     .join(", ");
 
@@ -466,9 +522,9 @@ export async function agregarMetricasPorPeriodo(
   if (filtros.apenasSucesso !== false) {
     where.push("ms.status_coleta = 'sucesso'");
   }
-  if (filtros.servicoIds?.length) {
-    where.push(`ms.servico_id IN (${filtros.servicoIds.map(() => `$${idx++}`).join(", ")})`);
-    filtros.servicoIds.forEach((id) => valores.push(id));
+  if (servicoIds !== undefined) {
+    where.push(`ms.servico_id = ANY($${idx++}::bigint[])`);
+    valores.push(servicoIds);
   }
 
   // Para dia/hora, se houver filtro por aplicacaoId ou regiaoId, precisa do JOIN com servicos
@@ -497,12 +553,14 @@ export async function agregarMetricasPorPeriodo(
   if (ordenacao) {
     const campo = validarCampoOrdenacao(ordenacao.campo, groupByValido, metricasValidas);
     const dir = validarOrdenacao(ordenacao.direcao);
-    orderBy = `ORDER BY "${campo}" ${dir}`;
+    const desempate = groupByValido !== "dia" && groupByValido !== "hora" && campo !== "grupo_id"
+      ? ", grupo_id ASC NULLS LAST" : "";
+    orderBy = `ORDER BY "${campo}" ${dir}${desempate}`;
   } else if (groupByValido === "dia" || groupByValido === "hora") {
     orderBy = `ORDER BY grupo DESC`;
   } else {
     const primeiroSum = `sum_${metricasValidas[0].replace(".", "_")}`;
-    orderBy = `ORDER BY "${primeiroSum}" DESC`;
+    orderBy = `ORDER BY "${primeiroSum}" DESC, grupo_id ASC NULLS LAST`;
   }
 
   const sql = `
@@ -519,18 +577,18 @@ export async function agregarMetricasPorPeriodo(
 
   valores.push(limite, offset);
 
-  const resultado = await consultar<any>(sql, valores);
+  const resultado = await consultar<LinhaAgregacaoBanco>(sql, valores);
 
   // Transforma linhas planas no formato agrupado por métrica
   return resultado.rows.map((row) => {
+    if (row.grupo_id !== undefined && row.grupo_id !== null) validarId(row.grupo_id, "grupoId");
     const metricasAgg: Record<string, number> = {};
     metricasValidas.forEach((m) => {
-      const key = m.replace(".", "_");
-      metricasAgg[`sum_${m}`] = row[`sum_${key}`] ?? 0;
-      metricasAgg[`avg_${m}`] = row[`avg_${key}`] ?? 0;
-      metricasAgg[`min_${m}`] = row[`min_${key}`] ?? 0;
-      metricasAgg[`max_${m}`] = row[`max_${key}`] ?? 0;
-      metricasAgg[`count_${m}`] = row[`count_${key}`] ?? 0;
+      metricasAgg[`sum_${m}`] = row[`sum_${m}`];
+      metricasAgg[`avg_${m}`] = row[`avg_${m}`];
+      metricasAgg[`min_${m}`] = row[`min_${m}`];
+      metricasAgg[`max_${m}`] = row[`max_${m}`];
+      metricasAgg[`count_${m}`] = row[`count_${m}`];
     });
     return {
       grupo: row.grupo,
