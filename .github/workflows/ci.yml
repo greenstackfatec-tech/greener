@@ -23,7 +23,7 @@ jobs:
         run: npm run typecheck
 
   frontend-typecheck:
-    name: Frontend typecheck + lint + build
+    name: Frontend tests + typecheck + lint + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +35,9 @@ jobs:
       - name: Install frontend deps
         working-directory: frontend
         run: npm ci
+      - name: Test
+        working-directory: frontend
+        run: npm test
       - name: Typecheck
         working-directory: frontend
         run: npm run typecheck
