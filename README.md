@@ -195,7 +195,7 @@ O andamento das atividades, as entregas, as pendências e as evidências podem s
 A pasta docs/ reúne a documentação técnica e os registros de desenvolvimento do GreenER. Ela contém o planejamento das entregas e das sprints, o Product Backlog, a arquitetura do sistema, a descrição dos cálculos de consumo energético e emissões de CO₂e, além da documentação dos endpoints da API desenvolvida pela equipe.
 
 Esses documentos ajudam a organizar as atividades, acompanhar o progresso, registrar decisões técnicas e manter a rastreabilidade entre os requisitos, as implementações e as entregas do projeto.<br>
-A <b>documentação completa</b> pode ser encontrada [aqui](docs)
+A <b>documentação completa</b> pode ser encontrada [aqui](./docs/README.md)
 
 ### Diagramas
 
