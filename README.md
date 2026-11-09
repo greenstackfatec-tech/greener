@@ -73,6 +73,10 @@ greener/
 │   │   ├── diagrama-classes.md
 │   │   └── diagrama-sequencia.md
 │   ├── sprints/
+│   │   ├── product-backlog.md
+│   │   ├── sprint-1.md
+│   │   ├── sprint-2.md
+│   │   └── sprint-3.md
 │   ├── README.md
 │   ├── api.md
 │   ├── arquitetura.md
@@ -189,7 +193,6 @@ O andamento das atividades, as entregas, as pendências e as evidências podem s
 | ![My Skills](https://skillicons.dev/icons?i=ts) | v7.0 (backend) · v6.0 (frontend) |
 | ![My Skills](https://skillicons.dev/icons?i=nodejs)| v22.16.0 |
 |![My Skills](https://skillicons.dev/icons?i=postgres) | v18.3 |
-| ![My Skills](https://skillicons.dev/icons?i=html)| HTML5 |
 | ![My Skills](https://skillicons.dev/icons?i=css) | CSS3 |
 | ![My Skills](https://skillicons.dev/icons?i=figma) | Web|
 | ![My Skills](https://skillicons.dev/icons?i=git) | v2.53 |
