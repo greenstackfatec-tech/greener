@@ -3,7 +3,7 @@
 ← [Voltar ao README](../README.md) · [Product Backlog](./sprints/product-backlog.md)
 
 **Projeto:** GreenER · **Equipe:** Green Stack · **Curso:** DSM — FATEC Jacareí  
-**Atualização:** 04/11/2026  
+**Atualização:** 09/11/2026  
 **Documento de referência:** RP07 — Plano de entregas e Definition of Done (DoD)
 
 ---
@@ -22,7 +22,7 @@ Este documento organiza as entregas das três sprints e define como cada item de
 
 Uma tarefa não deve ser marcada como **Concluída** apenas porque o código ou documento existe, porque um PR foi aberto ou porque a atividade foi planejada. É necessário conferir o critério de aceite e registrar a evidência correspondente.
 
-As situações abaixo representam a leitura do repositório e das issues em 04/11/2026. Devem ser atualizadas pela equipe após cada Daily, Review ou revisão de PR.
+As situações abaixo representam a leitura do repositório e das issues em 09/11/2026, após a Sprint Review 2. Devem continuar sendo atualizadas pela equipe após cada Planning, Daily, Review ou revisão de PR.
 
 ---
 
@@ -34,26 +34,37 @@ As situações abaixo representam a leitura do repositório e das issues em 04/1
 
 | Código | Requisito | Entrega | Como verificar | Responsáveis | Evidência | Situação |
 |---|---|---|---|---|---|---|
-| ES01 | RP07 — gestão e priorização do produto | Product Backlog com tarefas identificadas, prioridades, disciplinas e sprint prevista | Conferir se as tarefas têm código, descrição, prioridade, disciplina e sprint; validar com o planejamento da equipe | Igor e equipe Green Stack | [`docs/sprints/product-backlog.md`](./sprints/product-backlog.md) | Concluído |
-| ES03 | RP07 — planejamento das entregas | Primeira versão do plano de entregas para orientar as três sprints | Conferir se as três sprints possuem objetivo, entregas previstas, critérios de verificação e responsáveis; atualizar após cada Planning | Fernanda e equipe Green Stack | Este documento e [relatório da Sprint 1](./sprints/sprint-1.md) | Concluído |
+| ES01 | RP07 — gestão e priorização do produto | Product Backlog atualizado com tarefas identificadas, prioridades, disciplinas e sprint prevista | Conferir se as tarefas têm código, descrição, prioridade, disciplina e sprint; validar com o planejamento da equipe | Igor e equipe Green Stack | [`docs/sprints/product-backlog.md`](./sprints/product-backlog.md) | Concluído |
+| ES03 | RP07 — planejamento das entregas | Plano de entregas para orientar o desenvolvimento das três sprints | Conferir se as três sprints possuem objetivo, entregas previstas, critérios de verificação e responsáveis; atualizar após cada Planning | Fernanda e equipe Green Stack | Este documento e [relatório da Sprint 1](./sprints/sprint-1.md) | Concluído |
 | ES04 | RP07 — Definition of Done | Critérios compartilhados para considerar uma entrega pronta | Conferir se a DoD está documentada, foi apresentada à equipe e é aplicada nas revisões e PRs | Equipe Green Stack | Seção [Definition of Done](#5-definition-of-done-dod) e [template de PR](../.github/PULL_REQUEST_TEMPLATE.md) | Concluído |
 | ES06 | RP07 — planejamento e inspeção da Sprint 1 | Sprint Backlog e registro da Sprint Review da Sprint 1 | Conferir atividades, responsáveis, situação, retrospectiva, burndown e registro da demonstração | Equipe Green Stack | [Relatório da Sprint 1](./sprints/sprint-1.md) | Concluído |
-| ES09 | RNF05 — documentação técnica | README principal e organização inicial da documentação do projeto | Seguir as instruções em um ambiente local; abrir os links; conferir se os documentos descritos existem e correspondem ao estado do produto | Fernanda e equipe Green Stack | [`README.md`](../README.md), [`docs/README.md`](./README.md) e documentos vinculados | Concluído |
+| ES09 | RNF05 — documentação técnica | README principal atualizado e organização inicial da documentação do projeto | Seguir as instruções em um ambiente local; abrir os links; conferir se os documentos descritos existem e correspondem ao estado do produto | Fernanda e equipe Green Stack | [`README.md`](../README.md), [`docs/README.md`](./README.md) e documentos vinculados | Concluído |
 
 ### Sprint 2 — Integração, cálculo, dashboard e organização do processo
 
 **Objetivo:** integrar frontend, backend e banco de dados; coletar e persistir métricas; calcular energia e CO₂e; apresentar indicadores; preparar o dashboard e consolidar a documentação e o processo de desenvolvimento.
 
+**Período das Dailies:** 21/10/2026 a 09/11/2026, com registros em 21/10, 22/10, 23/10, 26/10, 27/10, 28/10, 29/10, 30/10, 03/11, 04/11, 05/11, 06/11 e 09/11. **Sprint Review:** 09/11/2026.
+
 | Código | Requisito | Entrega | Como verificar | Responsáveis | Evidência | Situação |
 |---|---|---|---|---|---|---|
-| ES02 | RP07 — plano de entregas conforme a rubrica | Plano organizado por sprint, com a tabela exigida e DoD completa | Conferir a existência de objetivo por sprint, as sete colunas exigidas, os códigos ES01–ES09 e DW01, a DoD e a regra de conclusão mediante evidência | Fernanda | [Issue #117](https://github.com/greenstackfatec-tech/greener/issues/117) e este documento | Em validação |
-| ES03 | RP07 — atualização do planejamento | Revisão do plano com base no que foi realizado, replanejado e ainda está previsto | Comparar plano, Product Backlog e Sprint Backlogs; não transformar item futuro em concluído | Fernanda e equipe Green Stack | Este documento, [Product Backlog](./sprints/product-backlog.md) e [relatório da Sprint 2](./sprints/sprint-2.md) | Em andamento |
-| ES05 | RP07 — rastreabilidade e fluxo de Git | Convenção de branches, commits e Pull Requests associada aos códigos das tarefas | Conferir a convenção registrada, exemplos de branch/commit/PR e aplicação nos PRs; confirmar que a equipe conhece o fluxo | Fernanda e equipe Green Stack | [Issue #116](https://github.com/greenstackfatec-tech/greener/issues/116), fechada; [template de PR](../.github/PULL_REQUEST_TEMPLATE.md) | Concluído |
-| ES07 | RP07 — Sprint Backlog e Sprint Review da Sprint 2 | Backlog da Sprint 2 e, ao final, registro da Review de 09/11/2026 | Conferir tarefas, pontos, responsáveis e prazos no backlog; após 09/11, registrar demonstração, resultados, pendências, burndown, retrospectiva e decisões | Fernanda e equipe Green Stack | [Sprint Backlog da Sprint 2 — issue #127](https://github.com/greenstackfatec-tech/greener/issues/127), fechada; [registro da Review — issue #118](https://github.com/greenstackfatec-tech/greener/issues/118) | Em andamento |
-| ES09 | RNF05 — documentação técnica | README principal e READMEs das pastas atualizados conforme o que realmente está implementado | Conferir instruções, pré-requisitos, variáveis, comandos, telas, links, endpoints e estrutura; testar os comandos documentados | Fernanda e equipe Green Stack | [`README.md`](../README.md), [`backend/README.md`](../backend/README.md), [`frontend/README.md`](../frontend/README.md), [`database/README.md`](../database/README.md); issues [#119](https://github.com/greenstackfatec-tech/greener/issues/119) e [#120](https://github.com/greenstackfatec-tech/greener/issues/120) | Em andamento |
-| DW01 | RP01 — estrutura do frontend | Aplicação frontend em React + TypeScript, com pastas e arquivos utilizados e build servido por Nginx | Conferir estrutura em `frontend/src`; executar `npm ci` e `npm run build`; verificar Dockerfile multi-stage, configuração Nginx e proxy `/api/` | Renan | [Issue #77](https://github.com/greenstackfatec-tech/greener/issues/77), fechada; [`frontend/Dockerfile`](../frontend/Dockerfile), [`frontend/nginx.conf`](../frontend/nginx.conf), [`frontend/package.json`](../frontend/package.json) | Concluído |
+| ES02 | RP07 — plano de entregas conforme a rubrica | Plano organizado e atualizado por sprint, com a tabela exigida e DoD completa | Conferir objetivo por sprint, as sete colunas exigidas, os códigos ES01–ES09 e DW01, a DoD e a regra de conclusão mediante evidência | Fernanda | [Issue #117](https://github.com/greenstackfatec-tech/greener/issues/117) — fechada; este documento | Concluído |
+| ES03 | RP07 — atualização do planejamento | Revisão do plano com base no que foi realizado, replanejado e ainda está previsto | Comparar plano, Product Backlog e Sprint Backlogs; atualizar o planejamento após o Sprint Planning da Sprint 3 e registrar o que permanecer pendente | Fernanda e equipe Green Stack | Este documento, [Product Backlog](./sprints/product-backlog.md), [relatório da Sprint 2](./sprints/sprint-2.md) e planejamento da Sprint 3 | Em andamento |
+| ES05 | RP07 — rastreabilidade e fluxo de Git | Convenção de branches, commits e Pull Requests associada aos códigos das tarefas | Conferir a convenção registrada, exemplos de branch/commit/PR e aplicação nos PRs; confirmar que a equipe conhece o fluxo | Fernanda e equipe Green Stack | [Issue #116](https://github.com/greenstackfatec-tech/greener/issues/116) — fechada; [template de PR](../.github/PULL_REQUEST_TEMPLATE.md) | Concluído |
+| ES07 | RP07 — Sprint Backlog e Sprint Review da Sprint 2 | Sprint Backlog da Sprint 2 e registro da Sprint Review de 09/11/2026 | Conferir tarefas, pontos, responsáveis e prazos no backlog; verificar o relatório da Review, resultados, pendências, burndown, retrospectiva e decisões | Fernanda e equipe Green Stack | [Sprint Backlog — issue #127](https://github.com/greenstackfatec-tech/greener/issues/127) — fechada; [registro da Review — issue #118](https://github.com/greenstackfatec-tech/greener/issues/118) — fechada; [relatório da Sprint 2](./sprints/sprint-2.md) | Concluído |
+| ES09 | RNF05 — documentação técnica | README principal atualizado com tecnologias, funcionalidades implementadas, integrantes, execução e links | Conferir se as informações correspondem ao produto; abrir os links e validar as instruções de execução na branch de entrega | Fernanda e equipe Green Stack | [`README.md`](../README.md); [issue #119](https://github.com/greenstackfatec-tech/greener/issues/119) — fechada | Concluído |
+| ES10 | RNF05 — arquitetura e modelo de dados | Documentação da arquitetura, fluxo de dados e modelo relacional | Conferir o fluxo API do cliente → backend → banco → frontend, as responsabilidades dos módulos, o diagrama ER e a correspondência com o schema | Fernanda | [`arquitetura.md`](./arquitetura.md); [issue #121](https://github.com/greenstackfatec-tech/greener/issues/121) — fechada | Concluído |
+| ES11 | RNF05 — documentação dos cálculos | Fórmulas, variáveis, unidades, fatores e exemplo de cálculo de energia e CO₂e | Conferir as fórmulas, as unidades, os fatores adotados e o exemplo em relação à implementação | Igor e equipe Green Stack | [`calculos.md`](./calculos.md) e [relatório da Sprint 2](./sprints/sprint-2.md) | Concluído |
+| ES12 | RNF05 — documentação dos endpoints da API | Endpoints documentados com método, rota, parâmetros, exemplos, respostas e autenticação | Comparar cada rota documentada com as rotas efetivamente implementadas no backend | Fernanda | [`api.md`](./api.md); [issue #122](https://github.com/greenstackfatec-tech/greener/issues/122) — fechada | Concluído |
+| ES16 | RP07 — registros das Dailies e vídeos das Sprint Reviews | Atas das Dailies da Sprint 2 (13 registros entre 21/10 e 09/11) e registros das demonstrações de cada Sprint | Conferir uma linha por Daily com data, participantes, atividades e impedimentos; validar os links das demonstrações das Reviews | Fernanda e equipe Green Stack | [Sprint 1](./sprints/sprint-1.md); [Sprint 2](./sprints/sprint-2.md); [issue #114](https://github.com/greenstackfatec-tech/greener/issues/114) — fechada | Concluído |
+| ES17 | RNF05 — READMEs do backend e do frontend | Documentação de organização, configuração, variáveis, telas, integrações e comandos de execução | Conferir as instruções com os arquivos e scripts atuais; executar os comandos documentados quando aplicável | Fernanda | [`backend/README.md`](../backend/README.md), [`frontend/README.md`](../frontend/README.md); [issue #120](https://github.com/greenstackfatec-tech/greener/issues/120) — fechada | Concluído |
+| DW01 | RP01 — estrutura do frontend | Aplicação frontend em React + TypeScript, com pastas e arquivos utilizados e build servido por Nginx | Conferir estrutura em `frontend/src`; executar `npm ci` e `npm run build`; verificar Dockerfile, configuração Nginx e proxy `/api/` | Renan | [Issue #77](https://github.com/greenstackfatec-tech/greener/issues/77) — fechada; [`frontend/Dockerfile`](../frontend/Dockerfile), [`frontend/nginx.conf`](../frontend/nginx.conf), [`frontend/package.json`](../frontend/package.json) | Concluído |
+| DW18 | RP01 — tela inicial responsiva | Tela de início adaptada para desktop e mobile | Conferir a implementação e comparar a interface com o protótipo aprovado | Fernanda | [Issue #115](https://github.com/greenstackfatec-tech/greener/issues/115) — fechada; [relatório da Sprint 2](./sprints/sprint-2.md) | Concluído |
+| DW23 | RNF03/RNF04 — integração contínua e confiabilidade do ambiente | Verificações automatizadas de typecheck, build do Compose e smoke test, além de ajustes nos Dockerfiles | Conferir o workflow de CI e verificar os checks executados em Pull Requests | Equipe Green Stack | [Issue #123](https://github.com/greenstackfatec-tech/greener/issues/123) — fechada; [workflow de CI](../.github/workflows/ci.yml) | Concluído |
 
-**Observação sobre a Sprint 2:** a Sprint Review está prevista para **09/11/2026**, portanto não deve ser marcada como concluída antes da realização e do registro da reunião. O relatório atual ainda contém campos de retrospectiva não preenchidos e precisa ser atualizado após a Review.
+**Situação após a Sprint Review 2 (09/11/2026):** o Sprint Backlog (#127) e o registro da Review (#118) estão fechados. O burndown do relatório da Sprint 2 termina em **0 pontos restantes**. A documentação e as entregas listadas acima foram atualizadas com base nas issues encerradas e nos arquivos existentes no repositório.
+
+**Pendência de publicação:** no relatório da Sprint 2, o link da demonstração ainda está como `#`. Substitua-o pelo endereço do vídeo publicado antes da entrega final. Por isso, a atividade ES16 permanece **Em andamento**, considerando também os registros das próximas sprints.
 
 ### Sprint 3 — Análise, autenticação, comparação e entrega final
 
@@ -199,10 +210,10 @@ Os critérios abaixo complementam as tabelas das sprints. A tarefa só pode ser 
 **RNF05 — Documentação técnica**
 - [x] Documentar pré-requisitos, instalação, configuração, execução e testes.
 - [x] Descrever arquitetura, responsabilidades, fluxo de dados e integrações, com diagrama.
-- [ ] Documentar modelo de dados, entidades, atributos, relacionamentos e histórico, com diagrama.
-- [ ] Documentar endpoints da equipe, incluindo método, rota, parâmetros, exemplos e erros.
+- [x] Documentar modelo de dados, entidades, atributos, relacionamentos e histórico, com diagrama.
+- [x] Documentar endpoints da equipe, incluindo método, rota, parâmetros, exemplos e erros.
 - [x] Documentar URLs, autenticação, variáveis de ambiente e comportamento de falha das APIs auxiliares.
-- [ ] Documentar intervalos, timeouts e parâmetros operacionais.
+- [x] Documentar intervalos, timeouts e parâmetros operacionais.
 - [x] Documentar fórmulas, unidades e fatores utilizados nos cálculos.
 
 ---
@@ -285,7 +296,7 @@ Além dos itens gerais, documentos devem atender aos seguintes critérios:
 - [ ] A revisão do documento foi registrada no Pull Request.
 
 
-## 7. Referências do projeto
+## 6. Referências do projeto
 
 - [Product Backlog](./sprints/product-backlog.md)
 - [Relatório da Sprint 1](./sprints/sprint-1.md)

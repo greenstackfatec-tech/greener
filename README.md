@@ -11,7 +11,7 @@ Do consumo computacional ao impacto ambiental.
 
 ## 📚 SUMÁRIO
 
-[Sobre o Projeto](#-sobre-o-projeto) | [Product Backlog](#-product-backlog) | [Plano de Entregas](#-plano-de-entregas) | [Sprints](#-sprints) | [Tecnologias](#%EF%B8%8F-tecnologias) | [Documentação](#-documentação) | [Instalação](#️-como-executar-o-projeto-com-docker) | [Equipe](#%E2%80%8D-nossa-equipe)
+[Sobre o Projeto](#-sobre-o-projeto) | [Product Backlog](#-product-backlog) | [Plano de Entregas](#-plano-de-entregas) | [Sprints](#-sprints) | [Tecnologias](#%EF%B8%8F-tecnologias) | [Documentação](#-Documentação) | [Instalação](#️-como-executar-o-projeto-com-docker) | [Equipe](#%E2%80%8D-nossa-equipe)
 
 <br>
 
@@ -116,21 +116,18 @@ greener/
 
 ## [📄 Product Backlog](./docs/sprints/product-backlog.md)
 
-<p style="text-align: justify;">
-O Product Backlog é uma lista dinâmica e priorizada de todos os requisitos, funcionalidades, melhorias e correções necessários para o desenvolvimento de um produto.<br>
-O <b>Product Backlog</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/product-backlog.md">aqui</a>.
-</p>
+O Product Backlog é uma lista dinâmica e priorizada de todos os requisitos, funcionalidades, melhorias e correções necessários para o desenvolvimento de um produto. <br>
+O Product Backlog pode ser encontrado [aqui](./docs/sprints/product-backlog.md)
 
 <br>
 
 ## [🏆 Plano de Entregas](./docs/plano-de-entregas.md)
 
-<p style="text-align: justify;">
  O plano de entregas organiza os objetivos, os itens selecionados, os responsáveis, os critérios de aceite e as evidências de cada sprint. Também deve registrar a Definition of Done (DoD), utilizada para avaliar se uma entrega pode ser considerada concluída.
 <br>
-O <b>Plano de Entregas</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano%20de%20entregas.md">aqui</a>.
-</p>
+O <b>Plano de Entregas</b> pode ser encontrado [aqui](./docs/plano-de-entregas.md)
 
+<br>
 
 #### Funcionalidades implementadas
 
@@ -166,21 +163,17 @@ Os valores apresentados dependem das respostas das APIs e dos registros disponí
 
 ## 🎯 Sprint 01: Prototipação, Banco de dados, e APIs
 
-<p style="text-align: justify;">
 A primeira sprint contempla atividades de prototipação, estruturação do banco de dados e preparação das integrações com as APIs auxiliares. O estado de cada atividade e as evidências correspondentes devem ser consultados no relatório da sprint.
 <br>
-O <b>Sprint Backlog</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/sprint-1.md">aqui</a>.
-</p>
+O <b>Sprint Backlog</b> pode ser encontrado [aqui](./docs/sprints/sprint-1.md)
 
 <br>
 
 ## 🎯 Sprint 02: Integração, monitoramento e indicadores ambientais
 
-<p style="text-align: justify;">
 A segunda sprint tem como objetivo consolidar uma versão funcional do GreenER, integrando a coleta periódica de métricas dos serviços, a persistência dos dados no banco e os cálculos estimados de potência, consumo energético e emissões de CO₂e. Também contempla a implementação da autenticação JWT, dos indicadores ambientais consolidados e do dashboard para visualização dos serviços monitorados, seus estados e respectivos dados. 
 <br>
-O andamento das atividades, as entregas, as pendências e as evidências podem ser consultados no <b>Relatório da Sprint 2</b>, disponível <a href="./docs/sprints/sprint-2.md">aqui</a>.
-</p>
+O andamento das atividades, as entregas, as pendências e as evidências podem ser consultados no <b>Relatório da Sprint 2</b>, disponível [aqui](./docs/sprints/sprint-2.md)
 
 <br>
 
@@ -193,23 +186,20 @@ O andamento das atividades, as entregas, as pendências e as evidências podem s
 | ![My Skills](https://skillicons.dev/icons?i=ts) | v7.0 (backend) · v6.0 (frontend) |
 | ![My Skills](https://skillicons.dev/icons?i=nodejs)| v22.16.0 |
 |![My Skills](https://skillicons.dev/icons?i=postgres) | v18.3 |
-| ![My Skills](https://skillicons.dev/icons?i=css) | CSS3 |
 | ![My Skills](https://skillicons.dev/icons?i=figma) | Web|
 | ![My Skills](https://skillicons.dev/icons?i=git) | v2.53 |
 | ![My Skills](https://skillicons.dev/icons?i=github) | Web |
-| <img src="https://github.com/tandpfun/skill-icons/blob/main/icons/Docker.svg" width="47"> | v29.8.1 |
+| ![My Skills](https://skillicons.dev/icons?i=docker) | v29.8.1 |
 
 
 <br>
 
 ## [🗃️ Documentação](./docs/README.md)
 
-<p style="text-align: justify;">
 A pasta docs/ reúne a documentação técnica e os registros de desenvolvimento do GreenER. Ela contém o planejamento das entregas e das sprints, o Product Backlog, a arquitetura do sistema, a descrição dos cálculos de consumo energético e emissões de CO₂e, além da documentação dos endpoints da API desenvolvida pela equipe.
 
 Esses documentos ajudam a organizar as atividades, acompanhar o progresso, registrar decisões técnicas e manter a rastreabilidade entre os requisitos, as implementações e as entregas do projeto.<br>
-A <b>documentação completa</b> pode ser encontrada <a href="https://github.com/greenstackfatec-tech/greener/tree/develop/docs">aqui</a>.
-</p>
+A <b>documentação completa</b> pode ser encontrada [aqui](./docs/README.md)
 
 ### Diagramas
 

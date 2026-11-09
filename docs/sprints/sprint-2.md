@@ -57,7 +57,7 @@ Atas das Dailies e vídeo da Sprint Review (roteiro, gravação, edição e publ
 
 > Clique na imagem abaixo para assistir ao vídeo referente à segunda sprint.
 
-[Sprint 2 - GreenER](#)
+[Sprint 2 - GreenER](https://www.youtube.com/watch?v=dAeaiwG0VI0)
 
 <br>
 ## 📢 Retrospectiva
