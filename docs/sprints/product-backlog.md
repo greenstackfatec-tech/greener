@@ -9,7 +9,7 @@
 | Campo          | Valores                                                                                          |
 | -------------- | ------------------------------------------------------------------------------------------------ |
 | **Esforço (Pontos)** | Pontuação estimada de esforço (Fibonacci: 1, 2, 3, 5, 8) utilizada no Burndown             |
-| **Disciplina** | BD = Banco de Dados · DD = Design Digital · DW = Desenvolvimento Web II · ES = Engenharia de Software II · TP = Técnicas de Programação I |
+| **Disciplina** | BD = Banco de Dados · DD = Design Digital · DW = Desenvolvimento Web II · ES = Engenharia de Software II · TP = Técnicas de Programação I · S2 = Sprint 2 (processo) |
 | **Sprint**     | 1 = base e coleta de dados (Review 19/10) · 2 = cálculo e dashboard (Review 09/11) · 3 = análise e login (Review 23/11) |
 
 Os códigos entre parênteses são os requisitos do desafio (RF, RNF, RP).
@@ -25,18 +25,18 @@ Os códigos entre parênteses são os requisitos do desafio (RF, RNF, RP).
 | **BD03** | Criar a conexão do backend com o PostgreSQL (pool e variáveis de ambiente)                            | 5                | BD         | 2       |
 | **BD04** | Criar os repositories com SQL parametrizado, sem ORM, para serviços (upsert) e coletas                | 8                | BD         | 2       |
 | **BD05** | Criar o repository dos resultados calculados (potência, energia e CO₂e)                               | 5                | BD         | 2       |
-| **BD06** | Criar as consultas de histórico, ranking e comparação por período (RF10, RF14, RF15)                  | 5                | BD         | 3       |
+| **BD06** | Criar as consultas de histórico, ranking e comparação por período (RF10, RF14, RF15)                  | 5                | BD         | 2       |
 | **BD07** | Escrever o `database/README.md` com a ordem e os comandos para aplicar os scripts em um banco vazio   | 2                | BD         | 2       |
 | **DD01** | Definir a identidade visual (paleta, fontes e logo)                                                   | 3                | DD         | 1       |
 | **DD02** | Definir o fluxo de navegação entre as telas (RP05)                                                    | 3                | DD         | 2       |
 | **DD03** | Prototipar o dashboard: cards de indicadores e lista de serviços (desktop e mobile)                   | 5                | DD         | 1       |
-| **DD04** | Prototipar as telas de histórico, ranking e comparação (desktop e mobile)                             | 4                | DD         | 2       |
-| **DD05** | Prototipar a tela de mapa (desktop e mobile)                                                          | 3                | DD         | 2       |
-| **DD06** | Prototipar o login e a área de configuração (desktop e mobile)                                        | 3                | DD         | 1, 2    |
+| **DD04** | Prototipar as telas de histórico, ranking e comparação (desktop e mobile)                             | 13               | DD         | 2       |
+| **DD05** | Prototipar a tela de mapa (desktop e mobile)                                                          | 3                | DD         | 3       |
+| **DD06** | Prototipar o login e a área de configuração (desktop e mobile)                                        | 3                | DD         | 2       |
 | **DD07** | Definir os estados visuais: carregando, erro, serviço indisponível e ativo sem métricas               | 5                | DD         | 2       |
 | **DW01** | Criar o projeto frontend com React + TypeScript e organizar as pastas (pages, components, services, hooks, contexts, providers) (RP01) | 8 | DW | 2       |
 | **DW02** | Configurar as rotas entre as telas e o cliente HTTP em `services/` para consumir a API do backend     | 5                | DW         | 2       |
-| **DW03** | Conteinerizar o projeto: Dockerfiles, `compose.yaml` (frontend, backend e PostgreSQL com volume) e `.env.example` (RP04) | 5 | DW | 1, 2    |
+| **DW03** | Conteinerizar o projeto: Dockerfiles, `compose.yaml` (frontend, backend e PostgreSQL com volume) e `.env.example` (RP04) | 5 | DW | 2       |
 | **DW04** | Criar o layout base das telas (header, menu e container)                                              | 5                | DW         | 2       |
 | **DW05** | Implementar o dashboard: tabela de serviços com estado, localização, CPU, RAM, disco, rede, energia e CO₂e (RF01, RF09) | 8 | DW | 2 |
 | **DW06** | Implementar os cards de indicadores consolidados (RF08)                                               | 3                | DW         | 2       |
@@ -67,11 +67,11 @@ Os códigos entre parênteses são os requisitos do desafio (RF, RNF, RP).
 | **ES09** | Criar e manter o README principal e os READMEs de cada pasta (RNF05)                                  | 1                | ES         | 1, 2, 3 |
 | **ES10** | Documentar a arquitetura e o modelo de dados (`docs/arquitetura.md`)                                  | 2                | ES         | 2       |
 | **ES11** | Documentar os cálculos: fórmulas, unidades e exemplo (`docs/calculos.md`)                             | 2                | ES         | 2       |
-| **ES12** | Documentar os endpoints da API (`docs/api.md`)                                                        | 3                | ES         | 2, 3    |
-| **ES13** | Esclarecer as dúvidas em aberto com o cliente (área de configuração, constantes do cálculo, água)     | 3                | ES         | 1, 2    |
+| **ES12** | Documentar os endpoints da API (`docs/api.md`)                                                        | 3                | ES         | 2       |
+| **ES13** | Esclarecer as dúvidas em aberto com o cliente (área de configuração, constantes do cálculo, água)     | 3                | ES         | 2       |
 | **ES14** | Preparar a apresentação final                                                                         | 5                | ES         | 3       |
 | **ES15** | Conferir comandos, links e instruções em um clone limpo antes da entrega final                        | 3                | ES         | 3       |
-| **ES16** | Registrar atas das Daily Meetings e vídeos das Sprint Reviews                                         | 4                | ES         | 1, 2, 3 |
+| **ES16** | Registrar atas das Daily Meetings                                                                      | 2                | ES         | 1, 2, 3 |
 | **ES17** | Criar e manter os READMEs do backend e do frontend                                                    | 3                | ES         | 2, 3    |
 | **TP01** | Criar o projeto backend com Node.js + TypeScript (strict), servidor HTTP, rota `GET /health` e variáveis de ambiente (RP02) | 5 | TP | 2       |
 | **TP02** | Organizar o backend em módulos: routes, controllers, services e repositories                          | 8                | TP         | 2       |
@@ -89,11 +89,14 @@ Os códigos entre parênteses são os requisitos do desafio (RF, RNF, RP).
 | **TP14** | Tratar erros e timeouts das chamadas externas para que uma falha não derrube o sistema (RNF04)        | 3                | TP         | 2       |
 | **TP15** | Tratar localização e coordenadas ausentes (RF12, RF13)                                                | 2                | TP         | 2       |
 | **TP16** | Criar os endpoints de serviços e indicadores (RF09)                                                   | 5                | TP         | 2       |
-| **TP17** | Criar os endpoints de histórico, ranking e comparação, com filtro de período (RF10, RF14, RF15)       | 5                | TP         | 3       |
-| **TP18** | Implementar o login com JWT e o middleware de proteção de rotas (RP06)                                | 8                | TP         | 2, 3    |
+| **TP17** | Criar os endpoints de histórico, ranking e comparação, com filtro de período (RF10, RF14, RF15)       | 5                | TP         | 2       |
+| **TP18** | Implementar o login com JWT e o middleware de proteção de rotas (RP06)                                | 8                | TP         | 2       |
 | **TP19** | Criar os endpoints protegidos da configuração (intervalo de coleta)                                   | 3                | TP         | 3       |
 | **TP20** | Escrever testes automatizados do cálculo e da detecção de estados                                     | 5                | TP         | 2       |
 | **TP21** | Medir e ajustar o desempenho do dashboard e das consultas (RNF03)                                     | 3                | TP         | 3       |
+| **S2-01** | Roteiro e gravação do vídeo da Sprint Review 2                                                        | 4                | S2         | 2       |
+| **S2-02** | Edição e publicação do vídeo da Sprint Review 2                                                       | 4                | S2         | 2       |
+| **S2-03** | Registrar atas das Daily Meetings da Sprint 2                                                         | 2                | S2         | 2       |
 
 ---
 
