@@ -110,7 +110,7 @@ greener/
 
 <br>
 
-## [📄 Product Backlog](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/product-backlog.md)
+## [📄 Product Backlog](./docs/sprints/product-backlog.md)
 
 <p style="text-align: justify;">
 O Product Backlog é uma lista dinâmica e priorizada de todos os requisitos, funcionalidades, melhorias e correções necessários para o desenvolvimento de um produto.<br>
@@ -119,7 +119,7 @@ O <b>Product Backlog</b> pode ser encontrado <a href="https://github.com/greenst
 
 <br>
 
-## [🏆 Plano de Entregas](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano-de-entregas.md)
+## [🏆 Plano de Entregas](./docs/plano-de-entregas.md)
 
 <p style="text-align: justify;">
  O plano de entregas organiza os objetivos, os itens selecionados, os responsáveis, os critérios de aceite e as evidências de cada sprint. Também deve registrar a Definition of Done (DoD), utilizada para avaliar se uma entrega pode ser considerada concluída.
@@ -149,7 +149,7 @@ Os valores apresentados dependem das respostas das APIs e dos registros disponí
 | Sprints | Data | Status | Relatório | Vídeo |
 | :---: | :---: | :---: | :--- | :---: |
 | 1 | 19/10/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-1.md) | [Ver vídeo](https://youtu.be/gBj58b91ARw) |
-| 2 | 09/11/2026 | ⌛ | [Indisponível](./docs/sprints/sprint-2.md) | [Indisponível](#) |
+| 2 | 09/11/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-2.md) | [Ver vídeo](https://www.youtube.com/watch?v=dAeaiwG0VI0) |
 | 3 | 23/11/2026 | ⬜ | [Indisponível]() | [Indisponível](#) |
 
 ### Legenda:
@@ -199,7 +199,7 @@ O andamento das atividades, as entregas, as pendências e as evidências podem s
 
 <br>
 
-## [🗃️ Documentação](https://github.com/greenstackfatec-tech/greener/tree/develop/docs)
+## [🗃️ Documentação](./docs/README.md)
 
 <p style="text-align: justify;">
 A pasta docs/ reúne a documentação técnica e os registros de desenvolvimento do GreenER. Ela contém o planejamento das entregas e das sprints, o Product Backlog, a arquitetura do sistema, a descrição dos cálculos de consumo energético e emissões de CO₂e, além da documentação dos endpoints da API desenvolvida pela equipe.
@@ -350,7 +350,7 @@ Esse comando encerra e remove os containers, mas preserva o volume `postgres_dat
       </td>
       <td>Igor Iansen</td>
       <td>Product Owner </td>
-      <td> <a href="https://github.com/igoriansen" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="LinkedIn"/> </a></td>
+      <td> <a href="https://github.com/igoriansen" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/> </a></td>
       <td>  <a href="https://www.linkedin.com/in/igoriansen/" title="LinkedIn"> <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/> </a> </td>
    </tr>
    <tr>
@@ -359,7 +359,7 @@ Esse comando encerra e remove os containers, mas preserva o volume `postgres_dat
       </td>
       <td>Fernanda Fonseca</td>
       <td> Scrum Master </td>
-      <td> <a href="https://github.com/fernandafonseca-dev" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="LinkedIn"/> </a></td>
+      <td> <a href="https://github.com/fernandafonseca-dev" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/> </a></td>
       <td>  <a href="https://www.linkedin.com/in/fernanda-fonseca-37b9893b6/" title="LinkedIn"> <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/> </a> </td>
    </tr>
    <tr>
@@ -368,7 +368,7 @@ Esse comando encerra e remove os containers, mas preserva o volume `postgres_dat
       </td>
       <td>Thiago Souza</td>
       <td> Desenvolvedor </td>
-      <td> <a href="https://github.com/thiagosantos-17" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="LinkedIn"/> </a></td>
+      <td> <a href="https://github.com/thiagosantos-17" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/> </a></td>
       <td>        
          <a href="https://www.linkedin.com/in/thiago-s-7579913b3/?isSelfProfile=false" title="LinkedIn">
          <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/> </a> 
@@ -380,7 +380,7 @@ Esse comando encerra e remove os containers, mas preserva o volume `postgres_dat
       </td>
       <td>Renan Santos</td>
       <td> Desenvolvedor </td>
-      <td> <a href="https://github.com/renanrmsantos14" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="LinkedIn"/> </a></td>
+      <td> <a href="https://github.com/renanrmsantos14" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/> </a></td>
       <td>  <a href="https://www.linkedin.com/in/renan-santos-40662738b/?isSelfProfile=true" title="LinkedIn"> <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/> </a> </td>
    </tr>
    <tr>
@@ -389,7 +389,7 @@ Esse comando encerra e remove os containers, mas preserva o volume `postgres_dat
       </td>
       <td>Guilherme Matos</td>
       <td> Desenvolvedor </td>
-      <td> <a href="https://github.com/gm-paiva" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="LinkedIn"/> </a></td>
+      <td> <a href="https://github.com/gm-paiva" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/> </a></td>
       <td>        <a href="https://www.linkedin.com/in/guilherme-matos-120827365/" title="LinkedIn">
          <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/> </a> 
       </td>
@@ -400,7 +400,7 @@ Esse comando encerra e remove os containers, mas preserva o volume `postgres_dat
       </td>
       <td> Júlia de Oliveira</td>
       <td> Desenvolvedora </td>
-      <td> <a href="https://github.com/juliasilverio-dev" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="LinkedIn"/> </a></td>
+      <td> <a href="https://github.com/juliasilverio-dev" title="GitHub"> <img src="https://img.shields.io/badge/GitHub-0d1117?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/> </a></td>
       <td>  <a href="https://www.linkedin.com/in/j%C3%BAlia-silv%C3%A9rio-593b423b9/" title="LinkedIn"> <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/> </a> </td>
    </tr>
 </table>
