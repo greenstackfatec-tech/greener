@@ -239,7 +239,8 @@
   cursor: not-allowed;
 }
 
-.adm-intervalo-estado {
+.adm-intervalo-estado,
+.adm-estado {
   margin-top: 16px;
   color: var(--texto-apoio);
 }
