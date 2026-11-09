@@ -1,0 +1,316 @@
+/* Moldura da área logada. Medidas e cores: docs/design/tela-admin-desktop.png e tela-admin-mobile.png */
+
+.adm {
+  --verde: #25863c;
+  --verde-suave: #eaf5ec;
+  --texto: #1e1e1e;
+  --texto-apoio: #616b63;
+  --borda: #e6e7e6;
+  --fundo: #f7f7f7;
+  --erro: #b42318;
+
+  /* O body do index.css não ocupa a tela toda; aqui a moldura ocupa. */
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: "Inter Variable", "Inter", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.adm *,
+.adm *::before,
+.adm *::after {
+  box-sizing: border-box;
+}
+
+/* :where() zera a especificidade, então qualquer classe das telas pode definir margens sem !important. */
+:where(.adm) h1,
+:where(.adm) h2,
+:where(.adm) p {
+  margin: 0;
+}
+
+.adm :focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 2px;
+}
+
+/* ---------- Mobile (padrão): cabeçalho + abas ---------- */
+
+.adm-lateral {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 8px;
+  padding: 16px 24px;
+  background: #fff;
+}
+
+.adm-marca {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  line-height: 36px;
+  font-weight: 600;
+}
+
+.adm-marca img {
+  width: 32px;
+  height: 32px;
+}
+
+.adm-menu-botao {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texto);
+  cursor: pointer;
+  position: relative;
+}
+
+.adm-menu-botao::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+}
+
+.adm-workspace,
+.adm-topo {
+  display: none;
+}
+
+.adm-nav {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.adm-nav-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border: 1px solid var(--verde);
+  border-radius: 8px;
+  color: var(--verde);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.adm-nav-item svg {
+  display: none;
+}
+
+.adm-nav-item[aria-current="page"] {
+  background: var(--verde);
+  color: #fff;
+}
+
+.adm-nav-item[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* No mobile o rodapé do menu só aparece com o botão de menu aberto. */
+.adm-lateral-rodape {
+  display: none;
+  width: 100%;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--borda);
+}
+
+.adm-lateral[data-aberto] .adm-lateral-rodape {
+  display: grid;
+  gap: 2px;
+}
+
+.adm-lateral-rodape strong {
+  font-weight: 600;
+}
+
+.adm-lateral-rodape span {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--texto-apoio);
+}
+
+.adm-botao-contorno {
+  height: 44px;
+  margin-top: 14px;
+  border: 1px solid var(--verde);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--verde);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.adm-botao-contorno:hover {
+  background: var(--verde-suave);
+}
+
+.adm-conteudo {
+  /* Anula o estilo global "main" (cartão branco) do index.css. */
+  width: auto;
+  padding: 24px 24px 32px;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- Desktop ---------- */
+
+@media (min-width: 1024px) {
+  .adm {
+    display: grid;
+    grid-template-columns: 256px minmax(0, 1fr);
+    grid-template-rows: 80px 1fr;
+  }
+
+  .adm-lateral {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 24px 24px;
+  }
+
+  .adm-marca {
+    flex: none;
+    height: 80px;
+  }
+
+  .adm-menu-botao {
+    display: none;
+  }
+
+  .adm-workspace {
+    display: grid;
+    margin-top: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    background: var(--verde-suave);
+  }
+
+  .adm-workspace span {
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: var(--texto-apoio);
+  }
+
+  .adm-workspace strong {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+
+  .adm-nav {
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 33px;
+  }
+
+  .adm-nav-item {
+    flex: none;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 0 12px;
+    border-color: transparent;
+    color: var(--texto);
+  }
+
+  .adm-nav-item svg {
+    display: block;
+    flex: none;
+  }
+
+  .adm-nav-item[aria-current="page"] {
+    background: var(--verde-suave);
+    color: var(--texto);
+  }
+
+  .adm-lateral-rodape {
+    display: grid;
+    gap: 2px;
+    margin-top: auto;
+    padding-top: 20px;
+  }
+
+  .adm-lateral-rodape strong {
+    font-size: 15px;
+  }
+
+  .adm-lateral-rodape span {
+    margin-bottom: 14px;
+  }
+
+  .adm-botao-contorno {
+    margin-top: 0;
+  }
+
+  .adm-topo {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 32px;
+    background: #fff;
+  }
+
+  .adm-topo-caminho {
+    flex: 1;
+    color: var(--texto-apoio);
+  }
+
+  .adm-selo {
+    padding: 8px;
+    border-radius: 8px;
+    background: var(--verde-suave);
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+
+  .adm-avatar {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--verde-suave);
+    font-weight: 600;
+  }
+
+  .adm-conteudo {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 33px 32px 32px;
+  }
+}

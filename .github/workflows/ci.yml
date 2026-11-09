@@ -1,0 +1,184 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  backend-typecheck:
+    name: Backend typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Typecheck
+        working-directory: backend
+        run: npm run typecheck
+
+  frontend-typecheck:
+    name: Frontend tests + typecheck + lint + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+      - name: Test
+        working-directory: frontend
+        run: npm test
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  docker-smoke-test:
+    name: Docker compose smoke test
+    runs-on: ubuntu-latest
+    needs: [backend-typecheck, frontend-typecheck]
+    env:
+      POSTGRES_DB: greener
+      POSTGRES_USER: greener
+      POSTGRES_PASSWORD: greener_dev_only
+      JWT_SECRET: test-secret-key-for-ci-only
+      METRICS_API_URL: https://metrics.unilaunch.org
+      CARBON_API_URL: https://carbon.unilaunch.org
+      API_TIMEOUT_MS: 10000
+      COLLECTIONS_AUTO_START: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: docker compose build
+      - name: Start stack
+        run: docker compose up -d
+      - name: Wait for database healthy
+        run: |
+          echo "Waiting for database to be healthy..."
+          for i in {1..30}; do
+            HEALTH=$(docker inspect --format='{{.State.Health.Status}}' greener-database-1 2>/dev/null || echo "starting")
+            echo "Database health: $HEALTH ($i/30)"
+            if [ "$HEALTH" = "healthy" ]; then
+              echo "Database is healthy"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Database failed to become healthy"
+          docker compose logs database
+          exit 1
+      - name: Wait for backend healthy
+        run: |
+          echo "Waiting for backend to be healthy..."
+          for i in {1..30}; do
+            HEALTH=$(docker inspect --format='{{.State.Health.Status}}' greener-backend-1 2>/dev/null || echo "starting")
+            echo "Backend health: $HEALTH ($i/30)"
+            if [ "$HEALTH" = "healthy" ]; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Backend failed to become healthy"
+          docker compose logs backend
+          exit 1
+      - name: Smoke test backend health/ready
+        run: |
+          echo "Testing backend /health/ready endpoint..."
+          for i in {1..15}; do
+            if curl -fsS http://localhost:3000/health/ready | grep -q '"status":"ok"'; then
+              echo "Backend health/ready OK"
+              exit 0
+            fi
+            echo "Retry $i/15..."
+            sleep 2
+          done
+          echo "Backend health/ready failed"
+          docker compose logs backend
+          exit 1
+      - name: Smoke test frontend
+        run: |
+          echo "Testing frontend..."
+          for i in {1..10}; do
+            if curl -fsS http://localhost:8080/ | grep -q '<html'; then
+              echo "Frontend OK"
+              exit 0
+            fi
+            echo "Retry $i/10..."
+            sleep 2
+          done
+          echo "Frontend failed"
+          docker compose logs frontend
+          exit 1
+      - name: Teardown
+        if: always()
+        run: docker compose down -v
+
+  analytics-integration:
+    name: Analytics integration tests (PostgreSQL)
+    runs-on: ubuntu-latest
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: greener
+      PGUSER: greener
+      PGPASSWORD: greener_ci_only
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: greener
+          POSTGRES_USER: greener
+          POSTGRES_PASSWORD: greener_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U greener -d greener"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Run analytics integration tests
+        working-directory: backend
+        run: npm run test:analytics:integration
+
+  test:
+    name: Backend unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Run tests
+        working-directory: backend
+        run: npm test

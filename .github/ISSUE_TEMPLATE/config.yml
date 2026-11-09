@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Product Backlog
+    url: https://github.com/greenstackfatec-tech/GreenER/blob/develop/docs/sprints/product-backlog.md
+    about: "Consulte o ID do item (ex.: BD03) antes de criar a tarefa."

@@ -1,0 +1,342 @@
+/* Conteúdo da área administrativa. As variáveis (--verde etc.) vêm de .adm em components/LayoutAdministrativo.css */
+
+.adm-titulo {
+  font-size: 32px;
+  line-height: 44px;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.adm-subtitulo {
+  margin-top: 8px;
+  color: var(--texto-apoio);
+}
+
+.adm-periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 24px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--texto-apoio);
+}
+
+.adm-selo-dados {
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: var(--verde-suave);
+  color: var(--texto);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ---------- Cards ---------- */
+
+.adm-card {
+  padding: 24px;
+  border: 1px solid var(--verde-suave);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.adm-card-titulo {
+  font-size: 20px;
+  line-height: 30px;
+  font-weight: 600;
+}
+
+.adm-card-legenda {
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--texto-apoio);
+}
+
+.adm-indicadores,
+.adm-linha {
+  display: grid;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.adm-linha ~ .adm-card,
+.adm-nota {
+  margin-top: 24px;
+}
+
+.adm-indicador-rotulo {
+  color: var(--texto-apoio);
+}
+
+.adm-indicador-valor {
+  margin-top: 16px;
+  font-size: 34px;
+  line-height: 44px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.adm-indicador-apoio {
+  margin-top: 15px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--verde);
+}
+
+/* O GraficoConsumo já é um "cartão"; aqui o cartão é o wrapper (borda do Figma). */
+.adm-card-grafico {
+  min-width: 0;
+}
+
+.adm-card-grafico .grafico {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+}
+
+/* Mobile: barras de 32 px com espaço entre elas (no desktop, 42 px com o recuo do GraficoConsumo). */
+.adm-card-grafico .grafico-barras {
+  padding: 0;
+}
+
+.adm-card-grafico .grafico-barras li {
+  flex-basis: 32px;
+}
+
+/* Linha fina entre as barras e a nota do gráfico, como no Figma. */
+.adm-card-grafico .grafico-barras + .grafico-legenda {
+  padding-top: 16px;
+  border-top: 1px solid var(--borda);
+}
+
+/* ---------- Por recurso ---------- */
+
+.adm-recursos {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-recurso-linha {
+  display: flex;
+  justify-content: space-between;
+}
+
+.adm-recurso-trilho {
+  height: 8px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--verde-suave);
+}
+
+.adm-recurso-barra {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--verde);
+}
+
+/* ---------- Aplicações monitoradas ---------- */
+
+.adm-aplicacoes {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-aplicacoes li {
+  display: grid;
+  gap: 4px 0;
+  padding: 15px 0;
+  border-top: 1px solid var(--borda);
+}
+
+.adm-aplicacoes li:last-child {
+  padding-bottom: 0;
+}
+
+.adm-aplicacao-estado {
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--texto-apoio);
+}
+
+.adm-aplicacao-valores {
+  display: grid;
+  gap: 4px;
+}
+
+.adm-aplicacao-valores span {
+  color: var(--texto-apoio);
+}
+
+/* ---------- Configuração: intervalo de coleta ---------- */
+
+.adm-intervalo-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.adm-campo {
+  display: grid;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.adm-campo label {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+.adm-campo input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--texto-apoio);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--texto);
+  font: inherit;
+}
+
+.adm-campo input[aria-invalid="true"] {
+  border-color: var(--erro);
+}
+
+.adm-campo-ajuda {
+  min-height: 18px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--texto-apoio);
+}
+
+.adm-campo-ajuda[data-erro] {
+  color: var(--erro);
+}
+
+.adm-botao {
+  justify-self: start;
+  height: 44px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--verde);
+  color: #fff;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.adm-botao:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.adm-intervalo-estado,
+.adm-estado {
+  margin-top: 16px;
+  color: var(--texto-apoio);
+}
+
+.adm-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.adm-aviso[data-tipo="sucesso"] {
+  background: var(--verde-suave);
+  color: var(--texto);
+}
+
+.adm-aviso[data-tipo="erro"] {
+  border: 1px solid var(--erro);
+  background: #fef3f2;
+  color: var(--erro);
+}
+
+.adm-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---------- Nota de rodapé ---------- */
+
+.adm-nota {
+  padding: 15px 16px;
+  border-radius: 8px;
+  background: var(--verde-suave);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--texto-apoio);
+}
+
+/* ---------- Desktop ---------- */
+
+@media (min-width: 1024px) {
+  .adm-titulo {
+    font-size: 34px;
+    line-height: 44px;
+  }
+
+  .adm-indicadores {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .adm-card-grafico .grafico-barras {
+    padding: 0 22px;
+  }
+
+  .adm-card-grafico .grafico-barras li {
+    flex-basis: 42px;
+  }
+
+  /* align-items: start -> "Por recurso" tem a altura do próprio conteúdo, como no Figma. */
+  .adm-linha {
+    grid-template-columns: minmax(0, 65fr) minmax(0, 35fr);
+    align-items: start;
+  }
+
+  .adm-aplicacoes li {
+    grid-template-columns: minmax(0, 45%) minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .adm-aplicacao-valores {
+    display: flex;
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1100px) {
+  .adm-indicador-valor { font-size: 28px; line-height: 36px; }
+}
+
+@media (max-width: 1023px) {
+  .adm-campo input { font-size: 16px; }
+  .adm-link { min-height: 44px; }
+  /* O cartão já tem recuo; o ResumoConsumo trazia o próprio (24 + 24 px). */
+  .adm-card-grafico .resumo { padding: 0; border-radius: 0; background: none; }
+}
+@media (max-width: 359px) {
+  .adm-indicador-valor { font-size: 28px; line-height: 36px; }
+}

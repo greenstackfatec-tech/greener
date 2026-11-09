@@ -1,0 +1,76 @@
+/* Cores dos estados, amostradas do mock DD07 (docs/design/DD07 estados de interface .png). */
+:root {
+  --estado-ativo: #25863c;
+  --estado-ativo-fundo: #e8f6ec;
+  --estado-ativo-texto: #134125;
+  --estado-indisponivel: #5e6b63;
+  --estado-indisponivel-fundo: #f0f3f0;
+  --estado-indisponivel-texto: #5e6b63;
+  --estado-sem-metricas: #2e63a8;
+  --estado-sem-metricas-fundo: #e8f1fb;
+  --estado-sem-metricas-texto: #2e63a8;
+  --estado-erro: #b42318;
+  --estado-erro-fundo: #fcebe8;
+  --estado-erro-texto: #b42318;
+  --estado-vazio: #844c0f;
+  --estado-vazio-fundo: #fcf3db;
+  --estado-vazio-texto: #844c0f;
+}
+
+.cartao-estado {
+  --tom: var(--estado-ativo);
+  --tom-fundo: var(--estado-ativo-fundo);
+  --tom-texto: var(--estado-ativo-texto);
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #e3eae5;
+  border-left: 4px solid var(--tom);
+  border-radius: 14px;
+  padding: 15px 18px 12px 16px;
+  color: #1b291f;
+  font-family: "Inter Variable", Inter, system-ui, sans-serif;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cartao-estado[data-tom="indisponivel"] { --tom: var(--estado-indisponivel); --tom-fundo: var(--estado-indisponivel-fundo); --tom-texto: var(--estado-indisponivel-texto); }
+.cartao-estado[data-tom="sem_metricas"],
+.cartao-estado[data-tom="carregando"] { --tom: var(--estado-sem-metricas); --tom-fundo: var(--estado-sem-metricas-fundo); --tom-texto: var(--estado-sem-metricas-texto); }
+.cartao-estado[data-tom="erro"] { --tom: var(--estado-erro); --tom-fundo: var(--estado-erro-fundo); --tom-texto: var(--estado-erro-texto); }
+.cartao-estado[data-tom="vazio"] { --tom: var(--estado-vazio); --tom-fundo: var(--estado-vazio-fundo); --tom-texto: var(--estado-vazio-texto); }
+
+.cartao-estado-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.cartao-estado-titulo { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; font-weight: 650; color: #1b291f; min-width: 0; }
+.cartao-estado-ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--tom); flex-shrink: 0; }
+.cartao-estado-selo { background: var(--tom-fundo); color: var(--tom-texto); border-radius: 6px; padding: 5px 9px; font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; white-space: nowrap; }
+.cartao-estado-descricao { margin: 6px 0 0; font-size: 12px; color: #616b63; }
+
+/* Localização do serviço (RF12): três campos lado a lado; "Não informado" fica apagado. */
+.cartao-estado-local { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 0; }
+.cartao-estado-local > div { min-width: 0; }
+.cartao-estado-local dt { font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #8a958d; }
+.cartao-estado-local dd { margin: 3px 0 0; font-size: 12px; font-weight: 550; color: #33463a; overflow-wrap: anywhere; }
+.cartao-estado-local dd.sem-info { font-weight: 400; font-style: italic; color: #98a29a; }
+
+.cartao-estado-valor { min-height: 30px; margin: 10px 0 12px; display: flex; align-items: center; }
+.cartao-estado-valor strong { font-size: 25px; line-height: 1.1; font-weight: 700; letter-spacing: -0.4px; color: var(--tom); }
+.cartao-estado-traco { display: block; width: 24px; height: 3px; border-radius: 2px; background: var(--tom); opacity: 0.85; }
+
+.cartao-estado-pontos { display: inline-flex; gap: 5px; }
+.cartao-estado-pontos i { width: 8px; height: 8px; border-radius: 50%; background: var(--tom); animation: cartao-estado-pulso 1.2s infinite ease-in-out; }
+.cartao-estado-pontos i:nth-child(2) { animation-delay: 0.2s; }
+.cartao-estado-pontos i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes cartao-estado-pulso { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .cartao-estado-pontos i { animation: none; } }
+
+.cartao-estado-rodape { margin: 0; padding-top: 10px; border-top: 1px solid #ecf0ed; font-size: 11px; color: #616b63; }
+.cartao-estado-rodape button { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--tom); text-decoration: underline; cursor: pointer; }
+.cartao-estado-rodape button:disabled { opacity: 0.6; cursor: wait; }
+.cartao-estado-rodape button:focus-visible { outline: 2px solid var(--tom); outline-offset: 2px; border-radius: 2px; }
+
+/* No estado vazio o valor é uma chamada em texto, menor que um número (DD07). */
+.cartao-estado[data-tom="vazio"] .cartao-estado-valor strong { font-size: 19px; letter-spacing: -0.2px; }
+
+@media (max-width: 700px) {
+  .cartao-estado-selo, .cartao-estado-local dt, .cartao-estado-rodape { font-size: 12px; }
+  .cartao-estado-rodape button { min-height: 44px; }
+}
