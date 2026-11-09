@@ -11,6 +11,7 @@ export interface Servico {
   cidade: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** Vêm da região; nulos quando o serviço não tem localização (a tela mostra "Não informado", RF12). */
   regiao: string | null;
   pais: string | null;
   coletadoEm: string | null;
@@ -73,6 +74,7 @@ export async function listarServicos(signal?: AbortSignal): Promise<Servico[]> {
   }
   return bruto.map(normalizar);
 }
+
 /** Estado visual de um serviço (RF02, RF05, RF06): os três são distintos na interface. */
 export type Situacao = "ativo" | "indisponivel" | "sem_metricas" | "removido";
 
@@ -82,4 +84,3 @@ export function situacaoDoServico(servico: Servico): Situacao {
   if (servico.statusColeta !== "sucesso") return "sem_metricas";
   return "ativo";
 }
-

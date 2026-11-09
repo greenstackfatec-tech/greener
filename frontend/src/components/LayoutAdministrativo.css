@@ -14,6 +14,7 @@
   justify-self: stretch;
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--fundo);
@@ -77,6 +78,13 @@
   background: none;
   color: var(--texto);
   cursor: pointer;
+  position: relative;
+}
+
+.adm-menu-botao::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
 }
 
 .adm-workspace,

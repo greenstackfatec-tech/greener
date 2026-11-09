@@ -1,3 +1,4 @@
+import { NAO_INFORMADO, type LocalizacaoExibida } from "../localizacao.ts";
 import "./CartaoEstado.css";
 
 /** Os seis estados do mock DD07. */
@@ -16,10 +17,12 @@ interface Props {
   acao?: { rotulo: string; aoClicar: () => void; desabilitada?: boolean };
   /** Nível do título na hierarquia da página. */
   nivelTitulo?: 2 | 3;
+  /** País, região e cidade do serviço (RF12); campo ausente chega como "Não informado". */
+  localizacao?: LocalizacaoExibida;
 }
 
 /** Cartão de estado do DD07: barra lateral, ponto, selo, valor e rodapé na cor do estado. */
-export function CartaoEstado({ tom, titulo, selo, descricao, valor, rodape, acao, nivelTitulo = 3 }: Props) {
+export function CartaoEstado({ tom, titulo, selo, descricao, valor, rodape, acao, nivelTitulo = 3, localizacao }: Props) {
   const Titulo = nivelTitulo === 2 ? "h2" : "h3";
   // Carregando avisa com educação (status); erro interrompe (alert).
   const papel = tom === "carregando" ? "status" : tom === "erro" ? "alert" : undefined;
@@ -34,6 +37,22 @@ export function CartaoEstado({ tom, titulo, selo, descricao, valor, rodape, acao
         <span className="cartao-estado-selo">{selo}</span>
       </header>
       <p className="cartao-estado-descricao">{descricao}</p>
+      {localizacao && (
+        <dl className="cartao-estado-local" aria-label="Localização do serviço">
+          {(
+            [
+              ["País", localizacao.pais],
+              ["Região", localizacao.regiao],
+              ["Cidade", localizacao.cidade],
+            ] as const
+          ).map(([rotulo, texto]) => (
+            <div key={rotulo}>
+              <dt>{rotulo}</dt>
+              <dd className={texto === NAO_INFORMADO ? "sem-info" : undefined}>{texto}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
       <div className="cartao-estado-valor">
         {tom === "carregando" ? (
           <span className="cartao-estado-pontos" aria-hidden="true">

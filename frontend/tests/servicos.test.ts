@@ -4,6 +4,7 @@ import { listarServicos, situacaoDoServico } from "../src/services/servicos.ts";
 import type { Servico } from "../src/services/servicos.ts";
 import { rodapeDaSituacao } from "../src/estadosServico.ts";
 import { numero } from "../src/formatacao.ts";
+import { NAO_INFORMADO, localizacaoDoServico } from "../src/localizacao.ts";
 
 const ativo: Servico = {
   id: 41, nome: "Serviço de teste", status: "ativo", cidade: null, latitude: null,
@@ -52,4 +53,29 @@ test("falha HTTP e resposta inválida não viram uma lista de serviços sem mét
   await assert.rejects(listarServicos, /esperado um array/);
   consulta.mock.mockImplementation(async () => Response.json([{}]));
   await assert.rejects(listarServicos, /item sem id, nome ou status/);
+});
+
+test("RF12: mostra país, região e cidade quando existem", () => {
+  const completo = { ...ativo, pais: "Brasil", regiao: "sa-east-1", cidade: "São Paulo" };
+  assert.deepEqual(localizacaoDoServico(completo), { pais: "Brasil", regiao: "sa-east-1", cidade: "São Paulo" });
+});
+
+test("RF12: campo que falta vira \"Não informado\" sem esconder os demais", () => {
+  assert.equal(NAO_INFORMADO, "Não informado");
+  assert.deepEqual(
+    localizacaoDoServico({ ...ativo, pais: "Brasil", regiao: "sa-east-1", cidade: null }),
+    { pais: "Brasil", regiao: "sa-east-1", cidade: NAO_INFORMADO },
+  );
+  // Serviço sem nenhuma localização (o `ativo` do teste): os três campos ficam "Não informado".
+  assert.deepEqual(localizacaoDoServico(ativo), { pais: NAO_INFORMADO, regiao: NAO_INFORMADO, cidade: NAO_INFORMADO });
+});
+
+test("RF12: texto vazio ou só com espaços vindo da API conta como ausente", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => Response.json([
+    { id: 7, nome: "Sem local", status: "ativo", pais: "  ", regiao: "", cidade: "\t" },
+  ]));
+  const [servico] = await listarServicos();
+  // A normalização já descarta vazios e a coordenada segue nula para o mapa (RF13).
+  assert.deepEqual([servico.pais, servico.regiao, servico.cidade, servico.latitude, servico.longitude], [null, null, null, null, null]);
+  assert.deepEqual(localizacaoDoServico(servico), { pais: NAO_INFORMADO, regiao: NAO_INFORMADO, cidade: NAO_INFORMADO });
 });

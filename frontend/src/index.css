@@ -5,18 +5,23 @@
   background: #f2f7f3;
 }
 
-body {
-  margin: 0;
+html,
+body,
+#root {
+  width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
   display: block;
 }
 
-main {
-  width: min(34rem, calc(100% - 3rem));
-  padding: 2rem;
-  background: white;
-  border-radius: 1rem;
-  box-shadow: 0 1rem 3rem #18352b14;
+* {
+  box-sizing: border-box;
 }
 
 h1 {

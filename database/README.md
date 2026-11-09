@@ -39,11 +39,35 @@ database/
 ├── schema.sql
 ├── seed.sql
 └── migrations/
-    └── 001_persistencia_coletas.sql
+    ├── 000_schema_inicial.sql
+    ├── 001_persistencia_coletas.sql
+    ├── 002_servico_sem_localizacao.sql
+    └── 003_seed_dados_iniciais.sql
 ```
 
-O `schema.sql` define a estrutura, o `seed.sql` carrega os dados iniciais de desenvolvimento e `migrations/` reúne as atualizações para bancos já inicializados.
+A pasta `migrations/` é o caminho oficial para criar e evoluir o banco: o Docker Compose a monta em `/docker-entrypoint-initdb.d` e executa os scripts em ordem numérica quando o volume está vazio.
 
+`schema.sql` e `seed.sql` continuam no repositório como **scripts de reinício para desenvolvimento e testes automatizados**. O `schema.sql` apaga e recria as tabelas, e o `seed.sql` limpa os dados antes de carregá-los; por isso, nunca os execute em um banco com dados que você queira manter.
+
+### 4.1. Migrations
+
+Cada arquivo de `migrations/` é um passo numerado e transacional (`BEGIN` ... `COMMIT`): se algum comando falhar, nada do arquivo é gravado.
+
+| Nº | Arquivo | Issue | O que faz | Em banco vazio | Em banco com dados |
+|---|---|---|---|---|---|
+| 000 | `000_schema_inicial.sql` | #106 | Cria todas as tabelas, já no estado atual. | Aplicar. | **Não aplicar** (as tabelas já existem). |
+| 001 | `001_persistencia_coletas.sql` | #92 | Adiciona `servicos.id_externo`, vincula os serviços do seed e permite intervalo de coleta igual a zero. | Não altera nada. | Aplicar se ainda não aplicada. Pode ser reaplicada. |
+| 002 | `002_servico_sem_localizacao.sql` | #82 | Permite `servicos.regiao_id` nulo quando a localização é desconhecida. | Não altera nada. | Aplicar se ainda não aplicada. Pode ser reaplicada. |
+| 003 | `003_seed_dados_iniciais.sql` | #106 | Carrega regiões, aplicação, oito serviços, configuração de intervalo e o usuário de teste. | Aplicar (somente em desenvolvimento). | **Não aplicar** (os registros já existem). |
+
+As migrations 001 e 002 ajustam bancos criados antes delas. Como a 000 já nasce com o resultado das duas, em um banco novo elas executam sem efeito.
+
+Regras para as migrations:
+
+- O nome segue `NNN_descricao.sql`, e a ordem de aplicação é a ordem numérica.
+- Uma migration já compartilhada **não é editada**; qualquer correção ou mudança nova vira um arquivo novo, com o próximo número.
+- Não contêm `DROP TABLE` nem `TRUNCATE`.
+- Começam com `BEGIN;`, terminam com `COMMIT;` e são executadas com `psql -v ON_ERROR_STOP=1`.
 
 ## 5. Requisitos
 
@@ -56,42 +80,142 @@ Para trabalhar com os arquivos deste diretório, é necessário ter:
 
 ## 6. Execução
 
-A execução dos scripts depende da estrutura e das instruções definidas nos arquivos SQL.
+**Atenção:** antes de executar um script, confirme o banco de dados selecionado. Comandos de criação, alteração ou remoção podem afetar os dados existentes.
 
-De forma geral, o processo consiste em:
+### 6.1. Criar o banco do zero (banco vazio)
 
-1. Preparar o ambiente PostgreSQL.
-2. Verificar o conteúdo e a finalidade dos scripts.
-3. Criar ou selecionar o banco de dados de destino, conforme as instruções do projeto.
-4. Executar os scripts na ordem adequada.
-5. Verificar se as estruturas foram criadas corretamente.
+Em um banco vazio, a ordem é: `000_schema_inicial.sql`, `001_persistencia_coletas.sql`, `002_servico_sem_localizacao.sql` e `003_seed_dados_iniciais.sql`, ou seja, todos os arquivos de `migrations/` em ordem numérica.
 
-**Atenção:** antes de executar um script, verifique os comandos presentes no arquivo e confirme o banco de dados selecionado. Operações de criação, alteração ou remoção podem afetar os dados existentes.
-
-
-### 6.1. Atualizar um banco existente
-
-A migração [`001_persistencia_coletas.sql`](migrations/001_persistencia_coletas.sql), da issue #92, atualiza bancos existentes sem recriar tabelas ou limpar dados. Ela adiciona o identificador externo dos serviços quando necessário, vincula os oito serviços conhecidos dos dados iniciais aos IDs confirmados na API de métricas e permite gravar intervalo de coleta igual a zero. Os IDs internos, status, histórico e metadados obrigatórios das regiões são preservados.
-
-Em um volume novo, o Compose executa `schema.sql` e `seed.sql` automaticamente. Para um volume já inicializado, aplique a migração antes de executar novas coletas. Na raiz `greener/`, com o `.env` preparado conforme o [README principal](../README.md), execute:
+**Com Docker Compose (automático).** Na raiz `greener/`, com o `.env` preparado conforme o [README principal](../README.md):
 
 ```powershell
 docker compose up -d --wait database
-docker compose cp database/migrations/001_persistencia_coletas.sql database:/tmp/tp07.sql
-docker compose exec -T database psql -v ON_ERROR_STOP=1 -U greener -d greener -f /tmp/tp07.sql
 ```
 
-Os comandos usam o usuário e o banco padrão. Se o seu `.env` tiver outros valores, ajuste o argumento de `-U` para o valor de `POSTGRES_USER` e o de `-d` para o valor de `POSTGRES_DB`.
+O PostgreSQL executa a pasta `migrations/` sozinho, apenas na primeira inicialização, quando o volume ainda está vazio. Para acompanhar:
 
-A execução bem-sucedida termina com `COMMIT`. A migração pode ser reaplicada; avisos de que a coluna ou o índice já existem são esperados. Se houver erro, o script interrompe a execução e a transação é desfeita.
+```powershell
+docker compose logs database
+```
+
+Para recriar o banco do zero em um volume que já foi inicializado, remova o volume. **Isso apaga todos os dados do banco:**
+
+```powershell
+docker compose down -v
+docker compose up -d --wait database
+```
+
+**Com PostgreSQL local, sem Docker.** Na raiz `greener/`, com `psql` e `createdb` disponíveis no `PATH` (no Windows, o `bin` da instalação, como `C:\Program Files\PostgreSQL\18\bin`). O `PGCLIENTENCODING` evita erro com acentos:
+
+```powershell
+$env:PGCLIENTENCODING = "UTF8"
+createdb -U postgres greener
+foreach ($arquivo in Get-ChildItem database\migrations\*.sql | Sort-Object Name) {
+    psql -v ON_ERROR_STOP=1 -U postgres -d greener -f $arquivo.FullName
+    if ($LASTEXITCODE -ne 0) { throw "Falha em $($arquivo.Name)" }
+}
+```
+
+Em Linux ou macOS:
+
+```bash
+createdb -U postgres greener
+for f in database/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -U postgres -d greener -f "$f" || break; done
+```
+
+Sem terminal, no pgAdmin: crie o banco, abra o Query Tool e execute cada arquivo de `migrations/` na ordem numérica.
+
+**Verificar.** O banco deve ter sete tabelas e oito serviços:
+
+```powershell
+docker compose exec -T database psql -U greener -d greener -c "\dt"
+docker compose exec -T database psql -U greener -d greener -c "SELECT id_externo, nome FROM servicos ORDER BY id;"
+```
+
+Em instalação local, use o mesmo `psql` dos comandos acima, sem o prefixo `docker compose exec -T database`. O usuário de teste do seed é `teste@greener.com`, com a senha `greener123`; ele existe só para desenvolvimento.
+
+### 6.2. Onde ficam as consultas DML
+
+As consultas de `SELECT`, `INSERT` e `UPDATE` usadas pela aplicação ficam no backend, nos arquivos `*.repository.ts` de cada módulo, sempre parametrizadas (`$1`, `$2`, ...). A conexão está em `backend/src/db/connection.ts`. Alterações de estrutura (DDL) ficam somente em `database/migrations/`.
+
+| Arquivo (em `backend/src/`) | Tabelas | Uso |
+|---|---|---|
+| `modules/auth/auth.repository.ts` | `usuarios` | Busca o usuário pelo e-mail no login. |
+| `modules/services/services.repository.ts` | `servicos`, `regioes`, `aplicacoes`, `metricas_servico` | Lista e busca serviços com a última coleta; cadastra ou atualiza serviços (por `id_externo`) e regiões. |
+| `modules/collections/collections.repository.ts` | `metricas_servico`, `servicos` | Grava cada coleta, atualiza o status do serviço e consulta o histórico. |
+| `modules/resultados/resultados.repository.ts` | `metricas_servico` | Grava e consulta os resultados de potência, energia e emissão. |
+| `modules/dashboard-indicators/dashboard-indicators.repository.ts` | `metricas_servico`, `servicos` | Indicadores consolidados do dashboard. |
+| `modules/configuracoes/configuracoes.repository.ts` | `configuracoes` | Lê o intervalo de coleta. |
+
+### 6.3. Aplicar uma migration em um banco que já tem dados
+
+O Compose só executa `migrations/` quando o volume está vazio. Em um volume já inicializado, uma migration nova **não roda sozinha**, e não é preciso recriar o volume: aplique somente o arquivo novo, na raiz `greener/`.
+
+**1. Descubra o que já foi aplicado.** O banco não guarda um registro das migrations; confira o resultado delas:
+
+```sql
+-- 001: deve retornar uma linha
+SELECT column_name FROM information_schema.columns
+WHERE table_name = 'servicos' AND column_name = 'id_externo';
+
+-- 001: deve mostrar CHECK ((intervalo_segundos >= 0))
+SELECT pg_get_constraintdef(oid) FROM pg_constraint
+WHERE conname = 'metricas_servico_intervalo_segundos_check';
+
+-- 002: deve retornar YES
+SELECT is_nullable FROM information_schema.columns
+WHERE table_name = 'servicos' AND column_name = 'regiao_id';
+```
+
+Aplique apenas as migrations de número maior que a última já aplicada. Não aplique a `000` nem a `003` em um banco com dados.
+
+**2. Faça um backup (recomendado).**
+
+```powershell
+docker compose exec -T database sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > /tmp/backup.sql'
+docker compose cp database:/tmp/backup.sql ./backup.sql
+```
+
+**3. Aplique a migration.** Troque o nome do arquivo pelo da migration desejada:
+
+```powershell
+docker compose up -d --wait database
+docker compose cp database/migrations/001_persistencia_coletas.sql database:/tmp/migration.sql
+docker compose exec -T database psql -v ON_ERROR_STOP=1 -U greener -d greener -f /tmp/migration.sql
+```
+
+Os comandos usam o usuário e o banco padrão. Se o seu `.env` tiver outros valores, ajuste o argumento de `-U` para o valor de `POSTGRES_USER` e o de `-d` para o valor de `POSTGRES_DB`. Em um PostgreSQL local, execute `psql -v ON_ERROR_STOP=1 -U postgres -d greener -f database/migrations/<arquivo>.sql`.
+
+**4. Confirme.** A execução bem-sucedida termina com `COMMIT`. Se houver erro, o script interrompe a execução e a transação é desfeita: o banco continua como estava, e você pode corrigir a causa e executar de novo.
+
+Para manter os dados ao encerrar o ambiente, use `docker compose down` sem a opção `-v`, que remove os volumes.
+
+### 6.4. Observações sobre a migration 001
 
 O vínculo dos registros antigos exige que o cadastro corresponda ao seed conhecido. Nomes duplicados na aplicação `GreenER Demo`, IDs externos conflitantes ou localização divergente interrompem a migração. Nesse caso, confira os registros e suas coletas para confirmar o vínculo correto antes de executar novamente; a migração não escolhe um registro arbitrariamente nem mescla históricos. Serviços antigos fora desse conjunto exigem mapeamento manual confirmado.
 
-Use a migração para atualizar bancos com dados a preservar. O `schema.sql` contém comandos que apagam tabelas, e o `seed.sql` limpa dados antes de carregá-los novamente. Para manter os dados ao encerrar o ambiente, use `docker compose down` sem a opção `-v`, que remove os volumes.
+### 6.5. Criar uma migration nova
 
-Os comandos e resultados esperados dos [testes de persistência estão no README do backend](../backend/README.md#testes-de-persistência).
+1. Crie `database/migrations/NNN_descricao.sql`, com `NNN` igual ao próximo número da sequência.
+2. Estruture o arquivo assim, sem `DROP TABLE` e sem `TRUNCATE`:
 
-### 7. [Documentação Complementar](https://github.com/greenstackfatec-tech/greener/blob/develop/README.md)
+```sql
+-- NNN_descricao.sql (issue #XX): o que muda e por quê.
+-- Execute com psql -v ON_ERROR_STOP=1.
+BEGIN;
+
+ALTER TABLE servicos ADD COLUMN exemplo VARCHAR(50);
+
+COMMIT;
+```
+
+3. Teste em um banco vazio (seção 6.1) e em um banco com dados (seção 6.3).
+4. Reflita a mudança em `schema.sql` (e em `seed.sql`, se envolver dados), porque os testes automatizados e o reinício de desenvolvimento usam esses dois arquivos como estado atual do banco.
+5. Atualize a tabela da seção 4.1.
+
+Os comandos e resultados esperados dos [testes de persistência estão no README do backend](../backend/README.md#5-banco-de-dados-e-persistência).
+
+## 7. [Documentação Complementar]
 
 Para informações gerais sobre o projeto, sua arquitetura e suas demais tecnologias, consulte o arquivo `README.md` localizado na raiz do repositório.
 

@@ -75,7 +75,7 @@
   font-size: 34px;
   line-height: 44px;
   font-weight: 600;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .adm-indicador-apoio {
@@ -239,7 +239,8 @@
   cursor: not-allowed;
 }
 
-.adm-intervalo-estado {
+.adm-intervalo-estado,
+.adm-estado {
   margin-top: 16px;
   color: var(--texto-apoio);
 }
@@ -324,4 +325,18 @@
     display: flex;
     gap: 24px;
   }
+}
+
+@media (min-width: 1024px) and (max-width: 1100px) {
+  .adm-indicador-valor { font-size: 28px; line-height: 36px; }
+}
+
+@media (max-width: 1023px) {
+  .adm-campo input { font-size: 16px; }
+  .adm-link { min-height: 44px; }
+  /* O cartão já tem recuo; o ResumoConsumo trazia o próprio (24 + 24 px). */
+  .adm-card-grafico .resumo { padding: 0; border-radius: 0; background: none; }
+}
+@media (max-width: 359px) {
+  .adm-indicador-valor { font-size: 28px; line-height: 36px; }
 }

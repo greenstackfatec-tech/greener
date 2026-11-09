@@ -29,6 +29,9 @@ async function preparar(t: TestContext, umServico = false) {
     falharPrimeiroCarbono: false,
     semMetricas: false,
     metricasAusentes: false,
+    indisponivel: false,
+    erroMetricas: null as { status: number; codigo: string; mensagem: string } | null,
+    primeiroSemMetricas: false,
     falhaPrimeiroServico: "" as "" | "http" | "timeout" | "rede",
     timeoutsCancelados: 0,
     zerarMetricas: false,
@@ -44,6 +47,7 @@ async function preparar(t: TestContext, umServico = false) {
     consultas.push({ sql, parametros });
     if (sql.includes("FROM aplicacoes")) return { rows: [{ id: 7 }] };
     if (sql.includes("FROM configuracoes")) return { rows: [{ valor: "60" }] };
+    if (sql.includes("WITH anteriores AS MATERIALIZED")) return { rows: [] };
     if (sql.includes("FROM regioes"))
       return { rows: [{ id: parametros[1] === "Brazil" ? 11 : 12 }] };
     if (sql.includes("INSERT INTO servicos")) {
@@ -96,22 +100,43 @@ async function preparar(t: TestContext, umServico = false) {
     ) {
       response.writeHead(503, { "content-type": "application/json" });
       response.end(JSON.stringify({ error: "unavailable", message: "Carbono indisponível" }));
+      return;
     } else if (estado.intervaloZero && caminho.includes("/metrics/")) {
       response.writeHead(200, { "content-type": "application/json" });
       response.end(JSON.stringify({ ...metricas, collection_interval_seconds: 0 }));
+      return;
     } else if (estado.metricas404 && caminho.includes("/metrics/")) {
       response.writeHead(404, { "content-type": "application/json" });
       response.end(
         JSON.stringify({ error: "service_not_found", message: "Serviço não encontrado" }),
       );
+      return;
     } else if (estado.indisponivel && caminho.includes("/metrics/")) {
       response.writeHead(503, { "content-type": "application/json" });
       response.end(
         JSON.stringify({ error: "service_unavailable", message: "Serviço indisponível" }),
       );
+      return;
     } else if (estado.metricasAusentes && caminho.includes("/metrics/")) {
       response.writeHead(500, { "content-type": "application/json" });
       response.end(JSON.stringify({ error: "metrics_missing", message: "Métricas ausentes" }));
+      return;
+    } else if (estado.semMetricas && caminho.includes("/metrics/")) {
+      response.writeHead(500, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "metrics_missing", message: "Métricas ausentes" }));
+      return;
+    } else if (estado.erroMetricas && caminho.includes("/metrics/")) {
+      response.writeHead(estado.erroMetricas.status, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: estado.erroMetricas.codigo, message: estado.erroMetricas.mensagem }));
+      return;
+    } else if (estado.metricasInvalidas && caminho.startsWith("/metrics/")) {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ ...metricas, metrics: { ...metricas.metrics, memory_gb: -1 } }));
+      return;
+    } else if (estado.primeiroSemMetricas && caminho === "/metrics/servico-1") {
+      response.writeHead(500, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "metrics_missing", message: "Métricas ausentes" }));
+      return;
     } else if (estado.zerarMetricas && caminho.includes("/metrics/")) {
       response.writeHead(200, { "content-type": "application/json" });
       response.end(
@@ -120,21 +145,24 @@ async function preparar(t: TestContext, umServico = false) {
           metrics: { cpu_percent: 0, memory_gb: 0, disk_gb: 0, network_gb: 0 },
         }),
       );
+      return;
     } else if (estado.listaVazia && caminho === "/services") {
       response.writeHead(200, { "content-type": "application/json" });
       response.end("[]");
+      return;
     } else if (umServico && caminho === "/services") {
       response.writeHead(200, { "content-type": "application/json" });
       response.end(JSON.stringify(servicos.slice(0, 1)));
-    } else if (estado.metricasInvalidas && caminho.startsWith("/metrics/")) {
-      response.end(JSON.stringify({ ...metricas, metrics: { ...metricas.metrics, memory_gb: -1 } }));
+      return;
     } else if (caminho.startsWith("/metrics/")) {
       response.writeHead(200, { "content-type": "application/json" });
-      response.end(JSON.stringify({
+      const resp = {
         ...metricas,
         collection_interval_seconds: estado.intervaloApi,
         metrics: { ...metricas.metrics, cpu_percent: estado.cpuPercentual },
-      }));
+      };
+      response.end(JSON.stringify(resp));
+      return;
     } else {
       tratarRequisicaoMock(request, response);
     }
@@ -351,14 +379,16 @@ test("intervalo zero aceito pela API é preservado com duração e energia iguai
   assert.equal(gravacoes[0][10], 0);
 });
 
-test("lista de serviços vazia conclui sem consultas ou gravações no banco", async (t) => {
+test("lista de serviços vazia sincroniza a presença sem gravar amostras", async (t) => {
   const { estado, consultas } = await preparar(t);
   estado.listaVazia = true;
   const resultado = await executarRodadaColeta();
   assert.equal(resultado.totalServicos, 0);
   assert.equal(resultado.erros, 0);
   assert.deepEqual(resultado.detalhes, []);
-  assert.equal(consultas.length, 0);
+  assert.equal(consultas.length, 2);
+  assert.deepEqual(consultas[1].parametros, [7, []]);
+  assert.ok(consultas[1].sql.includes("WITH anteriores AS MATERIALIZED"));
 });
 
 test("TP06 rotina consulta novamente a API e grava cada novo estado, com recuperação de falha", async (t) => {
@@ -594,6 +624,7 @@ test("ausência confirmada resolve somente a falha de métricas do mesmo serviç
   estado.indisponivel = true;
   await executarRodadaColeta();
   const ultimaCompleta = consultarMonitoramentoColeta().ultimaColetaCompletaEm;
+  estado.indisponivel = false;
   estado.metricasAusentes = true;
   const resultado = await coletarServico(servicos[0], 90);
   assert.equal(resultado.intervaloSegundos, 90);

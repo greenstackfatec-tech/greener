@@ -14,6 +14,7 @@
   justify-self: stretch;
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: #fff;
@@ -415,4 +416,11 @@
   .auth-rodape-separador {
     display: inline !important;
   }
+}
+
+/* ---------- Celular e tablet (DW10 / RNF01) ---------- */
+@media (max-width: 1023px) {
+  /* O Safari do iPhone amplia a página ao focar um campo com fonte menor que 16 px. */
+  .auth-campo input { font-size: 16px; }
+  .auth-topo a { display: inline-flex; align-items: center; min-height: 44px; }
 }

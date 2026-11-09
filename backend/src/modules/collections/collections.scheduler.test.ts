@@ -23,6 +23,7 @@ function preparar() {
     falharDepoisDoIntervalo: false,
     aguardar: new Map<string, Promise<void>>(),
     listagens: 0,
+    aguardarListagem: undefined as Promise<void> | undefined,
   };
   const rotina = criarRotinaColeta({
     agora: () => agora,
@@ -44,6 +45,7 @@ function preparar() {
     },
     async listarServicos() {
       estado.listagens++;
+      await estado.aguardarListagem;
       if (estado.falharListagem) throw new Error("API indisponível");
       return estado.lista;
     },
@@ -237,4 +239,59 @@ test("valida o intervalo alternativo antes de iniciar", () => {
     assert.throws(() => rotina.iniciar(valor), TypeError);
     assert.equal(rotina.status().executando, false);
   }
+});
+
+test("cada lote vencido consulta a lista antes de coletar e reconhece remoção e retorno sem reiniciar", async () => {
+  const { rotina, estado, avancar, horarios } = preparar();
+  estado.intervalos.set(servicos[0].id, 1);
+  estado.intervalos.set(servicos[1].id, 120);
+  rotina.iniciar();
+  await avancar(0);
+  assert.equal(estado.listagens, 1);
+  estado.lista = [servicos[1]];
+  await avancar(1000);
+  assert.equal(estado.listagens, 2);
+  assert.deepEqual(horarios(), [0]);
+  estado.lista = servicos;
+  await avancar(60_000);
+  assert.deepEqual(horarios(), [0, 61_000]);
+  assert.equal(rotina.status().executando, true);
+  await rotina.parar();
+});
+
+test("serviços vencidos juntos compartilham a descoberta e falhas não geram laço nem coleta obsoleta", async () => {
+  const { rotina, estado, avancar, horarios, timers } = preparar();
+  rotina.iniciar();
+  await avancar(0);
+  estado.falharListagem = true;
+  await avancar(30_000);
+  assert.equal(estado.listagens, 2);
+  assert.deepEqual(horarios(), [0]);
+  assert.deepEqual(horarios(servicos[1].id), [0]);
+  assert.equal(timers.size, 1);
+  estado.falharListagem = false;
+  await avancar(60_000);
+  assert.equal(estado.listagens, 3);
+  assert.deepEqual(horarios(), [0, 90_000]);
+  assert.deepEqual(horarios(servicos[1].id), [0, 90_000]);
+  await rotina.parar();
+});
+
+test("descoberta pendente impede despacho com lista antiga e a parada aguarda sua conclusão", async () => {
+  const { rotina, estado, avancar, horarios, timers } = preparar();
+  rotina.iniciar();
+  await avancar(0);
+  let liberar!: () => void;
+  estado.aguardarListagem = new Promise<void>((resolve) => { liberar = resolve; });
+  await avancar(30_000);
+  await avancar(90_000);
+  assert.equal(estado.listagens, 2);
+  assert.deepEqual(horarios(), [0]);
+  assert.equal(timers.size, 0);
+  const parada = rotina.parar();
+  liberar();
+  await parada;
+  await avancar(0);
+  assert.deepEqual(horarios(), [0]);
+  assert.equal(timers.size, 0);
 });

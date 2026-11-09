@@ -1,19 +1,18 @@
-import { useIndicadores } from "../hooks/useIndicadores.ts";
+import { useIndicadores, type EstadoIndicadores } from "../hooks/useIndicadores.ts";
 
 function formatar(valor: number, casas: number): string {
   return valor.toLocaleString("pt-BR", { maximumFractionDigits: casas });
 }
 
 /**
- * Painel de consumo da tela de login. Mostra os indicadores consolidados reais
- * (GET /dashboard/indicadores). Não há nenhum valor fixo neste arquivo.
+ * Painel de consumo, só a parte visual: recebe o estado dos indicadores já carregado.
+ * A tela administrativa usa esta versão para mostrar os mesmos números dos cards,
+ * com uma única consulta a GET /dashboard/indicadores.
  *
  * TODO(TP17/DW11): quando existir endpoint de histórico por dia (últimos 7 dias),
  * voltar a exibir o gráfico de barras do protótipo aqui, alimentado por ele.
  */
-export function ResumoConsumo() {
-  const estado = useIndicadores();
-
+export function ResumoConsumoVisao({ estado }: { estado: EstadoIndicadores }) {
   return (
     <section className="resumo" aria-labelledby="resumo-titulo">
       <h2 id="resumo-titulo">Consumo de energia</h2>
@@ -55,4 +54,13 @@ export function ResumoConsumo() {
       )}
     </section>
   );
+}
+
+/**
+ * Painel de consumo da tela de login. Mostra os indicadores consolidados reais
+ * (GET /dashboard/indicadores). Não há nenhum valor fixo neste arquivo.
+ */
+export function ResumoConsumo() {
+  const estado = useIndicadores();
+  return <ResumoConsumoVisao estado={estado} />;
 }
