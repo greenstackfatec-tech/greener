@@ -1,6 +1,7 @@
 /* Cards de indicadores consolidados (DW06). O visual do card vem de .dash-summary* (DashboardPage.css). */
 
 .ind .dash-summary-card strong { overflow-wrap: anywhere; }
+.ind .dash-summary-card > div { min-width: 0; overflow-wrap: anywhere; }
 .ind-unidade { font-size: 12px; font-weight: 600; letter-spacing: 0; color: #7d8980; white-space: nowrap; }
 
 /* Carregando: bloco cinza no lugar do número, com brilho suave. */
@@ -42,5 +43,10 @@
 
 @media (max-width: 700px) {
   .ind-esqueleto { height: 21px; width: 64px; }
-  .ind-unidade { font-size: 10px; }
+  .ind-aviso { font-size: 12px; }
+  .ind-aviso button { min-height: 44px; }
+}
+
+@media (max-width: 359px) {
+  .ind .dash-summary { grid-template-columns: minmax(0, 1fr); }
 }

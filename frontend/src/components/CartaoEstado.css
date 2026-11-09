@@ -30,6 +30,7 @@
   color: #1b291f;
   font-family: "Inter Variable", Inter, system-ui, sans-serif;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .cartao-estado[data-tom="indisponivel"] { --tom: var(--estado-indisponivel); --tom-fundo: var(--estado-indisponivel-fundo); --tom-texto: var(--estado-indisponivel-texto); }
 .cartao-estado[data-tom="sem_metricas"],
@@ -37,7 +38,7 @@
 .cartao-estado[data-tom="erro"] { --tom: var(--estado-erro); --tom-fundo: var(--estado-erro-fundo); --tom-texto: var(--estado-erro-texto); }
 .cartao-estado[data-tom="vazio"] { --tom: var(--estado-vazio); --tom-fundo: var(--estado-vazio-fundo); --tom-texto: var(--estado-vazio-texto); }
 
-.cartao-estado-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cartao-estado-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .cartao-estado-titulo { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; font-weight: 650; color: #1b291f; min-width: 0; }
 .cartao-estado-ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--tom); flex-shrink: 0; }
 .cartao-estado-selo { background: var(--tom-fundo); color: var(--tom-texto); border-radius: 6px; padding: 5px 9px; font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; white-space: nowrap; }
@@ -68,3 +69,8 @@
 
 /* No estado vazio o valor é uma chamada em texto, menor que um número (DD07). */
 .cartao-estado[data-tom="vazio"] .cartao-estado-valor strong { font-size: 19px; letter-spacing: -0.2px; }
+
+@media (max-width: 700px) {
+  .cartao-estado-selo, .cartao-estado-local dt, .cartao-estado-rodape { font-size: 12px; }
+  .cartao-estado-rodape button { min-height: 44px; }
+}

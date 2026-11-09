@@ -254,7 +254,7 @@ Para iniciar frontend, backend e PostgreSQL juntos, siga a seção Docker do [RE
 
 ## Responsividade
 
-As telas são feitas para celular, tablet e desktop (RNF01). A referência visual do celular são as imagens `docs/design/*-mobile.png`, todas com 390 px de largura. Nesta primeira versão, a responsividade foi verificada manualmente; o frontend ainda não tem testes automatizados de interface.
+As telas são feitas para celular, tablet e desktop (RNF01). A referência visual do celular são as imagens `docs/design/*-mobile.png`, todas com 390 px de largura. A responsividade é verificada manualmente; os testes automatizados de interface cobrem o roteamento e o estado acessível do botão de atualização do dashboard.
 
 ### Breakpoints
 
@@ -343,7 +343,7 @@ npm run build
 npm test
 ```
 
-`npm test` cobre apenas `servicos` e `indicadores`, não as telas. Anexe ao PR capturas de tela de pelo menos dois tamanhos (por exemplo, 390 e 768 px), sem tokens nem dados pessoais.
+`npm test` executa os testes de `servicos` e `indicadores` com Node e os testes de interface com Vitest, React Testing Library e jsdom. Estes verificam que `/cadastro` renderiza o formulário, que `/administrativa` sem token redireciona para `/login` e que o botão de atualização do dashboard acompanha o estado da consulta no nome acessível e em `aria-busy`. O CI executa a mesma suíte. Anexe ao PR capturas de tela de pelo menos dois tamanhos (por exemplo, 390 e 768 px), sem tokens nem dados pessoais.
 
 ---
 
