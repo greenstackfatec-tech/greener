@@ -16,7 +16,6 @@ docs/
 └── sprints/
     ├── product-backlog.md
     ├── sprint-1.md
-    ├── atas-sprint-1.pdf
     ├── sprint-2.md
     └── sprint-3.md
 └── design/
@@ -40,7 +39,6 @@ docs/
 | [Execução com Docker Compose](../README.md#-como-executar-o-projeto-com-docker) | Instruções para configurar o `.env`, iniciar PostgreSQL, backend e frontend e verificar a disponibilidade dos serviços. |
 | [Product Backlog](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/product-backlog.md) | Centraliza e prioriza requisitos, funcionalidades, melhorias e correções do produto. |
 | [Relatório da Sprint 1](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/sprint-1.md) | Registra o planejamento, as atividades, as entregas, as evidências, as pendências e as decisões da primeira sprint. |
-| [Atas da Sprint 1](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/atas-sprint-1.pdf) | Registra as daily meetings da primeira sprint: participantes, andamento de cada integrante, impedimentos e avisos. |
 | [Relatório da Sprint 2](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/sprint-2.md) | Registra o planejamento, as atividades, as entregas, as evidências, as pendências e as decisões da segunda sprint. |
 | [Relatório da Sprint 3](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/sprint-3.md) | Registra o planejamento, as atividades, as entregas, as evidências, as pendências e as decisões da terceira sprint. |
 
