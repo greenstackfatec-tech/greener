@@ -23,7 +23,7 @@ As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. A
 | `/` | Início | DW18 | Implementada (mostra o status do backend) |
 | `/login` | Login | DW19 | Implementada (JWT, "lembrar de mim", erros e bloqueio por tentativas) |
 | `/cadastro` | Cadastro | DW20 | Página provisória |
-| `/administrativa` | Administrativa | DW21 | Página provisória |
+| `/administrativa` | Administrativa | DW21, DW22 | Implementada (indicadores e serviços da API, intervalo de coleta; o card "Por recurso" aguarda endpoint) |
 | `/dashboard` | Dashboard | DW05, DW06, DW07 | Implementada (cards de indicadores, tabela e estados visuais) |
 | `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
 
@@ -68,7 +68,7 @@ As rotas estão declaradas em `src/rotas.tsx`, e seus caminhos ficam centralizad
 | `/login` | Login | Integrada a `POST /auth/login`, com validação, opção “Lembrar de mim” e tratamento de erros e limite de tentativas. |
 | `/cadastro` | Cadastro | Formulário de pessoa física ou jurídica com validação no frontend. O endpoint de cadastro ainda não existe no backend, portanto o envio não conclui o registro. |
 | `/dashboard` | Dashboard | Apresenta serviços, estados, busca e filtros. Os dados dependem dos campos enviados pelo backend. |
-| `/administrativa` | Área administrativa | Protótipo com dados de demonstração. A página e a leitura da configuração de monitoramento estão implementadas; a alteração depende de endpoint ainda não disponível. |
+| `/administrativa` | Área administrativa | Indicadores e lista de serviços vindos da API (`GET /dashboard/indicadores` e `GET /services`) e leitura da configuração de monitoramento. O card "Por recurso" aguarda endpoint, e a alteração do intervalo depende de endpoint ainda não disponível. |
 | `/dashboard/estados` | Galeria de estados | Disponível somente em desenvolvimento para conferência com os mocks. |
 
 **Observação sobre as rotas:** `src/rotas.tsx` contém mais de uma declaração para `/cadastro` e `/administrativa`. Revise essas entradas e mantenha uma única configuração por caminho antes de considerar a navegação dessas páginas definitiva.
@@ -114,7 +114,9 @@ A consulta do diagnóstico é repetida a cada trinta segundos. Quando uma atuali
 
 ### 3.5 Área administrativa
 
-A área administrativa contém elementos de protótipo com dados demonstrativos para aplicações, consumo por recurso e gráficos. Esses valores não representam medições reais do ambiente.
+Os três cards do topo (energia estimada, emissões estimadas e serviços ativos) usam `GET /dashboard/indicadores`, e a lista "Serviços monitorados" usa `GET /services` (energia e emissão da última coleta de cada serviço; serviços removidos ficam de fora). Ambas as consultas passam por `useIndicadores` e `useServicos`, são repetidas a cada `INTERVALO_ATUALIZACAO_SEGUNDOS` e mostram estados de carregamento, erro (com "Tentar de novo") e vazio. O painel "Consumo de energia" reaproveita o estado dos indicadores (`ResumoConsumoVisao`), sem uma segunda consulta.
+
+Duas partes continuam sem dado real, porque o backend ainda não tem endpoint para elas: o card "Por recurso" (parcela de CPU, memória, disco e rede) mostra um aviso de "ainda não disponível", e o gráfico dos últimos 7 dias depende dos endpoints de histórico (TP17/DW11). Nenhum valor fixo é exibido no lugar delas.
 
 O card de intervalo consulta `GET /monitoring-settings`, rota protegida por JWT. O frontend possui uma chamada preparada para `PUT /monitoring-settings`, mas o backend atual disponibiliza somente o GET. A alteração do intervalo depende da implementação do endpoint correspondente.
 
@@ -170,9 +172,8 @@ As telas precisam distinguir dados recebidos da API dos valores utilizados somen
 
 | Origem | Onde é utilizado | Observação |
 |---|---|---|
-| API do backend | Início, login, dashboard e diagnóstico da coleta. | Os valores dependem das respostas efetivas dos endpoints. |
+| API do backend | Início, login, dashboard, área administrativa e diagnóstico da coleta. | Os valores dependem das respostas efetivas dos endpoints. |
 | `mock-servicos.ts` | Cenários de desenvolvimento do dashboard. | Dados simulados, não são medições reais. |
-| `pages/administrativa-dados.ts` | Cards, gráfico e lista de aplicações da área administrativa. | Dados demonstrativos do protótipo. |
 
 Quando um campo não é enviado pelo backend, a interface deve representar a ausência de informação, sem inventar valores ou transformar `null` em zero.
 
@@ -310,13 +311,13 @@ Abra `http://localhost:5173`. Para trocar o cenário do Dashboard, acesse `http:
 
 **2. Simular o celular no navegador:** abra o DevTools (`F12`), ative a barra de dispositivos (`Ctrl+Shift+M`), escolha "Responsive" e percorra os tamanhos de teste em `/`, `/login`, `/cadastro`, `/administrativa` e `/dashboard`.
 
-**3. Ver a tela Administrativa sem backend.** A rota `/administrativa` exige token. Para conferir só o layout, rode no console do navegador (`F12 > Console`):
+**3. Ver a tela Administrativa sem backend.** A rota `/administrativa` exige token. Para conferir o layout, suba o modo mock (`npm run dev:mock`), que fornece indicadores e serviços de exemplo, e rode no console do navegador (`F12 > Console`):
 
 ```js
 sessionStorage.setItem("greener.token","x."+btoa(JSON.stringify({exp:Math.floor(Date.now()/1000)+3600}))+".x")
 ```
 
-Esse token é falso e serve apenas para testar a interface no seu computador. Não o salve em arquivo e não o inclua em PR, print ou log. O backend continua recusando-o.
+Esse token é falso e serve apenas para testar a interface no seu computador. Não o salve em arquivo e não o inclua em PR, print ou log. O backend continua recusando-o. Sem o modo mock e sem backend, os cards e a lista mostram o estado de erro; o card do intervalo de coleta também mostra erro, pois o mock não atende `/monitoring-settings`.
 
 **4. Testar no celular de verdade** (única forma de confirmar o zoom do iPhone). Com o celular na mesma rede Wi-Fi do computador:
 
@@ -343,7 +344,7 @@ npm run build
 npm test
 ```
 
-`npm test` executa os testes de `servicos` e `indicadores` com Node e os testes de interface com Vitest, React Testing Library e jsdom. Estes verificam que `/cadastro` renderiza o formulário, que `/administrativa` sem token redireciona para `/login` e que o botão de atualização do dashboard acompanha o estado da consulta no nome acessível e em `aria-busy`. O CI executa a mesma suíte. Anexe ao PR capturas de tela de pelo menos dois tamanhos (por exemplo, 390 e 768 px), sem tokens nem dados pessoais.
+`npm test` executa os testes de `servicos` e `indicadores` com Node e os testes de interface com Vitest, React Testing Library e jsdom. Estes verificam que `/cadastro` renderiza o formulário, que `/administrativa` sem token redireciona para `/login`, que a tela administrativa exibe os indicadores e os serviços da API (com os estados de carregamento, erro, vazio e sem coleta) e que o botão de atualização do dashboard acompanha o estado da consulta no nome acessível e em `aria-busy`. O CI executa a mesma suíte. Anexe ao PR capturas de tela de pelo menos dois tamanhos (por exemplo, 390 e 768 px), sem tokens nem dados pessoais.
 
 ---
 
