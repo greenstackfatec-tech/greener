@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SubmitEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLocation, type Location } from "react-router";
 import { CampoTexto } from "../components/CampoTexto.tsx";
 import { LayoutAutenticacao } from "../components/LayoutAutenticacao.tsx";
 import { ROTAS } from "../caminhos.ts";
@@ -16,6 +16,7 @@ function formatarEspera(segundos: number): string {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [lembrar, setLembrar] = useState(false);
@@ -35,6 +36,9 @@ export function LoginPage() {
     return () => window.clearInterval(intervalo);
   }, [bloqueado]);
 
+  // Se veio de uma rota protegida, guarda o destino para redirecionar após o login.
+  const destino = (location.state as { from?: Location })?.from?.pathname ?? ROTAS.dashboard;
+
   async function aoEnviar(evento: SubmitEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (enviando || bloqueado) return;
@@ -50,8 +54,7 @@ export function LoginPage() {
     setEnviando(true);
     try {
       await entrar(emailLimpo, senha, lembrar);
-      // TODO(DW21/DW05): trocar o destino se a equipe decidir levar o login direto à área administrativa.
-      navigate(ROTAS.dashboard);
+      navigate(destino, { replace: true });
     } catch (erro) {
       if (erro instanceof ErroApi && erro.status === 429) {
         setSegundosRestantes(erro.tentarNovamenteEmSegundos ?? 60);
