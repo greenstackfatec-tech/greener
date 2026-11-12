@@ -14,9 +14,9 @@ export const router = createBrowserRouter([
   { path: ROTAS.login, element: <LoginPage /> },
   { path: ROTAS.cadastro, element: <CadastroPage /> },
   // Rotas privadas: sem token, <RotaPrivada /> leva ao /login.
-  { element: <RotaPrivada />, children: [{ path: ROTAS.administrativa, element: <AdministrativaPage /> }] },
-  { path: ROTAS.dashboard, element: <DashboardPage /> },
-  ...(import.meta.env.DEV ? [{ path: ROTAS.dashboardEstados, element: <EstadosPage /> }] : []),
-  // Catch-all para 404 - deve ser a última rota
-  { path: ROTAS.notFound, element: <NotFoundPage /> },
+  { element: <RotaPrivada />, children: [
+    { path: ROTAS.administrativa, element: <AdministrativaPage /> },
+    { path: ROTAS.dashboard, element: <DashboardPage /> },
+    ...(import.meta.env.DEV ? [{ path: ROTAS.dashboardEstados, element: <EstadosPage /> }] : []),
+  ] },
 ]);
