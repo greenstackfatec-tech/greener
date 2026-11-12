@@ -27,8 +27,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
   await banco.query(await readFile(new URL("../../../../database/schema.sql", import.meta.url), "utf8"));
   const { tratarRequisicao } = await import("../../app.ts");
   const { encerrarConexao } = await import("../../db/connection.ts");
-  const { encerrarPool } = await import("./dashboard-indicators.repository.ts");
-  encerramentos.push(encerrarConexao, encerrarPool);
+  encerramentos.push(encerrarConexao);
   const servidor = createServer((request, response) => {
     void tratarRequisicao(request, response).catch(() => {
       response.writeHead(500);

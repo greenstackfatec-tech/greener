@@ -3,9 +3,7 @@
  * TP10 - Calcular indicadores consolidados: consumo total, emissão total, serviços ativos e indisponíveis (RF08).
  */
 
-import { criarPool } from "../../db/connection.ts";
-
-const pool = criarPool();
+import { consultar } from "../../db/connection.ts";
 
 /** Indicadores consolidados do ambiente. */
 export interface IndicadoresConsolidados {
@@ -57,7 +55,7 @@ export async function buscarIndicadoresConsolidados(): Promise<IndicadoresConsol
   `;
 
   try {
-    const resultado = await pool.query(sql);
+    const resultado = await consultar(sql);
     const row = resultado.rows[0];
     return {
       consumoTotalKwh: Number(row.consumo_total_kwh) || 0,
@@ -69,9 +67,4 @@ export async function buscarIndicadoresConsolidados(): Promise<IndicadoresConsol
     console.error("[DASHBOARD-INDICATORS-REPOSITORY] Erro ao buscar indicadores:", erro);
     throw new Error("Falha ao buscar indicadores consolidados no banco de dados");
   }
-}
-
-/** Fecha o pool de conexões (para testes/encerramento). */
-export async function encerrarPool(): Promise<void> {
-  await pool.end();
 }

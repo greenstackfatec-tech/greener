@@ -2,7 +2,6 @@ import { createServer } from "node:http";
 import { tratarRequisicao } from "./app.ts";
 import { encerrarConexao } from "./db/connection.ts";
 import { rotinaColeta } from "./modules/collections/collections.service.ts";
-import { encerrarPool as encerrarPoolIndicadores } from "./modules/dashboard-indicators/dashboard-indicators.repository.ts";
 
 const port = Number(process.env.PORT ?? 3000);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -44,7 +43,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
           process.exitCode = 1;
         }
       }
-      await Promise.all([encerrarConexao(), encerrarPoolIndicadores()]);
+      await encerrarConexao();
     }).catch((erro: unknown) => {
       console.error("Falha ao encerrar a conexão com o banco:", erro);
       process.exitCode = 1;
