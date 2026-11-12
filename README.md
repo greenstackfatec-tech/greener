@@ -249,7 +249,7 @@ cp .env.example .env
 
 O arquivo `.env.example` contém as configurações iniciais para execução local.
 
-Para habilitar a autenticação JWT, configure a variável `JWT_SECRET` no arquivo `.env`. Gere uma chave com o comando:
+O exemplo já inclui um `JWT_SECRET` exclusivo de desenvolvimento para permitir o login local. Fora desse ambiente, substitua-o por uma chave própria, gerada com o comando:
 
 ```bash
 node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"

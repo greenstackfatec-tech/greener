@@ -84,7 +84,7 @@ No Docker Compose, as variáveis são lidas do `.env` da raiz, criado a partir d
 | `API_TIMEOUT_MS` | Timeout das chamadas externas, em ms. | `10000`. |
 | `COLLECTIONS_AUTO_START` | Controla início automático da coleta. | `true`; aceita `true` ou `false`. |
 
-Gere um segredo JWT aleatório:
+O `.env.example` já inclui um segredo JWT para permitir o login local. Fora do desenvolvimento local, gere um segredo próprio:
 
 ```bash
 node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
