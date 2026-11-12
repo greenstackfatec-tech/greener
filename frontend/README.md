@@ -108,6 +108,8 @@ Os cards são atualizados no mesmo intervalo da tabela (seção “Atualização
 
 O dashboard consulta os serviços por `GET /services` e apresenta estados, busca textual e filtro por situação. O diagnóstico da rotina é consultado por `GET /collections/rotina/status`.
 
+**Filtros por serviço, região e período (DW14, RF10, RF11).** A barra `components/FiltrosAnalise.tsx` filtra a lista por serviço e por região (serviços sem região aparecem em "Não informado") e escolhe o período: última 1 h, últimas 24 h, últimos 7 dias ou personalizado (início e fim). Período personalizado sem data, com data inválida ou com início igual ou depois do fim fica marcado, com a mensagem do erro na tela. A regra fica em `src/filtros.ts` e o estado em `hooks/useFiltrosAnalise.ts`, guardado na `sessionStorage` para valer também no histórico, no ranking e na comparação; `resolverPeriodo` devolve o início e o fim prontos para as rotas do TP17. Na lista do dashboard, que mostra a coleta mais recente, o período não muda os valores. A lista também pode ser ordenada por nome, maior consumo ou maior emissão de CO₂e. Na atualização automática só os dados mudam: filtros, busca, ordenação e visão (cartões ou tabela) continuam como a pessoa deixou.
+
 A interface distingue estados como ativo, indisponível, sem métricas, carregando, erro de atualização e lista vazia. Campos que não chegam na resposta devem continuar sem valor, em vez de serem preenchidos com números fictícios.
 
 A consulta do diagnóstico é repetida a cada trinta segundos. Quando uma atualização falha após uma resposta válida, o hook de serviços preserva os últimos dados válidos para que a tela possa informar que eles podem estar desatualizados.

@@ -3,6 +3,8 @@ import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado } from "../components/CartaoEstado.tsx";
 import { CardsIndicadores } from "../components/CardsIndicadores.tsx";
+import { FiltrosAnalise } from "../components/FiltrosAnalise.tsx";
+import { filtrarPorServicoERegiao, regioesDisponiveis } from "../filtros.ts";
 import { TEXTOS_SITUACAO, rodapeDaSituacao } from "../estadosServico.ts";
 import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
 import { dataHora, duracao, haQuanto, numero } from "../formatacao.ts";
@@ -10,9 +12,19 @@ import { useAgora } from "../hooks/useAgora.ts";
 import { useServicos } from "../hooks/useServicos.ts";
 import { useIndicadores } from "../hooks/useIndicadores.ts";
 import { useMonitoramentoColeta } from "../hooks/useMonitoramentoColeta.ts";
-import { situacaoDoServico } from "../services/servicos.ts";
+import { useFiltrosAnalise } from "../hooks/useFiltrosAnalise.ts";
+import { situacaoDoServico, type Servico } from "../services/servicos.ts";
 import { localizacaoDoServico, NAO_INFORMADO } from "../localizacao.ts";
 import "./DashboardPage.css";
+
+type Ordem = "nome" | "energia" | "co2e";
+
+const COMPARAR: Record<Ordem, (a: Servico, b: Servico) => number> = {
+  nome: (a, b) => a.nome.localeCompare(b.nome, "pt-BR"),
+  // Maior primeiro; serviço sem valor vai para o fim.
+  energia: (a, b) => (b.energiaKwh ?? -1) - (a.energiaKwh ?? -1),
+  co2e: (a, b) => (b.emissaoCo2eG ?? -1) - (a.emissaoCo2eG ?? -1),
+};
 
 export function DashboardPage() {
   const { servicos, carregando, atualizando, erro, atualizadoEm, recarregar } = useServicos(INTERVALO_ATUALIZACAO_SEGUNDOS * 1000);
@@ -20,6 +32,9 @@ export function DashboardPage() {
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
   const [visao, setVisao] = useState<"cartoes" | "tabela">("cartoes");
+  const [ordem, setOrdem] = useState<Ordem>("nome");
+  // Filtros, ordem e visão ficam no estado da tela: a atualização automática só troca os dados (RF11).
+  const { filtros, alterar: alterarFiltros, limpar: limparFiltros } = useFiltrosAnalise();
   const indicadores = useIndicadores(INTERVALO_ATUALIZACAO_SEGUNDOS * 1000);
   const recarregarIndicadores = indicadores.recarregar;
   const { statusColeta, erroMonitoramento, atualizarMonitoramento } = useMonitoramentoColeta();
@@ -33,11 +48,16 @@ export function DashboardPage() {
 
   const lista = useMemo(() => servicos ?? [], [servicos]);
 
-  const filtrados = useMemo(() => lista.filter((s) => {
+  const regioes = useMemo(() => regioesDisponiveis(lista), [lista]);
+  const opcoesServico = useMemo(() => [...lista].sort(COMPARAR.nome), [lista]);
+
+  const filtrados = useMemo(() => {
     const termo = busca.trim().toLocaleLowerCase("pt-BR");
-    const corresponde = `${s.nome} ${s.cidade ?? ""} ${s.regiao ?? ""} ${s.pais ?? ""}`.toLocaleLowerCase("pt-BR").includes(termo);
-    return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
-  }), [lista, busca, filtro]);
+    return filtrarPorServicoERegiao(lista, filtros).filter((s) => {
+      const corresponde = `${s.nome} ${s.cidade ?? ""} ${s.regiao ?? ""} ${s.pais ?? ""}`.toLocaleLowerCase("pt-BR").includes(termo);
+      return corresponde && (filtro === "todos" || situacaoDoServico(s) === filtro);
+    }).sort(COMPARAR[ordem]);
+  }, [lista, filtros, busca, filtro, ordem]);
 
   const ultimaAtualizacao = haQuanto(atualizadoEm, agora);
 
@@ -71,7 +91,7 @@ export function DashboardPage() {
       <div className="dash-empty">
         <span>⌕</span>
         <strong>Nenhum serviço encontrado</strong>
-        <p>Ajuste a busca ou o filtro para ver os serviços.</p>
+        <p>Ajuste a busca ou os filtros para ver os serviços.</p>
       </div>
     );
   } else {
@@ -155,7 +175,9 @@ export function DashboardPage() {
 
           <section className="dash-panel" id="servicos">
             <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div>{servicos !== null && <span className="dash-count">{filtrados.length} serviços</span>}</div>
-            <div className="dash-toolbar"><label className="dash-search"><span>⌕</span><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço ou localização..." aria-label="Buscar serviço ou localização"/></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Filtrar por estado"><option value="todos">Todos os estados</option><option value="ativo">Ativos</option><option value="indisponivel">Indisponíveis</option><option value="sem_metricas">Sem métricas</option><option value="removido">Removidos</option></select><div className="dash-visao" role="group" aria-label="Modo de exibição"><button type="button" aria-pressed={visao === "cartoes"} onClick={() => setVisao("cartoes")}>Cartões</button><button type="button" aria-pressed={visao === "tabela"} onClick={() => setVisao("tabela")}>Tabela</button></div></div>
+            <FiltrosAnalise filtros={filtros} servicos={opcoesServico} regioes={regioes} aoAlterar={alterarFiltros} aoLimpar={limparFiltros} />
+            <p className="dash-filtros-nota">O período vale para o histórico, o ranking e a comparação; esta lista mostra a coleta mais recente de cada serviço.</p>
+            <div className="dash-toolbar"><label className="dash-search"><span>⌕</span><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço ou localização..." aria-label="Buscar serviço ou localização"/></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Filtrar por estado"><option value="todos">Todos os estados</option><option value="ativo">Ativos</option><option value="indisponivel">Indisponíveis</option><option value="sem_metricas">Sem métricas</option><option value="removido">Removidos</option></select><select value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} aria-label="Ordenar serviços"><option value="nome">Nome (A–Z)</option><option value="energia">Maior consumo</option><option value="co2e">Maior emissão de CO₂e</option></select><div className="dash-visao" role="group" aria-label="Modo de exibição"><button type="button" aria-pressed={visao === "cartoes"} onClick={() => setVisao("cartoes")}>Cartões</button><button type="button" aria-pressed={visao === "tabela"} onClick={() => setVisao("tabela")}>Tabela</button></div></div>
 
             {/* Falha com dados já na tela: mantém a tabela e avisa que os valores podem estar desatualizados (RNF04). */}
             {erroExibido && servicos !== null && (

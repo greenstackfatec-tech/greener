@@ -45,3 +45,7 @@
 .dash-nav-item{min-height:44px}
 .dash-panel-heading p,.dash-empty p,.dash-aviso-erro,.dash-aviso-erro small,.dash-service-name,.dash-table th,.dash-table td,.dash-status,.dash-service-id,.dash-country,.dash-count,.dash-eyebrow,.dash-table-footer,.dash-footnote,.dash-summary-card small,.dash-summary-card em,.dash-energia small,.dash-sidebar-bottom small{font-size:12px}
 }
+
+/* Filtros (DW14) */
+.dash-filtros-nota{margin:0;padding:0 22px 12px;font-size:11px;color:#748078}
+@media(max-width:700px){.dash-filtros-nota{padding:0 14px 12px;font-size:12px}}
