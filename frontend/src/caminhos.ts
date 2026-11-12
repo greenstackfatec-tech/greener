@@ -10,4 +10,6 @@ export const ROTAS = {
   dashboard: "/dashboard",
   /** Galeria do DD07; só registrada em desenvolvimento. */
   dashboardEstados: "/dashboard/estados",
+  /** Página 404 - rota catch-all */
+  notFound: "*",
 } as const;
