@@ -1,3 +1,10 @@
+// Configurar variáveis de ambiente ANTES de importar módulos que criam pools
+process.env.PGHOST ??= "localhost";
+process.env.PGPORT ??= "5432";
+process.env.PGDATABASE ??= "greener";
+process.env.PGUSER ??= "greener";
+process.env.PGPASSWORD ??= "greener_dev_only";
+
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -7,11 +14,21 @@ import type { AgregacaoParams, HistoricoParams, RankingParams } from "./analytic
 
 const { Pool } = pg;
 
+// Configuração de conexão para o banco de testes (localhost:5432 do docker-compose)
+const dbConfig = {
+  host: process.env.PGHOST ?? "localhost",
+  port: Number(process.env.PGPORT ?? 5432),
+  database: process.env.PGDATABASE ?? "greener",
+  user: process.env.PGUSER ?? "greener",
+  password: process.env.PGPASSWORD ?? "greener_dev_only",
+  connectionTimeoutMillis: 5000,
+};
+
 test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
   // Isola cada execução em schema próprio
   const schema = `analytics_${randomUUID().replaceAll("-", "")}`;
-  const administrador = new Pool({ connectionTimeoutMillis: 5000 });
-  const banco = new Pool({ options: `-c search_path=${schema}`, connectionTimeoutMillis: 5000 });
+  const administrador = new Pool({ ...dbConfig });
+  const banco = new Pool({ ...dbConfig, options: `-c search_path=${schema}` });
   const opcoesAnteriores = process.env.PGOPTIONS;
   // O fuso da sessão difere de UTC para detectar dependência acidental do servidor.
   process.env.PGOPTIONS = `-c search_path=${schema} -c TimeZone=Pacific/Auckland`;

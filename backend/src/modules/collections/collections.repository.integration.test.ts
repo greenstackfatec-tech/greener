@@ -1,3 +1,10 @@
+// Configurar variáveis de ambiente ANTES de importar módulos que criam pools
+process.env.PGHOST ??= "localhost";
+process.env.PGPORT ??= "5432";
+process.env.PGDATABASE ??= "greener";
+process.env.PGUSER ??= "greener";
+process.env.PGPASSWORD ??= "greener_dev_only";
+
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
