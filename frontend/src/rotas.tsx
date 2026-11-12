@@ -7,6 +7,7 @@ import { DashboardPage } from "./pages/DashboardPage.tsx";
 import { AdministrativaPage } from "./pages/AdministrativaPage.tsx";
 import { RotaPrivada } from "./components/RotaPrivada.tsx";
 import { EstadosPage } from "./pages/EstadosPage.tsx";
+import { NotFoundPage } from "./pages/NotFoundPage.tsx";
 
 export const router = createBrowserRouter([
   { path: ROTAS.inicio, element: <InicioPage /> },
@@ -16,4 +17,6 @@ export const router = createBrowserRouter([
   { element: <RotaPrivada />, children: [{ path: ROTAS.administrativa, element: <AdministrativaPage /> }] },
   { path: ROTAS.dashboard, element: <DashboardPage /> },
   ...(import.meta.env.DEV ? [{ path: ROTAS.dashboardEstados, element: <EstadosPage /> }] : []),
+  // Catch-all para 404 - deve ser a última rota
+  { path: ROTAS.notFound, element: <NotFoundPage /> },
 ]);
