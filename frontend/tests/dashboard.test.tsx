@@ -114,3 +114,25 @@ test("filtro por serviço mostra só o serviço escolhido e limpar volta a mostr
   fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
   expect(nomesNaTabela()).toEqual(["API", "Fila"]);
 });
+
+test("mostra a hora da última coleta em São Paulo e os intervalos de coleta e de atualização", async () => {
+  vi.mocked(indicadores.consultarIndicadores).mockResolvedValue({
+    consumoTotalKwh: 1,
+    emissaoTotalCo2eG: 2,
+    servicosAtivos: 1,
+    servicosIndisponiveis: 0,
+    ultimaColetaEm: "2026-11-13T22:09:00.000Z",
+    intervaloColetaSegundos: 60,
+  });
+  render(<DashboardPage />);
+
+  expect(await screen.findByText(
+    `Última coleta: 13/11/2026, 19:09 (horário de São Paulo) · Coleta a cada 1 min · Tela atualiza a cada ${INTERVALO_ATUALIZACAO_SEGUNDOS} s`,
+  )).toBeTruthy();
+});
+
+test("sem nenhuma coleta, avisa em vez de mostrar uma hora", async () => {
+  render(<DashboardPage />);
+
+  expect(await screen.findByText(/^Nenhuma coleta registrada ainda · Tela atualiza a cada/)).toBeTruthy();
+});

@@ -171,7 +171,7 @@ export function DashboardPage() {
           </div>
 
           {/* Indicadores consolidados vindos do backend (DW06 / RF08). */}
-          <CardsIndicadores estado={indicadores} aoTentarDeNovo={recarregarIndicadores} />
+          <CardsIndicadores estado={indicadores} aoTentarDeNovo={recarregarIndicadores} intervaloAtualizacaoSegundos={INTERVALO_ATUALIZACAO_SEGUNDOS} />
 
           <section className="dash-panel" id="servicos">
             <div className="dash-panel-heading"><div><h2>Serviços monitorados</h2><p>Indicadores individuais da última coleta disponível.</p></div>{servicos !== null && <span className="dash-count">{filtrados.length} serviços</span>}</div>
