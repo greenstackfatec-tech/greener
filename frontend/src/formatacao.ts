@@ -28,6 +28,11 @@ export function dataHora(instante: number): string {
   return new Date(instante).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "medium" });
 }
 
+/** Data e hora no horário de São Paulo ("13/11/2026, 19:09"), qualquer que seja o fuso do navegador. */
+export function dataHoraSaoPaulo(instante: string): string {
+  return new Date(instante).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
+}
+
 /** Duração em segundos como texto curto: 30 vira "30 s" e 120 vira "2 min". */
 export function duracao(segundos: number): string {
   return segundos >= 60 && segundos % 60 === 0 ? `${segundos / 60} min` : `${segundos} s`;
