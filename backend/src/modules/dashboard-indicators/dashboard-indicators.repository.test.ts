@@ -19,6 +19,7 @@ test("indicadores e prontidão compartilham o mesmo pool de conexão", async (t)
       emissao_total_co2e_g: "15.5",
       servicos_ativos: "2",
       servicos_indisponiveis: "1",
+      ultima_coleta_em: "2026-11-13T22:00:00.000Z",
     }] };
   });
 
@@ -31,5 +32,6 @@ test("indicadores e prontidão compartilham o mesmo pool de conexão", async (t)
     emissaoTotalCo2eG: 15.5,
     servicosAtivos: 2,
     servicosIndisponiveis: 1,
+    ultimaColetaEm: new Date("2026-11-13T22:00:00.000Z"),
   });
 });
