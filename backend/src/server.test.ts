@@ -32,7 +32,7 @@ async function preparar(t: TestContext, automatico?: string) {
   const processo = spawn(process.execPath, [
     "--experimental-strip-types", "--input-type=module", "--eval",
     `import pg from "pg";
-     pg.Pool.prototype.query = async () => ({ rows: [{ valor: "60" }] });
+     pg.Pool.prototype.query = async () => ({ rows: [{ valor: "45" }] });
      await import("./src/server.ts");
      process.on("message", () => { process.emit("SIGTERM"); process.disconnect(); });`,
   ], {
@@ -86,7 +86,7 @@ test("TP06 servidor inicia a rotina por padrão, compartilha status/controle e e
   await app.encerrar();
 });
 
-test("ambiente isolado pode desativar início automático e validar intervalo alternativo pelo HTTP", async (t) => {
+test("início HTTP valida o body e usa a configuração persistida sem aceitar substituição", async (t) => {
   const app = await preparar(t, "false");
   assert.equal((await app.status()).dados.executando, false);
   assert.equal(app.listagens(), 0);
@@ -98,9 +98,13 @@ test("ambiente isolado pode desativar início automático e validar intervalo al
   const dados = (await inicio.json()) as {
     dados: { intervaloSegundos: number; intervaloAlternativoSegundos: number };
   };
-  assert.equal(dados.dados.intervaloSegundos, 1);
+  assert.equal(dados.dados.intervaloSegundos, 45);
   assert.equal(dados.dados.intervaloSegundos, dados.dados.intervaloAlternativoSegundos);
-  assert.equal((await app.status()).dados.intervaloAlternativoSegundos, 1);
+  assert.equal((await app.status()).dados.intervaloAlternativoSegundos, 45);
+  assert.equal((await app.parar()).status, 200);
+  const reinicio = await app.iniciar();
+  assert.equal(reinicio.status, 200);
+  assert.equal((await reinicio.json() as { dados: { intervaloSegundos: number } }).dados.intervaloSegundos, 45);
   assert.equal((await app.parar()).status, 200);
   await app.encerrar();
 });

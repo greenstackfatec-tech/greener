@@ -129,7 +129,6 @@ async function coletarEGravarServico(
   aplicacaoId: number,
   intervalo: number,
   contexto: ContextoFalha,
-  informarIntervalo?: (segundos: number) => void,
 ): Promise<ResultadoColeta> {
   const { region_code: codigoRegiao } = servicoApi.location;
   const cadastro = cadastrosDescobertos.get(servicoApi)?.cadastro;
@@ -174,7 +173,6 @@ async function coletarEGravarServico(
   }
   resolverFalha(contexto);
 
-  informarIntervalo?.(respostaMetricas.collection_interval_seconds);
   const intervaloSegundos = respostaMetricas.collection_interval_seconds;
 
   // Falhas no cálculo não descartam as métricas recebidas.
@@ -210,7 +208,6 @@ const coletasPendentes = new Map<string, Promise<ResultadoColeta>>();
 export function coletarServico(
   servico: ServicoApi,
   intervalo: number,
-  informarIntervalo?: (segundos: number) => void,
   aplicacaoId?: number,
 ): Promise<ResultadoColeta> {
   const anterior = coletasPendentes.get(servico.id);
@@ -226,7 +223,7 @@ export function coletarServico(
       if (cadastrosDescobertos.get(servico)?.presenca.presente === false) {
         throw new ColetaCancelada("Serviço removido antes do início da coleta");
       }
-      const resultado = await coletarEGravarServico(servico, id, intervalo, contexto, informarIntervalo);
+      const resultado = await coletarEGravarServico(servico, id, intervalo, contexto);
       resolverFalha({ ...contexto, etapa: "persistencia" });
       resolverFalha({ ...contexto, etapa: "configuracao" });
       monitoramento.concluirColeta(servico.id, resultado.resultado === "completo");
@@ -288,7 +285,7 @@ export async function executarRodadaColeta(): Promise<ResultadoRodadaColeta> {
   }
   const intervalo = await buscarIntervaloAlternativo();
   const tarefas = servicosApi.map((servicoApi) =>
-    coletarServico(servicoApi, intervalo, undefined, aplicacaoId),
+    coletarServico(servicoApi, intervalo, aplicacaoId),
   );
 
   // Espera todas as gravações terminarem antes de reportar uma falha.

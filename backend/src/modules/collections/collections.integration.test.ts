@@ -8,6 +8,8 @@ import pg from "pg";
 import { tratarRequisicaoMock } from "../../mocks/app.ts";
 import { metricas, regioes, servicos } from "../../mocks/fixtures.ts";
 import { criarRotinaColeta } from "./collections.scheduler.ts";
+import { gerarToken } from "../auth/jwt.ts";
+import { calcularColeta } from "../../calculos/calculo-energia.ts";
 import type { ServicoComUltimaColeta } from "../services/services.repository.ts";
 import type { IndicadoresDashboard } from "../dashboard-indicators/dashboard-indicators.service.ts";
 import type { ResultadoRodadaColeta } from "./collections.types.ts";
@@ -153,6 +155,24 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
   const urlApi = `http://127.0.0.1:${enderecoApi.port}`;
   const executar = () => fetch(`${urlApi}/collections/executar`, { method: "POST" });
   let idServico: number;
+
+  await t.test("configuração autenticada lê o valor persistido, inclusive quando diferente de 60", async () => {
+    const valorAnterior = (await banco.query("SELECT valor FROM configuracoes WHERE chave = 'intervalo_coleta_segundos'")).rows[0].valor;
+    const segredoAnterior = process.env.JWT_SECRET;
+    try {
+      process.env.JWT_SECRET = randomUUID();
+      await banco.query("UPDATE configuracoes SET valor = '45' WHERE chave = 'intervalo_coleta_segundos'");
+      assert.equal((await fetch(`${urlApi}/monitoring-settings`)).status, 401);
+      const token = await gerarToken("1");
+      const resposta = await fetch(`${urlApi}/monitoring-settings`, { headers: { authorization: `Bearer ${token}` } });
+      assert.equal(resposta.status, 200);
+      assert.deepEqual(await resposta.json(), { intervaloColetaSegundos: 45 });
+    } finally {
+      await banco.query("UPDATE configuracoes SET valor = $1 WHERE chave = 'intervalo_coleta_segundos'", [valorAnterior]);
+      if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
+      else process.env.JWT_SECRET = segredoAnterior;
+    }
+  });
 
   await t.test("rodada confirma serviços e métricas com suas chaves estrangeiras", async () => {
     const resposta = await executar();
@@ -515,6 +535,52 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     }
   });
 
+  await t.test("duas coletas automáticas respeitam 60s e preservam a duração e o cálculo da amostra", { timeout: 90_000 }, async (t) => {
+    const { listarServicos } = await import("../../integrations/metrics-api.ts");
+    const { coletarServico, buscarIntervaloAlternativo } = await import("./collections.service.ts");
+    const registros: { horario: string; mensagem: string }[] = [];
+    const rotina = criarRotinaColeta({
+      listarServicos, coletarServico, buscarIntervaloAlternativo,
+      logger: {
+        log: (mensagem: string) => { registros.push({ horario: new Date().toISOString(), mensagem }); },
+        warn() {}, error() {},
+      },
+    });
+    const intervaloAnterior = estado.intervaloApi;
+    t.after(async () => { await rotina.parar(); estado.intervaloApi = intervaloAnterior; });
+    estado.intervaloApi = 30;
+    const antes = await buscarHistoricoColetas(idServico);
+    rotina.iniciar();
+    const limite = Date.now() + 80_000;
+    let historico = await buscarHistoricoColetas(idServico);
+    while (historico.length < antes.length + 2) {
+      assert.ok(Date.now() < limite, "A rotina não gravou duas coletas com intervalo de 60s");
+      await setTimeout(100);
+      historico = await buscarHistoricoColetas(idServico);
+    }
+    await rotina.parar();
+    const [segunda, primeira] = historico;
+    const diferencaSegundos = (segunda.coletadoEm.getTime() - primeira.coletadoEm.getTime()) / 1000;
+    assert.equal(rotina.status().intervaloAlternativoSegundos, 60);
+    assert.ok(diferencaSegundos >= 60);
+    const esperado = calcularColeta(
+      { ...metricas, collection_interval_seconds: 30, metrics: { ...metricas.metrics, cpu_percent: estado.cpuPercentual } },
+      { ...regioes[0], region_code: regioes[0].code },
+    );
+    for (const coleta of [primeira, segunda]) {
+      assert.equal(coleta.intervaloSegundos, 30);
+      assert.equal(coleta.duracaoSegundos, 30);
+      assert.equal(coleta.energiaKwh, esperado.energiaKwh);
+      assert.equal(coleta.emissaoCo2eG, esperado.emissaoCo2eG);
+    }
+    t.diagnostic(JSON.stringify({
+      servicoId: idServico, idExterno: servicos[0].id, intervaloConfiguradoSegundos: 60,
+      duracaoAmostraSegundos: 30, primeiraColeta: primeira.coletadoEm.toISOString(),
+      segundaColeta: segunda.coletadoEm.toISOString(), diferencaSegundos,
+      logs: registros.filter((registro) => registro.mensagem.startsWith(`[COLETA] ${servicos[0].id}:`)),
+    }));
+  });
+
   await t.test("TP06 duas coletas automáticas preservam estados diferentes no PostgreSQL", async (t) => {
     const { listarServicos } = await import("../../integrations/metrics-api.ts");
     const { coletarServico, buscarIntervaloAlternativo } = await import("./collections.service.ts");
@@ -522,8 +588,14 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       listarServicos, coletarServico, buscarIntervaloAlternativo,
       logger: { log() {}, warn() {}, error() {} },
     });
-    t.after(() => rotina.parar());
-    estado.intervaloApi = 1;
+    const configuracaoAnterior = (await banco.query("SELECT valor FROM configuracoes WHERE chave = 'intervalo_coleta_segundos'")).rows[0].valor;
+    await banco.query("UPDATE configuracoes SET valor = '1' WHERE chave = 'intervalo_coleta_segundos'");
+    t.after(async () => {
+      await rotina.parar();
+      await banco.query("UPDATE configuracoes SET valor = $1 WHERE chave = 'intervalo_coleta_segundos'", [configuracaoAnterior]);
+      estado.intervaloApi = 60;
+    });
+    estado.intervaloApi = 30;
     const antes = await buscarHistoricoColetas(idServico);
     async function aguardarQuantidade(quantidade: number) {
       const limite = Date.now() + 5000;
@@ -543,6 +615,11 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     assert.equal(segunda.cpuPercentual, 40);
     assert.notEqual(segunda.id, primeira.id);
     assert.ok(segunda.coletadoEm > primeira.coletadoEm);
+    assert.ok(segunda.coletadoEm.getTime() - primeira.coletadoEm.getTime() >= 1000);
+    assert.equal(primeira.intervaloSegundos, 30);
+    assert.equal(primeira.duracaoSegundos, 30);
+    assert.equal(segunda.intervaloSegundos, 30);
+    assert.equal(segunda.duracaoSegundos, 30);
     const historico = await buscarHistoricoColetas(idServico);
     assert.deepEqual(historico.find((coleta) => coleta.id === primeira.id), primeira);
     const cadastroSalvo = await banco.query("SELECT id::int FROM servicos WHERE id_externo = $1", [servicos[0].id]);
@@ -654,13 +731,15 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     const original = cadastro;
     const novo = { ...structuredClone(servicos[1]), id: "servico-adicionado", name: "Serviço adicionado" };
     cadastro = [structuredClone(servicos[0])];
-    estado.intervaloApi = 1;
+    const configuracaoAnterior = (await banco.query("SELECT valor FROM configuracoes WHERE chave = 'intervalo_coleta_segundos'")).rows[0].valor;
+    await banco.query("UPDATE configuracoes SET valor = '1' WHERE chave = 'intervalo_coleta_segundos'");
+    estado.intervaloApi = 30;
     const antes = await estadoServico();
     const historicoAntes = await buscarHistoricoColetas(idServico);
     let idNovo: number | undefined;
     try {
-      assert.equal(rotinaColeta.iniciar(1), true);
-      assert.equal(rotinaColeta.iniciar(1), false);
+      assert.equal(rotinaColeta.iniciar(), true);
+      assert.equal(rotinaColeta.iniciar(), false);
       await aguardar(async () => (await buscarHistoricoColetas(idServico)).length > historicoAntes.length);
       cadastro = [cadastro[0], novo];
       await aguardar(async () => {
@@ -700,6 +779,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       assert.deepEqual(await eventos(), aposRetorno);
     } finally {
       await rotinaColeta.parar();
+      await banco.query("UPDATE configuracoes SET valor = $1 WHERE chave = 'intervalo_coleta_segundos'", [configuracaoAnterior]);
       cadastro = original;
       estado.intervaloApi = 60;
     }
