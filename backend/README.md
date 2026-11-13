@@ -189,7 +189,7 @@ Fluxo principal:
 6. Persistir a amostra e o estado da coleta.
 7. Programar a próxima execução.
 
-Cada serviço utiliza seu próprio `collection_interval_seconds`, quando válido. O intervalo começa a contar após o término da coleta, incluindo cálculo e persistência. Coletas manuais e automáticas do mesmo serviço aguardam a anterior para evitar sobreposição.
+Todos os serviços utilizam o intervalo salvo em `configuracoes`, na chave `intervalo_coleta_segundos` (60 segundos no seed). A espera começa após o término da coleta, incluindo cálculo e persistência. O `collection_interval_seconds` da API permanece como duração da amostra usada no cálculo e no histórico. Coletas manuais e automáticas do mesmo serviço aguardam a anterior para evitar sobreposição.
 
 Antes de cada ciclo de coleta, a descoberta compara os IDs externos da API com os serviços persistidos da aplicação monitorada. Serviços novos são cadastrados e passam a ser coletados; ausentes recebem `removido`, preservando o cadastro e o histórico; quando reaparecem, são reativados no mesmo registro e voltam a ser coletados, sem reiniciar a rotina. As mudanças e seus horários de detecção ficam em `logs_sistema`, com as ações `servico_incluido`, `servico_removido` e `servico_reativado`. Uma lista válida vazia confirma a ausência dos serviços monitorados; falhas na listagem não provocam remoções.
 

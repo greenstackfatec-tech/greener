@@ -52,8 +52,15 @@ async function assinar(payload: JWTPayload, algoritmo = "HS256", chave = lerConf
 test("login e proteção HTTP passam pelas camadas reais, simulando só a consulta ao banco", async (t) => {
   let consultas = 0;
   let falharConsulta = false;
+  let intervaloConfigurado = "45";
+  let falharConfiguracao = false;
   const emailsExistentes = new Set([usuario.email, "limitada@greener.com"]);
   t.mock.method(pg.Pool.prototype, "query", async (sql: string, parametros: unknown[]) => {
+    if (/FROM configuracoes\b/.test(sql)) {
+      assert.deepEqual(parametros, ["intervalo_coleta_segundos"]);
+      if (falharConfiguracao) throw new Error("Detalhe interno da consulta de configuração");
+      return { rows: [{ valor: intervaloConfigurado }] };
+    }
     if (!/FROM usuarios\b/.test(sql)) return { rows: [] };
     consultas += 1;
     assert.match(sql, /WHERE email = \$1$/);
@@ -85,9 +92,31 @@ test("login e proteção HTTP passam pelas camadas reais, simulando só a consul
     assert.equal(configuracao.status, 200);
     assert.equal(configuracao.headers.get("cache-control"), "no-store");
     const dadosConfiguracao = await configuracao.json() as { intervaloColetaSegundos: unknown };
-    assert.ok(typeof dadosConfiguracao.intervaloColetaSegundos === "number"
-      && Number.isSafeInteger(dadosConfiguracao.intervaloColetaSegundos)
-      && dadosConfiguracao.intervaloColetaSegundos > 0);
+    assert.deepEqual(dadosConfiguracao, { intervaloColetaSegundos: 45 });
+  });
+
+  await t.test("configuração inválida ou banco indisponível não devolvem um intervalo fictício", async (t) => {
+    const base = await iniciarServidor(t);
+    const respostaLogin = await login(base);
+    const { token } = await respostaLogin.json() as LoginAutenticado;
+    const consultar = () => fetch(`${base}/monitoring-settings`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    try {
+      for (const valor of ["0", "-1", "inválido", "1.5", "2147484"]) {
+        intervaloConfigurado = valor;
+        assert.equal((await consultar()).status, 500);
+      }
+      intervaloConfigurado = "45";
+      falharConfiguracao = true;
+      const resposta = await consultar();
+      assert.equal(resposta.status, 500);
+      assert.ok(!(await resposta.text()).includes("Detalhe interno"));
+    } finally {
+      intervaloConfigurado = "45";
+      falharConfiguracao = false;
+    }
+    assert.deepEqual(await (await consultar()).json(), { intervaloColetaSegundos: 45 });
   });
 
   await t.test("senha errada e usuário inexistente têm a mesma resposta e não recebem token", async (t) => {

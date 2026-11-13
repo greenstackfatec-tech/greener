@@ -327,7 +327,7 @@ Exemplo de resposta de erro:
 
 ### 3.5. Controle da rotina de coleta periódica
 
-A rotina de coleta é iniciada automaticamente quando o servidor HTTP sobe, exceto quando `COLLECTIONS_AUTO_START=false`. Cada serviço utiliza o intervalo informado pela API de métricas, com intervalo alternativo local quando necessário.
+A rotina de coleta é iniciada automaticamente quando o servidor HTTP sobe, exceto quando `COLLECTIONS_AUTO_START=false`. Todos os serviços utilizam o intervalo salvo na chave `intervalo_coleta_segundos` de `configuracoes` (60 segundos no seed), contado após o término da coleta anterior. O `collection_interval_seconds` da API permanece como duração da amostra para cálculo e histórico, sem controlar o agendamento.
 
 #### `POST /collections/rotina/iniciar`
 
@@ -343,7 +343,7 @@ Inicia manualmente a rotina de coleta periódica.
 
 | Campo | Tipo | Obrigatório | Regra |
 |---|---|---|---|
-| `intervaloSegundos` | Inteiro | Não | De 1 até 2.147.483 segundos. Define o intervalo alternativo local e de descoberta; o intervalo informado pela API de métricas tem prioridade para cada serviço. |
+| `intervaloSegundos` | Inteiro | Não | De 1 até 2.147.483 segundos. Aceito e validado por compatibilidade; não substitui o intervalo salvo em `configuracoes`. O corpo pode ser `{}`. |
 
 **Exemplo de requisição:**
 
@@ -363,7 +363,7 @@ Content-Type: application/json
 ```json
 {
   "sucesso": true,
-  "mensagem": "Rotina iniciada; cada serviço usa o intervalo informado pela API",
+  "mensagem": "Rotina iniciada com o intervalo configurado pela aplicação",
   "dados": {
     "intervaloSegundos": 60,
     "executando": true,
@@ -489,7 +489,7 @@ Quando o login retorna `429`, a resposta inclui o cabeçalho `Retry-After`, em s
 
 #### `GET /monitoring-settings`
 
-Retorna a configuração atual do intervalo alternativo de coleta.
+Retorna o intervalo de coleta consultado em `configuracoes`, na chave `intervalo_coleta_segundos`. O valor é numérico; o padrão de 60 segundos é usado quando a chave não existe. Falhas de consulta ou um valor inválido resultam em HTTP `500`.
 
 **Parâmetros:** nenhum.
 
@@ -505,7 +505,7 @@ Retorna a configuração atual do intervalo alternativo de coleta.
 
 **Token ausente ou inválido — HTTP 401:**
 - `POST /collections/executar`: executa uma rodada manual e retorna o resumo em `dados`. HTTP `200` inclui `resultado: "completo"`, `"parcial"` ou `"falha"`; `sucesso` é verdadeiro somente no resultado completo. `dados.sucessos` conta cálculos completos e `dados.parciais` conta métricas recebidas sem cálculo; detalhes com falha incluem `falha` e a mensagem compatível em `erro`. Chamadas concorrentes aguardam a coleta anterior do mesmo serviço e produzem novas amostras. Descoberta com timeout responde `504`; rede, HTTP externo ou resposta inválida respondem `502`. Configuração e persistência respondem `500`, com `{ error, message }` público controlado, após aguardar os serviços iniciados.
-- `POST /collections/rotina/iniciar`: exige `Content-Type: application/json`, com `{}` ou `{ "intervaloSegundos": 60 }`. O campo opcional deve ser um número inteiro entre 1 e 2147483 e substitui apenas o intervalo alternativo e de descoberta; a API mantém prioridade. Responde `200` com o estado da rotina e preserva `dados.intervaloSegundos`, equivalente a `dados.intervaloAlternativoSegundos`; `400` para JSON/intervalo inválido ou rotina já ativa/em encerramento; `415` sem o Content-Type adequado.
+- `POST /collections/rotina/iniciar`: exige `Content-Type: application/json`, com `{}` ou `{ "intervaloSegundos": 60 }`. O campo opcional deve ser um número inteiro entre 1 e 2147483 e é aceito por compatibilidade, sem substituir a configuração persistida. Responde `200` com o estado da rotina e preserva `dados.intervaloSegundos`, equivalente a `dados.intervaloAlternativoSegundos`, informando o intervalo da aplicação adotado; `400` para JSON/intervalo inválido ou rotina já ativa/em encerramento; `415` sem o Content-Type adequado.
 - `POST /collections/rotina/parar`: cancela os timers e aguarda as coletas pendentes antes de responder `200`; responde `400` se a rotina já estiver parada. Uma nova chamada de início só é aceita após terminar a parada.
 - `GET /collections/rotina/status`: responde `200` com `sucesso: true` e os campos `executando`, `encerrando`, `coletasEmAndamento`, `intervaloAlternativoSegundos` e `monitoramento` em `dados`. `executando` indica rotina ativa, inclusive aguardando o próximo disparo. `monitoramento` informa `situacao` (`aguardando`, `ok` ou `degradado`), horários de tentativa/sucesso e `falhasAtivas` por etapa e ID externo. É um retrato em memória, reiniciado com o processo, sem disparar consultas externas ou gravar amostras; usa `Cache-Control: no-store`.
 - `GET /collections`: retorna as últimas 100 coletas persistidas. Cada amostra acrescenta uma linha; a anterior permanece no histórico.

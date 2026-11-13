@@ -1,9 +1,15 @@
+import { buscarIntervaloColetaSegundos } from "../configuracoes/configuracoes.repository.ts";
+import { intervaloAgendavel } from "../collections/collections.scheduler.ts";
+
 export interface ConfiguracaoMonitoramento {
   intervaloColetaSegundos: number;
 }
 
-// Mesmo valor padrão de 'intervalo_coleta_segundos' no database/seed.sql.
-// Quando o banco entrar, só o corpo de buscarConfiguracao() muda.
 export async function buscarConfiguracao(): Promise<ConfiguracaoMonitoramento> {
-  return { intervaloColetaSegundos: 60 };
+  const intervaloColetaSegundos = await buscarIntervaloColetaSegundos();
+  if (!intervaloAgendavel(intervaloColetaSegundos)) {
+    throw new RangeError("Configuração de intervalo de coleta inválida.");
+  }
+  return { intervaloColetaSegundos };
 }
+

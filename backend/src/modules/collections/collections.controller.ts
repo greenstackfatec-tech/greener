@@ -6,6 +6,7 @@ import {
   listarColetasDoServico,
   rotinaColeta,
   consultarMonitoramentoColeta,
+  buscarIntervaloAlternativo,
   type ResultadoRodadaColeta,
 } from "./collections.service.ts";
 import { intervaloAgendavel, INTERVALO_MAXIMO_SEGUNDOS } from "./collections.scheduler.ts";
@@ -128,7 +129,8 @@ export async function iniciarRotinaColetaPeriodica(
       return;
     }
 
-    if (!rotinaColeta.iniciar(intervaloSegundos)) {
+    const intervaloConfigurado = await buscarIntervaloAlternativo();
+    if (!rotinaColeta.iniciar(intervaloConfigurado)) {
       responder(response, 400, {
         sucesso: false,
         mensagem: "Rotina de coleta já iniciada ou em encerramento",
@@ -139,7 +141,7 @@ export async function iniciarRotinaColetaPeriodica(
     const status = rotinaColeta.status();
     responder(response, 200, {
       sucesso: true,
-      mensagem: "Rotina iniciada; cada serviço usa o intervalo informado pela API",
+      mensagem: "Rotina iniciada com o intervalo configurado pela aplicação",
       dados: { intervaloSegundos: status.intervaloAlternativoSegundos, ...status },
     });
   } catch (erro) {
