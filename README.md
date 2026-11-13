@@ -133,7 +133,7 @@ O <b>Plano de Entregas</b> pode ser encontrado [aqui](./docs/plano-de-entregas.m
 
 - Integração do backend com a API de métricas dos serviços e com a API de intensidade de carbono.
 - Descoberta e consulta dos serviços monitorados.
-- Coleta manual e rotina de coleta periódica, respeitando o intervalo informado para cada serviço.
+- Coleta manual e rotina de coleta periódica, com intervalo definido pela aplicação e salvo no banco.
 - Persistência dos serviços e dos registros de coleta no PostgreSQL.
 - Cálculo estimado de potência, energia e emissão de CO₂e a partir das métricas disponíveis.
 - Consulta do histórico de coletas e dos indicadores consolidados do dashboard.
