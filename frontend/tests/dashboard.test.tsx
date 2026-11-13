@@ -14,6 +14,8 @@ beforeEach(() => {
     emissaoTotalCo2eG: 0,
     servicosAtivos: 0,
     servicosIndisponiveis: 0,
+    ultimaColetaEm: null,
+    intervaloColetaSegundos: null,
   });
   vi.spyOn(collections, "consultarStatusColeta").mockResolvedValue({
     executando: false,

@@ -35,6 +35,8 @@ const INDICADORES_API: indicadores.Indicadores = {
   emissaoTotalCo2eG: 1.25,
   servicosAtivos: 2,
   servicosIndisponiveis: 1,
+  ultimaColetaEm: null,
+  intervaloColetaSegundos: null,
 };
 
 function abrirPagina() {
@@ -132,6 +134,8 @@ test("banco sem coletas calculadas mostra zero e explica, em vez de inventar val
     emissaoTotalCo2eG: 0,
     servicosAtivos: 0,
     servicosIndisponiveis: 0,
+    ultimaColetaEm: null,
+    intervaloColetaSegundos: null,
   });
   abrirPagina();
 
