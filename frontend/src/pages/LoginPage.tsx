@@ -28,6 +28,9 @@ export function LoginPage() {
   const [segundosRestantes, setSegundosRestantes] = useState(0);
   const bloqueado = segundosRestantes > 0;
 
+  // Detecta ?expired=1 na URL (vindo do api.ts ao receber 401).
+  const sessaoExpirou = new URLSearchParams(location.search).get("expired") === "1";
+
   useEffect(() => {
     if (!bloqueado) return;
     const intervalo = window.setInterval(() => {
@@ -72,7 +75,9 @@ export function LoginPage() {
 
   const alerta = bloqueado
     ? `Muitas tentativas de login. Tente novamente em ${formatarEspera(segundosRestantes)}.`
-    : erroGeral;
+    : sessaoExpirou
+      ? "Sua sessão expirou. Faça login novamente."
+      : erroGeral;
 
   return (
     <LayoutAutenticacao>
