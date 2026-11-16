@@ -20,4 +20,18 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ["tests/**/*.test.tsx"],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.vitest,
+        ...globals.jest,
+      },
+    },
+    rules: {
+      "@typescript-eslint/ban-ts-comment": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+    },
+  },
 ]);

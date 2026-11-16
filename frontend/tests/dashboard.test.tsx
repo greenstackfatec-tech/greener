@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { DashboardPage } from "../src/pages/DashboardPage.tsx";

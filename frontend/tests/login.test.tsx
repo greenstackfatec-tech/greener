@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { RouterProvider } from "react-router";
@@ -133,7 +132,7 @@ test("401 em rota protegida limpa token e redirecionaria para /login?expired=1",
   });
 
   // Agora mocka 401 para rota protegida
-  vi.stubGlobal("fetch", vi.fn(async (_url) => new Response(
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(
     JSON.stringify({ error: "Unauthorized", message: "Token expirado" }),
     { status: 401, headers: { "Content-Type": "application/json" } }
   )));

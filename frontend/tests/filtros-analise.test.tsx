@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { FiltrosAnalise } from "../src/components/FiltrosAnalise.tsx";
