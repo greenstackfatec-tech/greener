@@ -104,6 +104,8 @@ O formulário permite alternar entre pessoa física e pessoa jurídica e valida 
 | Erro, sem dados anteriores | Traço (“—”) em cada card e um aviso com o botão “Tentar de novo”. O erro não vira zero. |
 | Erro, com dados anteriores | Os últimos valores válidos continuam na tela, com aviso de que podem estar desatualizados (RNF04). |
 
+**Última coleta e intervalos (TP16, RNF02).** Abaixo dos cards aparece a hora da última coleta no horário de São Paulo, o intervalo de coleta do backend e o intervalo de atualização da tela, por exemplo “Última coleta: 13/11/2026, 19:09 (horário de São Paulo) · Coleta a cada 1 min · Tela atualiza a cada 30 s”. A hora e o intervalo de coleta vêm de `GET /dashboard/indicadores` (`ultima_coleta_em` e `intervalo_coleta_segundos`); sem nenhuma coleta, a linha mostra “Nenhuma coleta registrada ainda”.
+
 Os cards são atualizados no mesmo intervalo da tabela (seção “Atualização automática”) e também pelo botão “Atualizar dados”. As contagens de ativos e indisponíveis seguem a regra do backend (status do serviço, sem os removidos), então “Serviços ativos” inclui os serviços ativos que ainda não enviaram métricas; já o filtro “Ativos” da tabela só considera os que têm coleta bem-sucedida.
 
 O dashboard consulta os serviços por `GET /services` e apresenta estados, busca textual e filtro por situação. O diagnóstico da rotina é consultado por `GET /collections/rotina/status`.

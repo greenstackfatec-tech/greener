@@ -523,7 +523,7 @@ A implementação atual disponibiliza somente `GET /monitoring-settings`. Não h
 
 #### `GET /dashboard/indicadores`
 
-Retorna os indicadores consolidados utilizados no dashboard. Os totais de energia e emissões consideram a última coleta bem-sucedida com cálculo disponível de cada serviço. As contagens consideram os serviços com estado `ativo` e `indisponivel`; serviços removidos não entram nessas duas contagens.
+Retorna os indicadores consolidados utilizados no dashboard. Os totais de energia e emissões consideram a última coleta bem-sucedida com cálculo disponível de cada serviço. As contagens consideram os serviços com estado `ativo` e `indisponivel`; serviços removidos não entram nessas duas contagens. A resposta também traz a data e a hora da coleta mais recente (`ultima_coleta_em`, em UTC) e o intervalo de coleta salvo em `configuracoes` (`intervalo_coleta_segundos`).
 
 **Parâmetros:** nenhum.
 
@@ -536,11 +536,13 @@ Retorna os indicadores consolidados utilizados no dashboard. Os totais de energi
   "consumo_total_kwh": 0.32345678,
   "emissao_total_co2e_g": 1.25,
   "servicos_ativos": 2,
-  "servicos_indisponiveis": 1
+  "servicos_indisponiveis": 1,
+  "ultima_coleta_em": "2026-11-01T10:02:00.000Z",
+  "intervalo_coleta_segundos": 60
 }
 ```
 
-Quando o banco não contém serviços ou coletas calculadas, os totais são retornados como `0`.
+Quando o banco não contém serviços ou coletas calculadas, os totais são retornados como `0`. Sem nenhuma coleta, `ultima_coleta_em` vem como `null`.
 
 **Erro interno — HTTP 500:**
 

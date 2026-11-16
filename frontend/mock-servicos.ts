@@ -34,6 +34,9 @@ function indicadores(zerados: boolean) {
     emissao_total_co2e_g: Number(soma("emissaoCo2eG").toFixed(8)),
     servicos_ativos: lista.filter((s) => s.status === "ativo").length,
     servicos_indisponiveis: lista.filter((s) => s.status === "indisponivel").length,
+    // Coleta mais recente entre os serviços e o intervalo do seed do banco.
+    ultima_coleta_em: lista.map((s) => s.coletadoEm).filter((c) => c !== null).sort().at(-1) ?? null,
+    intervalo_coleta_segundos: 60,
   };
 }
 

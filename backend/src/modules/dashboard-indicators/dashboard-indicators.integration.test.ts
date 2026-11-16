@@ -60,6 +60,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     assert.deepEqual(await indicadores(), {
       consumo_total_kwh: 0, emissao_total_co2e_g: 0,
       servicos_ativos: 0, servicos_indisponiveis: 0,
+      ultima_coleta_em: null, intervalo_coleta_segundos: 60,
     });
   });
 
@@ -80,6 +81,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     assert.deepEqual(await indicadores(), {
       consumo_total_kwh: 0, emissao_total_co2e_g: 0,
       servicos_ativos: 2, servicos_indisponiveis: 1,
+      ultima_coleta_em: null, intervalo_coleta_segundos: 60,
     });
   });
 
@@ -97,6 +99,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     assert.deepEqual(await indicadores(), {
       consumo_total_kwh: 0.32345678, emissao_total_co2e_g: 1.25,
       servicos_ativos: 2, servicos_indisponiveis: 1,
+      ultima_coleta_em: "2026-11-01T10:02:00.000Z", intervalo_coleta_segundos: 60,
     });
   });
 
@@ -109,6 +112,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     assert.deepEqual(await indicadores(), {
       consumo_total_kwh: 0.6, emissao_total_co2e_g: 1.75,
       servicos_ativos: 2, servicos_indisponiveis: 1,
+      ultima_coleta_em: "2026-11-01T10:03:00.000Z", intervalo_coleta_segundos: 60,
     });
   });
 
@@ -121,6 +125,19 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     assert.deepEqual(await indicadores(), {
       consumo_total_kwh: 0.8, emissao_total_co2e_g: 2.25,
       servicos_ativos: 2, servicos_indisponiveis: 1,
+      ultima_coleta_em: "2026-11-01T10:03:00.000Z", intervalo_coleta_segundos: 60,
+    });
+  });
+
+  await t.test("devolve o intervalo de coleta salvo em configuracoes", async () => {
+    await banco.query(
+      `INSERT INTO configuracoes (chave, valor) VALUES ('intervalo_coleta_segundos', '120')
+       ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor`,
+    );
+    assert.deepEqual(await indicadores(), {
+      consumo_total_kwh: 0.8, emissao_total_co2e_g: 2.25,
+      servicos_ativos: 2, servicos_indisponiveis: 1,
+      ultima_coleta_em: "2026-11-01T10:03:00.000Z", intervalo_coleta_segundos: 120,
     });
   });
 

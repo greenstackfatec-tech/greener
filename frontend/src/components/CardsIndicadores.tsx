@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import type { EstadoIndicadores } from "../hooks/useIndicadores.ts";
-import { numero } from "../formatacao.ts";
+import { dataHoraSaoPaulo, duracao, numero } from "../formatacao.ts";
 import "./CardsIndicadores.css";
 
 interface Props {
   estado: EstadoIndicadores;
   /** Ação do botão "Tentar de novo" do aviso de erro. */
   aoTentarDeNovo: () => void;
+  /** Intervalo de atualização automática da tela, em segundos. */
+  intervaloAtualizacaoSegundos: number;
 }
 
 interface CartaoProps {
@@ -58,7 +60,7 @@ const IconeEmissao = (
  * emissão total, serviços ativos e serviços indisponíveis.
  * Os valores vêm de GET /dashboard/indicadores; aqui não há nenhum número fixo.
  */
-export function CardsIndicadores({ estado, aoTentarDeNovo }: Props) {
+export function CardsIndicadores({ estado, aoTentarDeNovo, intervaloAtualizacaoSegundos }: Props) {
   const carregando = estado.tipo === "carregando";
   const dados = estado.tipo === "ok" ? estado.dados : estado.tipo === "erro" ? estado.dadosAnteriores : null;
   const semCalculo = dados !== null && dados.consumoTotalKwh === 0 && dados.emissaoTotalCo2eG === 0;
@@ -126,6 +128,17 @@ export function CardsIndicadores({ estado, aoTentarDeNovo }: Props) {
           carregando={carregando}
         />
       </div>
+
+      {/* Hora da última coleta e intervalos (TP16 / RNF02). */}
+      {dados !== null && (
+        <p className="ind-coleta">
+          {dados.ultimaColetaEm
+            ? `Última coleta: ${dataHoraSaoPaulo(dados.ultimaColetaEm)} (horário de São Paulo)`
+            : "Nenhuma coleta registrada ainda"}
+          {dados.intervaloColetaSegundos !== null && ` · Coleta a cada ${duracao(dados.intervaloColetaSegundos)}`}
+          {` · Tela atualiza a cada ${duracao(intervaloAtualizacaoSegundos)}`}
+        </p>
+      )}
     </section>
   );
 }

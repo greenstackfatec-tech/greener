@@ -10,6 +10,8 @@ const respostaApi = {
   emissao_total_co2e_g: 1.25,
   servicos_ativos: 2,
   servicos_indisponiveis: 1,
+  ultima_coleta_em: "2026-11-01T10:02:00.000Z",
+  intervalo_coleta_segundos: 60,
 };
 
 test("converte a resposta do backend para os nomes usados no frontend", async (t) => {
@@ -21,6 +23,8 @@ test("converte a resposta do backend para os nomes usados no frontend", async (t
     emissaoTotalCo2eG: 1.25,
     servicosAtivos: 2,
     servicosIndisponiveis: 1,
+    ultimaColetaEm: "2026-11-01T10:02:00.000Z",
+    intervaloColetaSegundos: 60,
   });
 });
 
@@ -29,7 +33,10 @@ test("banco sem coletas devolve zeros, e zero é um valor válido", async (t) =>
     Response.json({ consumo_total_kwh: 0, emissao_total_co2e_g: 0, servicos_ativos: 0, servicos_indisponiveis: 0 }),
   );
   const indicadores = await consultarIndicadores();
-  assert.deepEqual(indicadores, { consumoTotalKwh: 0, emissaoTotalCo2eG: 0, servicosAtivos: 0, servicosIndisponiveis: 0 });
+  assert.deepEqual(indicadores, {
+    consumoTotalKwh: 0, emissaoTotalCo2eG: 0, servicosAtivos: 0, servicosIndisponiveis: 0,
+    ultimaColetaEm: null, intervaloColetaSegundos: null,
+  });
   assert.equal(numero(indicadores.consumoTotalKwh, 4), "0");
 });
 

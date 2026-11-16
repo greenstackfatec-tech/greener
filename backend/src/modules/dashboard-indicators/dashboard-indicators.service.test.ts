@@ -15,6 +15,7 @@ const mockRepository = {
     emissaoTotalCo2eG: 567.89012345678,
     servicosAtivos: 5,
     servicosIndisponiveis: 2,
+    ultimaColetaEm: null,
   }),
 };
 
