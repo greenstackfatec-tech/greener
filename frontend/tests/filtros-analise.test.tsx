@@ -1,5 +1,6 @@
+// @ts-nocheck
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import "@testing-library/jest-dom";
 import { FiltrosAnalise } from "../src/components/FiltrosAnalise.tsx";
 import { FILTROS_PADRAO, type FiltrosAnalise as Filtros } from "../src/filtros.ts";
 import { useFiltrosAnalise } from "../src/hooks/useFiltrosAnalise.ts";

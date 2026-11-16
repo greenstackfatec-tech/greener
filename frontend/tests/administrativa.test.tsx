@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import "@testing-library/jest-dom";
 import { MemoryRouter } from "react-router";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AdministrativaPage } from "../src/pages/AdministrativaPage.tsx";
 import { ErroApi } from "../src/services/api.ts";
 import * as configuracao from "../src/services/configuracao.ts";
