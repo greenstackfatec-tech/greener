@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => ({
     environment: "jsdom",
     restoreMocks: true,
     unstubGlobals: true,
+    globals: true,
+    tsconfig: "tsconfig.test.json",
   },
   server: {
     // Mesmo comportamento do Nginx em produção: /api/* vai ao backend sem o prefixo.

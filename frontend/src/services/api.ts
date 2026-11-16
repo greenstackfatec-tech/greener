@@ -43,11 +43,12 @@ async function chamar<T>(caminho: string, init: RequestInit): Promise<T> {
 
   const response = await fetch(`${BASE_URL}${caminho}`, { ...init, headers });
 
-  // Token inválido/expirado no backend: limpa armazenamento e leva ao login com aviso.
-  if (response.status === 401) {
+  // Token inválido/expirado em rota protegida: limpa armazenamento e leva ao login com aviso.
+  // O 401 em /auth/login (credenciais inválidas) NÃO deve limpar token nem redirecionar;
+  // a página de login trata exibindo "E-mail ou senha inválidos" no formulário.
+  if (response.status === 401 && caminho !== "/auth/login") {
     removerToken();
     window.location.href = `${ROTAS.login}?expired=1`;
-    // O throw abaixo nunca é alcançado (navegação já ocorreu), mas satisfaz o tipo de retorno.
     throw new ErroApi(401, "Sessão expirada", "unauthorized", null);
   }
 

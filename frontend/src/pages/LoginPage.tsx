@@ -75,9 +75,11 @@ export function LoginPage() {
 
   const alerta = bloqueado
     ? `Muitas tentativas de login. Tente novamente em ${formatarEspera(segundosRestantes)}.`
-    : sessaoExpirou
-      ? "Sua sessão expirou. Faça login novamente."
-      : erroGeral;
+    : erroGeral
+      ? erroGeral
+      : sessaoExpirou
+        ? "Sua sessão expirou. Faça login novamente."
+        : null;
 
   return (
     <LayoutAutenticacao>
