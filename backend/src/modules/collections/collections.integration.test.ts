@@ -67,6 +67,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
   let cadastro = structuredClone(servicos);
   const chamadasMetricas = new Map<string, number>();
   let bloquearMetrica: (() => Promise<void>) | undefined;
+  let buscarProximaMetrica: (() => typeof metricas) | undefined;
   const estado = {
     semCarbono: false,
     falharPrimeiroCarbono: false,
@@ -97,6 +98,11 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
           message: "Métricas indisponíveis",
         }));
       }
+      return;
+    }
+    if (caminho === "/metrics/servico-1" && buscarProximaMetrica) {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify(buscarProximaMetrica()));
       return;
     }
     if (
@@ -588,7 +594,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     }));
   });
 
-  await t.test("TP06 duas coletas automáticas preservam estados diferentes no PostgreSQL", async (t) => {
+  await t.test("duas coletas consecutivas preservam métricas, cálculos e histórico no PostgreSQL", async (t) => {
     const { listarServicos } = await import("../../integrations/metrics-api.ts");
     const { coletarServico, buscarIntervaloAlternativo } = await import("./collections.service.ts");
     const rotina = criarRotinaColeta({
@@ -596,13 +602,27 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       logger: { log() {}, warn() {}, error() {} },
     });
     const configuracaoAnterior = (await banco.query("SELECT valor FROM configuracoes WHERE chave = 'intervalo_coleta_segundos'")).rows[0].valor;
-    await banco.query("UPDATE configuracoes SET valor = '1' WHERE chave = 'intervalo_coleta_segundos'");
+    const buscarMetricaAnterior = buscarProximaMetrica;
     t.after(async () => {
-      await rotina.parar();
-      await banco.query("UPDATE configuracoes SET valor = $1 WHERE chave = 'intervalo_coleta_segundos'", [configuracaoAnterior]);
-      estado.intervaloApi = 60;
+      try {
+        await rotina.parar();
+      } finally {
+        buscarProximaMetrica = buscarMetricaAnterior;
+        await banco.query("UPDATE configuracoes SET valor = $1 WHERE chave = 'intervalo_coleta_segundos'", [configuracaoAnterior]);
+      }
     });
-    estado.intervaloApi = 30;
+    await banco.query("UPDATE configuracoes SET valor = '1' WHERE chave = 'intervalo_coleta_segundos'");
+    const amostras = [25, 40].map((cpuPercentual) => ({
+      ...metricas,
+      collection_interval_seconds: 30,
+      metrics: { ...metricas.metrics, cpu_percent: cpuPercentual },
+    }));
+    let chamadas = 0;
+    buscarProximaMetrica = () => amostras[chamadas++] ?? amostras[1];
+    const calculosEsperados = [
+      { potenciaEstimadaW: 25.853, duracaoSegundos: 30, energiaKwh: 0.00021544, emissaoCo2eG: 0.021544 },
+      { potenciaEstimadaW: 40.853, duracaoSegundos: 30, energiaKwh: 0.00034044, emissaoCo2eG: 0.034044 },
+    ];
     const antes = await buscarHistoricoColetas(idServico);
     async function aguardarQuantidade(quantidade: number) {
       const limite = Date.now() + 5000;
@@ -615,25 +635,35 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     }
     rotina.iniciar();
     const [primeira] = await aguardarQuantidade(antes.length + 1);
-    estado.cpuPercentual = 40;
     const [segunda] = await aguardarQuantidade(antes.length + 2);
     await rotina.parar();
-    assert.equal(primeira.cpuPercentual, 25);
-    assert.equal(segunda.cpuPercentual, 40);
+    assert.equal(chamadas, 2);
     assert.notEqual(segunda.id, primeira.id);
     assert.ok(segunda.coletadoEm > primeira.coletadoEm);
-    assert.ok(segunda.coletadoEm.getTime() - primeira.coletadoEm.getTime() >= 1000);
-    assert.equal(primeira.intervaloSegundos, 30);
-    assert.equal(primeira.duracaoSegundos, 30);
-    assert.equal(segunda.intervaloSegundos, 30);
-    assert.equal(segunda.duracaoSegundos, 30);
+    for (const [indice, coleta] of [primeira, segunda].entries()) {
+      const { id, coletadoEm, calculadoEm, ...dados } = coleta;
+      assert.ok(calculadoEm instanceof Date);
+      assert.deepEqual(dados, {
+        cpuPercentual: amostras[indice].metrics.cpu_percent,
+        memoriaGb: 2,
+        discoGb: 10,
+        redeGb: 0.15,
+        intervaloSegundos: 30,
+        statusColeta: "sucesso",
+        ...calculosEsperados[indice],
+      });
+    }
     const historico = await buscarHistoricoColetas(idServico);
-    assert.deepEqual(historico.find((coleta) => coleta.id === primeira.id), primeira);
+    assert.deepEqual(historico, [segunda, primeira, ...antes]);
     const cadastroSalvo = await banco.query("SELECT id::int FROM servicos WHERE id_externo = $1", [servicos[0].id]);
     assert.deepEqual(cadastroSalvo.rows, [{ id: idServico }]);
-    const lista = (await (await fetch(`${urlApi}/collections`, { headers: headersAutenticacao })).json()) as { id: number }[];
-    assert.ok(lista.some((coleta) => coleta.id === primeira.id));
-    assert.ok(lista.some((coleta) => coleta.id === segunda.id));
+    const respostaHistorico = await fetch(`${urlApi}/collections?serviceId=${idServico}`, { headers: headersAutenticacao });
+    assert.equal(respostaHistorico.status, 200);
+    assert.deepEqual(await respostaHistorico.json(), historico.map((coleta) => ({
+      ...coleta,
+      coletadoEm: coleta.coletadoEm.toISOString(),
+      calculadoEm: coleta.calculadoEm?.toISOString() ?? null,
+    })));
   });
 
   await t.test("mock sem-metricas publica ausência, preserva histórico e recupera no mesmo processo", async () => {

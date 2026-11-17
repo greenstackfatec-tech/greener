@@ -1,8 +1,17 @@
 import { NAO_INFORMADO, type LocalizacaoExibida } from "../localizacao.ts";
+import { numero } from "../formatacao.ts";
 import "./CartaoEstado.css";
 
 /** Os seis estados do mock DD07. */
 export type TomEstado = "ativo" | "indisponivel" | "sem_metricas" | "carregando" | "erro" | "vazio";
+
+/** Métricas de recursos do serviço (RF09). */
+export interface MetricasRecurso {
+  cpuPercentual: number | null;
+  memoriaGb: number | null;
+  discoGb: number | null;
+  redeGb: number | null;
+}
 
 interface Props {
   tom: TomEstado;
@@ -19,13 +28,23 @@ interface Props {
   nivelTitulo?: 2 | 3;
   /** País, região e cidade do serviço (RF12); campo ausente chega como "Não informado". */
   localizacao?: LocalizacaoExibida;
+  /** Métricas de recursos (CPU, RAM, Disco, Rede) para exibição compacta (RF09). */
+  metricas?: MetricasRecurso;
 }
 
 /** Cartão de estado do DD07: barra lateral, ponto, selo, valor e rodapé na cor do estado. */
-export function CartaoEstado({ tom, titulo, selo, descricao, valor, rodape, acao, nivelTitulo = 3, localizacao }: Props) {
+export function CartaoEstado({ tom, titulo, selo, descricao, valor, rodape, acao, nivelTitulo = 3, localizacao, metricas }: Props) {
   const Titulo = nivelTitulo === 2 ? "h2" : "h3";
   // Carregando avisa com educação (status); erro interrompe (alert).
   const papel = tom === "carregando" ? "status" : tom === "erro" ? "alert" : undefined;
+
+  // Renderiza as métricas de recursos em formato compacto (RF09)
+  const mostrarMetricas = metricas && (
+    metricas.cpuPercentual !== null ||
+    metricas.memoriaGb !== null ||
+    metricas.discoGb !== null ||
+    metricas.redeGb !== null
+  );
 
   return (
     <article className="cartao-estado" data-tom={tom} role={papel} aria-busy={tom === "carregando" || undefined}>
@@ -51,6 +70,34 @@ export function CartaoEstado({ tom, titulo, selo, descricao, valor, rodape, acao
               <dd className={texto === NAO_INFORMADO ? "sem-info" : undefined}>{texto}</dd>
             </div>
           ))}
+        </dl>
+      )}
+      {mostrarMetricas && (
+        <dl className="cartao-estado-metricas" aria-label="Métricas de recursos do serviço">
+          {metricas!.cpuPercentual !== null && (
+            <div>
+              <dt>CPU</dt>
+              <dd>{numero(metricas!.cpuPercentual)}%</dd>
+            </div>
+          )}
+          {metricas!.memoriaGb !== null && (
+            <div>
+              <dt>RAM</dt>
+              <dd>{numero(metricas!.memoriaGb)} GB</dd>
+            </div>
+          )}
+          {metricas!.discoGb !== null && (
+            <div>
+              <dt>Disco</dt>
+              <dd>{numero(metricas!.discoGb)} GB</dd>
+            </div>
+          )}
+          {metricas!.redeGb !== null && (
+            <div>
+              <dt>Rede</dt>
+              <dd>{numero(metricas!.redeGb)} GB</dd>
+            </div>
+          )}
         </dl>
       )}
       <div className="cartao-estado-valor">
