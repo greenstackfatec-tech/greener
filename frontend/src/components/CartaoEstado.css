@@ -51,6 +51,11 @@
 .cartao-estado-local dd { margin: 3px 0 0; font-size: 12px; font-weight: 550; color: #33463a; overflow-wrap: anywhere; }
 .cartao-estado-local dd.sem-info { font-weight: 400; font-style: italic; color: #98a29a; }
 
+/* Métricas de recursos do serviço (RF09): exibição compacta em duas colunas. */
+.cartao-estado-metricas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin: 10px 0 0; font-size: 11px; }
+.cartao-estado-metricas dt { font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #8a958d; font-size: 8px; }
+.cartao-estado-metricas dd { margin: 2px 0 0; font-size: 12px; font-weight: 550; color: #33463a; }
+
 .cartao-estado-valor { min-height: 30px; margin: 10px 0 12px; display: flex; align-items: center; }
 .cartao-estado-valor strong { font-size: 25px; line-height: 1.1; font-weight: 700; letter-spacing: -0.4px; color: var(--tom); }
 .cartao-estado-traco { display: block; width: 24px; height: 3px; border-radius: 2px; background: var(--tom); opacity: 0.85; }
@@ -73,4 +78,6 @@
 @media (max-width: 700px) {
   .cartao-estado-selo, .cartao-estado-local dt, .cartao-estado-rodape { font-size: 12px; }
   .cartao-estado-rodape button { min-height: 44px; }
+  .cartao-estado-metricas dt { font-size: 9px; }
+  .cartao-estado-metricas dd { font-size: 12px; }
 }
