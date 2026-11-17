@@ -71,8 +71,21 @@ function compose(argumentos: string[]): Promise<void> {
 }
 
 async function requisitar<T>(caminho: string, method = "GET"): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (!caminho.startsWith("/health/")) {
+    const login = await fetch("http://127.0.0.1:30492/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "teste@greener.com", senha: "greener123" }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    assert.equal(login.status, 200, await login.clone().text());
+    const dados = await login.json() as { token: string };
+    headers.authorization = `Bearer ${dados.token}`;
+  }
   const resposta = await fetch(`http://127.0.0.1:30492${caminho}`, {
     method,
+    headers,
     signal: AbortSignal.timeout(20_000),
   });
   assert.equal(resposta.status, 200, await resposta.clone().text());

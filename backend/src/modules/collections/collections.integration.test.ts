@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import test from "node:test";
@@ -15,6 +15,13 @@ import type { IndicadoresDashboard } from "../dashboard-indicators/dashboard-ind
 import type { ResultadoRodadaColeta } from "./collections.types.ts";
 
 test("TP07 grava serviços e coletas com os repositories reais da BD04", async (t) => {
+  const segredoAnterior = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = randomBytes(48).toString("base64url");
+  t.after(() => {
+    if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = segredoAnterior;
+  });
+  const headersAutenticacao = { authorization: `Bearer ${await gerarToken("1")}` };
   const schema = `tp07_${randomUUID().replaceAll("-", "")}`;
   const pools = new Set<pg.Pool>();
   const conectar = pg.Pool.prototype.connect;
@@ -153,7 +160,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
   process.env.METRICS_API_URL = `http://127.0.0.1:${enderecoMock.port}`;
   process.env.CARBON_API_URL = process.env.METRICS_API_URL;
   const urlApi = `http://127.0.0.1:${enderecoApi.port}`;
-  const executar = () => fetch(`${urlApi}/collections/executar`, { method: "POST" });
+  const executar = () => fetch(`${urlApi}/collections/executar`, { method: "POST", headers: headersAutenticacao });
   let idServico: number;
 
   await t.test("configuração autenticada lê o valor persistido, inclusive quando diferente de 60", async () => {
@@ -188,7 +195,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     assert.equal(coleta.memoriaGb, metricas.metrics.memory_gb);
     assert.equal(coleta.intervaloSegundos, metricas.collection_interval_seconds);
     assert.ok(coleta.energiaKwh! > 0);
-    const lista = await fetch(`${urlApi}/services`);
+    const lista = await fetch(`${urlApi}/services`, { headers: headersAutenticacao });
     assert.equal(lista.status, 200);
     assert.ok(((await lista.json()) as { id: number }[]).some((s) => s.id === idServico));
     const regiao = await banco.query(
@@ -353,7 +360,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       [servicos[0].id],
     );
     assert.deepEqual(resultado.rows, [{ id: idServico, coletas: 5 }]);
-    const resposta = await fetch(`${urlApi}/collections`);
+    const resposta = await fetch(`${urlApi}/collections`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     assert.equal(((await resposta.json()) as unknown[]).length, 12);
   });
@@ -412,8 +419,8 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
   );
 
   async function consultarEstadoAtual() {
-    const lista = await fetch(`${urlApi}/services`);
-    const indicadores = await fetch(`${urlApi}/dashboard/indicadores`);
+    const lista = await fetch(`${urlApi}/services`, { headers: headersAutenticacao });
+    const indicadores = await fetch(`${urlApi}/dashboard/indicadores`, { headers: headersAutenticacao });
     assert.equal(lista.status, 200);
     assert.equal(indicadores.status, 200);
     return {
@@ -624,7 +631,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
     assert.deepEqual(historico.find((coleta) => coleta.id === primeira.id), primeira);
     const cadastroSalvo = await banco.query("SELECT id::int FROM servicos WHERE id_externo = $1", [servicos[0].id]);
     assert.deepEqual(cadastroSalvo.rows, [{ id: idServico }]);
-    const lista = (await (await fetch(`${urlApi}/collections`)).json()) as { id: number }[];
+    const lista = (await (await fetch(`${urlApi}/collections`, { headers: headersAutenticacao })).json()) as { id: number }[];
     assert.ok(lista.some((coleta) => coleta.id === primeira.id));
     assert.ok(lista.some((coleta) => coleta.id === segunda.id));
   });
@@ -660,7 +667,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
         ausencia.emissaoCo2eG, ausencia.calculadoEm,
       ].every((valor) => valor === null));
       assert.deepEqual(historico, antes);
-      const servicosPublicados = await (await fetch(`${urlApi}/services`)).json() as Record<string, unknown>[];
+      const servicosPublicados = await (await fetch(`${urlApi}/services`, { headers: headersAutenticacao })).json() as Record<string, unknown>[];
       const publicado = servicosPublicados.find((servico) => servico.id === idServico);
       assert.ok(publicado);
       assert.equal(publicado.status, "ativo");
@@ -671,7 +678,7 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       }
       const semLocalizacao = servicosPublicados.find((servico) => servico.nome === servicos[0].name && servico.pais === null);
       assert.ok(semLocalizacao, "a listagem mantém serviços sem localização");
-      const respostaHistorico = await fetch(`${urlApi}/collections?serviceId=${idServico}`);
+      const respostaHistorico = await fetch(`${urlApi}/collections?serviceId=${idServico}`, { headers: headersAutenticacao });
       assert.equal(respostaHistorico.status, 200);
       const historicoPublicado = await respostaHistorico.json() as Record<string, unknown>[];
       assert.equal(historicoPublicado[0].id, ausencia.id);
@@ -694,9 +701,9 @@ test("TP07 grava serviços e coletas com os repositories reais da BD04", async (
       assert.equal(recuperada.cpuPercentual, 40);
       assert.ok(recuperada.energiaKwh! > 0);
       assert.deepEqual(anteriores, [segundaAusencia, ausencia, ...antes]);
-      const atualizados = await (await fetch(`${urlApi}/services`)).json() as Record<string, unknown>[];
+      const atualizados = await (await fetch(`${urlApi}/services`, { headers: headersAutenticacao })).json() as Record<string, unknown>[];
       assert.equal(atualizados.find((servico) => servico.id === idServico)?.statusColeta, "sucesso");
-      const status = await (await fetch(`${urlApi}/collections/rotina/status`)).json() as {
+      const status = await (await fetch(`${urlApi}/collections/rotina/status`, { headers: headersAutenticacao })).json() as {
         dados: { monitoramento: { situacao: string; falhasAtivas: unknown[] } };
       };
       assert.equal(status.dados.monitoramento.situacao, "ok");

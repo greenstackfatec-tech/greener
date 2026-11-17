@@ -31,6 +31,34 @@ for (const { nome, base } of destinos) {
       assert.equal(resposta.status, 401);
     });
 
+    await t.test("coleta e dashboard exigem JWT pelo acesso direto e pelo proxy", async () => {
+      const rotas = [
+        ["POST", "/collections/executar"],
+        ["POST", "/collections/rotina/iniciar"],
+        ["POST", "/collections/rotina/parar"],
+        ["GET", "/collections/rotina/status"],
+        ["GET", "/collections"],
+        ["GET", "/collections?serviceId=1"],
+        ["GET", "/services"],
+        ["GET", "/services/1"],
+        ["GET", "/dashboard/indicadores"],
+        ["GET", "/analytics/historico/1"],
+        ["GET", "/analytics/ranking"],
+        ["GET", "/analytics/comparacao"],
+      ];
+      for (const [method, caminho] of rotas) {
+        for (const authorization of [undefined, "Bearer invalido"]) {
+          const resposta = await requisitar(caminho, {
+            method, headers: authorization ? { authorization } : {},
+          });
+          assert.equal(resposta.status, 401, `${method} ${caminho}`);
+          assert.deepEqual(await resposta.json(), { error: "unauthorized", message: "Token ausente ou inválido." });
+          assert.equal(resposta.headers.get("cache-control"), "no-store");
+          assert.equal(resposta.headers.get("www-authenticate"), authorization ? 'Bearer error="invalid_token"' : "Bearer");
+        }
+      }
+    });
+
     await t.test("credenciais do seed geram JWT sem expor o hash", async () => {
       const resposta = await requisitar("/auth/login", {
         method: "POST", headers: { "content-type": "application/json" },
@@ -52,6 +80,36 @@ for (const { nome, base } of destinos) {
       assert.ok(typeof dados.intervaloColetaSegundos === "number"
         && Number.isSafeInteger(dados.intervaloColetaSegundos)
         && dados.intervaloColetaSegundos > 0);
+    });
+
+    await t.test("JWT do login libera leituras do dashboard e preserva a validação do controle", async () => {
+      const headers = { authorization: `Bearer ${token}` };
+      const lista = await requisitar("/services", { headers });
+      assert.equal(lista.status, 200);
+      const servicos = await lista.json() as Array<{ id: number }>;
+      assert.ok(servicos.length >= 2);
+      const [primeiro, segundo] = servicos;
+      const periodo = "inicio=2000-01-01T00:00:00Z&fim=2100-01-01T00:00:00Z";
+      const caminhos = [
+        `/services/${primeiro.id}`,
+        "/dashboard/indicadores",
+        "/collections",
+        `/collections?serviceId=${primeiro.id}`,
+        "/collections/rotina/status",
+        `/analytics/historico/${primeiro.id}?${periodo}`,
+        `/analytics/ranking?${periodo}&metrica=energia`,
+        `/analytics/comparacao?${periodo}&servicos=${primeiro.id},${segundo.id}`,
+      ];
+      for (const caminho of caminhos) {
+        const resposta = await requisitar(caminho, { headers });
+        assert.equal(resposta.status, 200, caminho);
+        assert.match(resposta.headers.get("content-type") ?? "", /application\/json/);
+        await resposta.json();
+      }
+      const invalida = await requisitar("/collections/rotina/iniciar", {
+        method: "POST", headers: { ...headers, "content-type": "application/json" }, body: "{",
+      });
+      assert.equal(invalida.status, 400);
     });
 
     await t.test("adulteração do token é recusada", async () => {

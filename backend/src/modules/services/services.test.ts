@@ -6,13 +6,22 @@ process.env.PGUSER ??= "greener";
 process.env.PGPASSWORD ??= "greener_dev_only";
 
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import test from "node:test";
+import { gerarToken } from "../auth/jwt.ts";
 import { tratarRequisicao } from "../../app.ts";
 import { encerrarConexao } from "../../db/connection.ts";
 import type { Servico } from "./services.repository.ts";
 
 test("GET /services passa por route, controller, service e repository", async (t) => {
+  const segredoAnterior = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = randomBytes(48).toString("base64url");
+  t.after(() => {
+    if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = segredoAnterior;
+  });
+  const headersAutenticacao = { authorization: `Bearer ${await gerarToken("1")}` };
   const servidor = createServer((request, response) => {
     void tratarRequisicao(request, response);
   });
@@ -29,7 +38,7 @@ test("GET /services passa por route, controller, service e repository", async (t
   const baseUrl = `http://127.0.0.1:${endereco.port}`;
 
   await t.test("lista os serviços em JSON", async () => {
-    const resposta = await fetch(`${baseUrl}/services`);
+    const resposta = await fetch(`${baseUrl}/services`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     assert.match(resposta.headers.get("content-type") ?? "", /application\/json/);
     const servicos = (await resposta.json()) as Servico[];
@@ -38,29 +47,29 @@ test("GET /services passa por route, controller, service e repository", async (t
   });
 
   await t.test("GET /services/:id devolve um serviço só", async () => {
-    const lista = (await (await fetch(`${baseUrl}/services`)).json()) as Servico[];
-    const resposta = await fetch(`${baseUrl}/services/${lista[0].id}`);
+    const lista = (await (await fetch(`${baseUrl}/services`, { headers: headersAutenticacao })).json()) as Servico[];
+    const resposta = await fetch(`${baseUrl}/services/${lista[0].id}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const { id, nome, status, cidade, latitude, longitude } = lista[0];
     assert.deepEqual(await resposta.json(), { id, nome, status, cidade, latitude, longitude });
   });
 
   await t.test("GET /services/:id de serviço que não existe responde 404 em JSON", async () => {
-    const resposta = await fetch(`${baseUrl}/services/999999`);
+    const resposta = await fetch(`${baseUrl}/services/999999`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 404);
     assert.equal(((await resposta.json()) as { error: string }).error, "not_found");
   });
 
   await t.test("GET /services/:id com id inválido responde 400", async () => {
     for (const id of ["abc", "0", "-1", "1.5", "99999999999"]) {
-      const resposta = await fetch(`${baseUrl}/services/${id}`);
+      const resposta = await fetch(`${baseUrl}/services/${id}`, { headers: headersAutenticacao });
       assert.equal(resposta.status, 400, `id ${id}`);
       assert.equal(((await resposta.json()) as { error: string }).error, "invalid_id");
     }
   });
 
   await t.test("caminho que não existe responde 404", async () => {
-    const resposta = await fetch(`${baseUrl}/nao-existe`);
+    const resposta = await fetch(`${baseUrl}/nao-existe`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 404);
   });
 });

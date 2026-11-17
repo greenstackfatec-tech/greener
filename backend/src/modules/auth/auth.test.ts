@@ -14,6 +14,7 @@ import { gerarToken, lerConfiguracaoJwt, verificarToken } from "./jwt.ts";
 import { exigirAutenticacao } from "./auth.middleware.ts";
 import { ErroLimiteLogin, LimitadorLogin } from "./auth.limiter.ts";
 import type { LoginAutenticado } from "./auth.service.ts";
+import { rotinaColeta } from "../collections/collections.service.ts";
 
 process.env.JWT_SECRET = randomBytes(48).toString("base64url");
 
@@ -273,8 +274,8 @@ test("login e proteção HTTP passam pelas camadas reais, simulando só a consul
     }
     const publica = await fetch(`${base}/health/live`);
     assert.equal(publica.status, 200);
-    assert.equal((await fetch(`${base}/services`)).status, 200);
-    assert.equal((await fetch(`${base}/collections`)).status, 200);
+    assert.equal((await fetch(`${base}/services`)).status, 401);
+    assert.equal((await fetch(`${base}/collections`)).status, 401);
   });
 
   await t.test("sem segredo, rotas públicas funcionam e a autenticação não libera acesso", async (t) => {
@@ -283,7 +284,7 @@ test("login e proteção HTTP passam pelas camadas reais, simulando só a consul
     const segredoAnterior = process.env.JWT_SECRET;
     try {
       delete process.env.JWT_SECRET;
-      for (const caminho of ["/health/live", "/health/ready", "/services", "/collections"]) {
+      for (const caminho of ["/health/live", "/health/ready"]) {
         assert.equal((await fetch(`${base}${caminho}`)).status, 200);
       }
       const resposta = await login(base);
@@ -300,6 +301,59 @@ test("login e proteção HTTP passam pelas camadas reais, simulando só a consul
       else process.env.JWT_SECRET = segredoAnterior;
     }
   });
+});
+
+test("rotas de coleta e dashboard recusam acesso sem autorização antes de executar ações", async (t) => {
+  const base = await iniciarServidor(t);
+  const consulta = t.mock.method(pg.Pool.prototype, "query", async () => {
+    throw new Error("Uma requisição bloqueada não deve consultar o banco");
+  });
+  const fetchOriginal = globalThis.fetch;
+  let externas = 0;
+  t.mock.method(globalThis, "fetch", (...args: Parameters<typeof fetch>) => {
+    if (!String(args[0]).startsWith(`${base}/`)) {
+      externas++;
+      throw new Error("Uma requisição bloqueada não deve consultar APIs externas");
+    }
+    return fetchOriginal(...args);
+  });
+  const estadoAnterior = rotinaColeta.status();
+  const token = await gerarToken("1");
+  const rotas = [
+    ["POST", "/collections/executar"],
+    ["POST", "/collections/rotina/iniciar"],
+    ["POST", "/collections/rotina/parar"],
+    ["GET", "/collections/rotina/status"],
+    ["GET", "/collections"],
+    ["GET", "/collections?serviceId=17"],
+    ["GET", "/services"],
+    ["GET", "/services/17"],
+    ["GET", "/dashboard/indicadores"],
+    ["GET", "/analytics/historico/17"],
+    ["GET", "/analytics/ranking"],
+    ["GET", "/analytics/comparacao"],
+  ];
+  for (const [method, caminho] of rotas) {
+    await t.test(`${method} ${caminho}`, async () => {
+      for (const authorization of [undefined, "Bearer invalido"]) {
+        const resposta = await fetch(`${base}${caminho}`, {
+          method,
+          headers: authorization ? { authorization } : {},
+          ...(method === "POST" ? { body: "{" } : {}),
+        });
+        assert.equal(resposta.status, 401);
+        assert.deepEqual(await resposta.json(), { error: "unauthorized", message: "Token ausente ou inválido." });
+        assert.equal(resposta.headers.get("cache-control"), "no-store");
+        assert.equal(resposta.headers.get("www-authenticate"), authorization ? 'Bearer error="invalid_token"' : "Bearer");
+      }
+      const separador = caminho.includes("?") ? "&" : "?";
+      const resposta = await fetch(`${base}${caminho}${separador}token=${token}`, { method });
+      assert.equal(resposta.status, 401);
+    });
+  }
+  assert.equal(consulta.mock.calls.length, 0);
+  assert.equal(externas, 0);
+  assert.deepEqual(rotinaColeta.status(), estadoAnterior);
 });
 
 test("cadastro público persiste bcrypt e permite login sem alterar contas existentes", async (t) => {

@@ -6,13 +6,21 @@ process.env.PGUSER ??= "greener";
 process.env.PGPASSWORD ??= "greener_dev_only";
 
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import test from "node:test";
+import { gerarToken } from "../auth/jwt.ts";
 import pg from "pg";
 
 test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (t) => {
+  const segredoAnterior = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = randomBytes(48).toString("base64url");
+  t.after(() => {
+    if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = segredoAnterior;
+  });
+  const headersAutenticacao = { authorization: `Bearer ${await gerarToken("1")}` };
   const schema = `indicadores_${randomUUID().replaceAll("-", "")}`;
   const administrador = new pg.Pool({ connectionTimeoutMillis: 5000 });
   await administrador.query(`CREATE SCHEMA "${schema}"`);
@@ -50,7 +58,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
   assert.ok(endereco && typeof endereco !== "string");
   const baseUrl = `http://127.0.0.1:${endereco.port}`;
   async function indicadores() {
-    const resposta = await fetch(`${baseUrl}/dashboard/indicadores`);
+    const resposta = await fetch(`${baseUrl}/dashboard/indicadores`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200, await resposta.clone().text());
     assert.match(resposta.headers.get("content-type") ?? "", /application\/json/);
     return resposta.json();
@@ -145,7 +153,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     t.mock.method(console, "error", () => {});
     await banco.query("ALTER TABLE metricas_servico RENAME TO metricas_servico_teste");
     try {
-      const resposta = await fetch(`${baseUrl}/dashboard/indicadores`);
+      const resposta = await fetch(`${baseUrl}/dashboard/indicadores`, { headers: headersAutenticacao });
       assert.equal(resposta.status, 500);
       assert.deepEqual(await resposta.json(), { error: "internal_error" });
     } finally {
@@ -154,7 +162,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
   });
 
   await t.test("retorna 404 para caminho inexistente", async () => {
-    const resposta = await fetch(`${baseUrl}/dashboard/nao-existe`);
+    const resposta = await fetch(`${baseUrl}/dashboard/nao-existe`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 404);
   });
 });
