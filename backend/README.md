@@ -116,18 +116,19 @@ Em um volume Docker novo, `schema.sql` e `seed.sql` são executados na inicializ
 
 ### Coleta manual e consultas
 
-Com o ambiente iniciado:
+Com o ambiente iniciado, obtenha um JWT em `POST /auth/login` e substitua o token no cabeçalho abaixo:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:3000/collections/executar"
-Invoke-RestMethod -Uri "http://localhost:3000/services"
-Invoke-RestMethod -Uri "http://localhost:3000/collections"
+$headersAutenticacao = @{ Authorization = "Bearer <token_obtido_no_login>" }
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/collections/executar" -Headers $headersAutenticacao
+Invoke-RestMethod -Uri "http://localhost:3000/services" -Headers $headersAutenticacao
+Invoke-RestMethod -Uri "http://localhost:3000/collections" -Headers $headersAutenticacao
 ```
 
 Para consultar o histórico de um serviço específico:
 
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:3000/collections?serviceId=1"
+Invoke-RestMethod -Uri "http://localhost:3000/collections?serviceId=1" -Headers $headersAutenticacao
 ```
 
 Ajuste a porta conforme `BACKEND_PORT` no `.env`.
