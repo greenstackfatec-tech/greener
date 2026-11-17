@@ -4,6 +4,28 @@
 .ind .dash-summary-card > div { min-width: 0; overflow-wrap: anywhere; }
 .ind-unidade { font-size: 12px; font-weight: 600; letter-spacing: 0; color: #7d8980; white-space: nowrap; }
 
+/* Ícone de informação com tooltip (energia vs CO₂e) */
+.ind-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  color: #7d8980;
+  cursor: help;
+  flex-shrink: 0;
+}
+.ind-info:hover,
+.ind-info:focus {
+  color: #25863c;
+}
+.ind-info:focus-visible {
+  outline: 2px solid #25863c;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 /* Carregando: bloco cinza no lugar do número, com brilho suave. */
 .ind-esqueleto {
   display: block;
