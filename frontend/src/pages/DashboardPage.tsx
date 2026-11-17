@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
-import { CartaoEstado } from "../components/CartaoEstado.tsx";
+import { CartaoEstado, type MetricasRecurso } from "../components/CartaoEstado.tsx";
 import { CardsIndicadores } from "../components/CardsIndicadores.tsx";
 import { FiltrosAnalise } from "../components/FiltrosAnalise.tsx";
 import { filtrarPorServicoERegiao, regioesDisponiveis } from "../filtros.ts";
@@ -119,6 +119,12 @@ export function DashboardPage() {
         {filtrados.map((s) => {
           const estado = situacaoDoServico(s);
           const textos = TEXTOS_SITUACAO[estado];
+          const metricas: MetricasRecurso = {
+            cpuPercentual: s.cpuPercentual,
+            memoriaGb: s.memoriaGb,
+            discoGb: s.discoGb,
+            redeGb: s.redeGb,
+          };
           return (
             <CartaoEstado
               key={s.id}
@@ -141,6 +147,7 @@ export function DashboardPage() {
               )}
               rodape={rodapeDaSituacao(s, estado, agora)}
               localizacao={localizacaoDoServico(s)}
+              metricas={metricas}
             />
           );
         })}
