@@ -5,6 +5,7 @@ import { createServer, request as requisicaoHttp } from "node:http";
 import test from "node:test";
 import type { TestContext } from "node:test";
 import pg from "pg";
+import { compare } from "bcryptjs";
 import { decodeJwt, SignJWT } from "jose";
 import type { JWTPayload } from "jose";
 import { tratarRequisicao } from "../../app.ts";
@@ -297,6 +298,141 @@ test("login e proteção HTTP passam pelas camadas reais, simulando só a consul
     } finally {
       if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
       else process.env.JWT_SECRET = segredoAnterior;
+    }
+  });
+});
+
+test("cadastro público persiste bcrypt e permite login sem alterar contas existentes", async (t) => {
+  const contas = new Map<string, { id: string; nome: string; senha_hash: string }>();
+  let consultas = 0;
+  let falha: unknown;
+  t.mock.method(pg.Pool.prototype, "query", async (sql: string, parametros: unknown[]) => {
+    consultas += 1;
+    if (falha !== undefined) throw falha;
+    if (/INSERT INTO usuarios\b/.test(sql)) {
+      assert.match(sql, /VALUES \(\$1, \$2, \$3\) RETURNING id::text$/);
+      assert.equal(parametros.length, 3);
+      const [nome, email, senha_hash] = parametros as string[];
+      if (contas.has(email)) throw { code: "23505", constraint: "usuarios_email_key" };
+      const id = String(9007199254740993n + BigInt(contas.size));
+      contas.set(email, { id, nome, senha_hash });
+      return { rows: [{ id }] };
+    }
+    assert.match(sql, /FROM usuarios WHERE email = \$1$/);
+    return { rows: contas.has(parametros[0] as string) ? [contas.get(parametros[0] as string)] : [] };
+  });
+  const base = await iniciarServidor(t);
+  const cadastrar = (dados: unknown) => fetch(`${base}/auth/register`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(dados),
+  });
+
+  await t.test("aceita o corpo mínimo e os campos adicionais da tela sem armazená-los", async () => {
+    const casos = [
+      { nome: "Pessoa Teste", email: "nova@example.com", senha: "Senha123" },
+      { nome: "  Pessoa Física  ", email: "  fisica@example.com  ", senha: " Senha123 ", tipoPessoa: "fisica", documento: "52998224725" },
+      { nome: "Empresa Teste", email: "empresa@example.com", senha: "Senha123", tipoPessoa: "juridica", documento: "11222333000181" },
+      { nome: "Limite", email: "limite-ascii@example.com", senha: "a".repeat(72) },
+      { nome: "Unicode", email: "limite-utf8@example.com", senha: "á".repeat(36) },
+      { nome: "O'Hara", email: "o'hara@example.com", senha: "Senha123", tipoPessoa: "outro", documento: null },
+    ];
+    for (const dados of casos) {
+      const resposta = await cadastrar(dados);
+      assert.equal(resposta.status, 201);
+      assert.equal(resposta.headers.get("cache-control"), "no-store");
+      assert.match(resposta.headers.get("content-type") ?? "", /application\/json/);
+      const conta = contas.get(dados.email.trim());
+      assert.ok(conta);
+      assert.deepEqual(await resposta.json(), { id: conta.id });
+      assert.equal(conta.nome, dados.nome.trim());
+      assert.deepEqual(Object.keys(conta).sort(), ["id", "nome", "senha_hash"]);
+      assert.match(conta.senha_hash, /^\$2[aby]\$10\$/);
+      assert.notEqual(conta.senha_hash, dados.senha);
+      assert.equal(await compare(dados.senha, conta.senha_hash), true);
+      const autenticada = await login(base, { email: dados.email, senha: dados.senha });
+      assert.equal(autenticada.status, 200);
+      const { token } = await autenticada.json() as LoginAutenticado;
+      assert.equal(await verificarToken(token), conta.id);
+    }
+  });
+
+  await t.test("duplicidade de e-mail retorna conflito sem sobrescrever a senha", async () => {
+    const antes = { ...contas.get("nova@example.com") };
+    const resposta = await cadastrar({ nome: "Outra Pessoa", email: " nova@example.com ", senha: "OutraSenha123" });
+    assert.equal(resposta.status, 409);
+    assert.equal(resposta.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await resposta.json(), { error: "email_already_exists", message: "Este e-mail já está cadastrado." });
+    assert.deepEqual(contas.get("nova@example.com"), antes);
+    assert.equal((await login(base, { email: "nova@example.com", senha: "Senha123" })).status, 200);
+    assert.equal((await login(base, { email: "nova@example.com", senha: "OutraSenha123" })).status, 401);
+  });
+
+  await t.test("requisições simultâneas com mesmo e-mail criam somente uma conta", async () => {
+    const antes = contas.size;
+    const dados = { nome: "Concorrência", email: "simultaneo@example.com", senha: "Senha123" };
+    const respostas = await Promise.all([cadastrar(dados), cadastrar(dados)]);
+    assert.deepEqual(respostas.map(resposta => resposta.status).sort(), [201, 409]);
+    await Promise.all(respostas.map(resposta => resposta.json()));
+    assert.equal(contas.size, antes + 1);
+  });
+
+  await t.test("rejeita dados inválidos antes de acessar o banco", async () => {
+    const valido = { nome: "Pessoa Teste", email: "valida@example.com", senha: "Senha123" };
+    const casos: unknown[] = [null, [], "texto", 123, {}];
+    for (const nome of [undefined, null, 123, "", "   ", "a".repeat(101), "Pessoa\0Teste"]) casos.push({ ...valido, nome });
+    for (const email of [undefined, null, 123, "", "invalido", "a\0@exemplo.com", `${"a".repeat(145)}@exemplo.com`]) casos.push({ ...valido, email });
+    for (const senha of [undefined, null, 123, "", "1234567", "a".repeat(73), "á".repeat(37), "Senha123\0"]) casos.push({ ...valido, senha });
+    const antes = consultas;
+    for (const dados of casos) {
+      const resposta = await cadastrar(dados);
+      assert.equal(resposta.status, 400);
+      assert.equal((await resposta.json() as { error: string }).error, "invalid_request");
+    }
+    assert.equal(consultas, antes);
+  });
+
+  await t.test("mantém os erros de JSON, tipo de conteúdo e tamanho do corpo", async () => {
+    const antes = consultas;
+    const casos = [
+      { body: "{", tipo: "application/json", status: 400, codigo: "invalid_json" },
+      { body: "", tipo: "application/json", status: 400, codigo: "invalid_json" },
+      { body: "texto", tipo: "text/plain", status: 415, codigo: "unsupported_media_type" },
+      { body: "a".repeat(8193), tipo: "application/json", status: 413, codigo: "payload_too_large" },
+    ];
+    for (const caso of casos) {
+      const resposta = await fetch(`${base}/auth/register`, {
+        method: "POST", headers: { "content-type": caso.tipo }, body: caso.body,
+      });
+      assert.equal(resposta.status, caso.status);
+      assert.equal((await resposta.json() as { error: string }).error, caso.codigo);
+      assert.equal(resposta.headers.get("cache-control"), "no-store");
+    }
+    assert.equal(consultas, antes);
+  });
+
+  await t.test("falhas inesperadas do banco não são confundidas com e-mail duplicado", async () => {
+    try {
+      for (const erro of [new Error("Detalhe interno"), { code: "23505", constraint: "usuarios_pkey" }, { code: "23503" }, null]) {
+        falha = erro;
+        const resposta = await cadastrar({ nome: "Falha", email: "falha@example.com", senha: "Senha123" });
+        assert.equal(resposta.status, 500);
+        assert.deepEqual(await resposta.json(), { error: "internal_server_error" });
+      }
+    } finally {
+      falha = undefined;
+    }
+    assert.equal(contas.has("falha@example.com"), false);
+  });
+
+  await t.test("cadastro público funciona também sem segredo JWT configurado", async () => {
+    const segredo = process.env.JWT_SECRET;
+    try {
+      delete process.env.JWT_SECRET;
+      const resposta = await cadastrar({ nome: "Pública", email: "publica@example.com", senha: "Senha123" });
+      assert.equal(resposta.status, 201);
+      await resposta.json();
+    } finally {
+      if (segredo === undefined) delete process.env.JWT_SECRET;
+      else process.env.JWT_SECRET = segredo;
     }
   });
 });

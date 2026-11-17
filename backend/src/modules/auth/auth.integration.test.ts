@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { decodeJwt } from "jose";
+import { compare } from "bcryptjs";
+import { consultar, encerrarConexao } from "../../db/connection.ts";
 import type { LoginAutenticado } from "./auth.service.ts";
 
-// Exige o ambiente de desenvolvimento com schema e seed; não altera os dados do banco.
+// Os testes de login exigem schema e seed e não alteram os dados do banco.
 const destinos = [
   { nome: "backend direto", base: process.env.TEST_API_URL ?? "http://127.0.0.1:3000" },
   { nome: "proxy do frontend", base: process.env.TEST_PROXY_URL ?? "http://127.0.0.1:8080/api" },
@@ -113,4 +115,81 @@ test("limite de login é compartilhado entre backend direto e proxy sem bloquear
     });
     assert.equal(configuracao.status, 200);
   });
+});
+
+// Ative TEST_AUTH_REGISTRATION=true somente com PostgreSQL isolado para os testes de cadastro.
+test("cadastro com PostgreSQL real pelo backend e proxy", {
+  skip: process.env.TEST_AUTH_REGISTRATION !== "true",
+}, async (t) => {
+  const ids: string[] = [];
+  t.after(async () => {
+    try {
+      if (ids.length > 0) await consultar("DELETE FROM usuarios WHERE id = ANY($1::bigint[])", [ids]);
+    } finally {
+      await encerrarConexao();
+    }
+  });
+
+  for (const { nome: destino, base } of destinos) {
+    await t.test(destino, async () => {
+      const url = base.replace(/\/$/, "");
+      const cadastrar = (dados: unknown) => fetch(`${url}/auth/register`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify(dados), signal: AbortSignal.timeout(10_000),
+      });
+      for (const tipoPessoa of ["fisica", "juridica"]) {
+        const email = `cadastro-${randomUUID()}@example.com`;
+        const senha = " SenhaTeste123! ";
+        const dados = { nome: "  Conta de Teste  ", email: ` ${email} `, senha, tipoPessoa, documento: "" };
+        const resposta = await cadastrar(dados);
+        assert.equal(resposta.status, 201);
+        assert.equal(resposta.headers.get("cache-control"), "no-store");
+        const criada = await resposta.json() as { id: string };
+        ids.push(criada.id);
+        assert.deepEqual(Object.keys(criada), ["id"]);
+        assert.match(criada.id, /^[1-9]\d*$/);
+        const registro = await consultar<{ id: string; nome: string; email: string; senha_hash: string }>(
+          "SELECT id::text, nome, email, senha_hash FROM usuarios WHERE id = $1", [criada.id],
+        );
+        const usuario = registro.rows[0];
+        assert.equal(usuario.nome, "Conta de Teste");
+        assert.equal(usuario.email, email);
+        assert.match(usuario.senha_hash, /^\$2[aby]\$10\$/);
+        assert.notEqual(usuario.senha_hash, senha);
+        assert.equal(await compare(senha, usuario.senha_hash), true);
+
+        const repetida = await cadastrar({ ...dados, senha: "OutraSenha123!" });
+        assert.equal(repetida.status, 409);
+        assert.deepEqual(await repetida.json(), { error: "email_already_exists", message: "Este e-mail já está cadastrado." });
+        for (const acesso of destinos) {
+          const autenticada = await fetch(`${acesso.base.replace(/\/$/, "")}/auth/login`, {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email, senha }), signal: AbortSignal.timeout(10_000),
+          });
+          assert.equal(autenticada.status, 200);
+          const { token } = await autenticada.json() as LoginAutenticado;
+          assert.equal(decodeJwt(token).sub, criada.id);
+        }
+      }
+
+      const email = `concorrencia-${randomUUID()}@example.com`;
+      const dados = { nome: "Conta Concorrente", email, senha: "SenhaTeste123!" };
+      const respostas = await Promise.all([cadastrar(dados), cadastrar(dados)]);
+      const corpos = await Promise.all(respostas.map(resposta => resposta.json() as Promise<{ id?: string; error?: string }>));
+      for (const corpo of corpos) if (corpo.id) ids.push(corpo.id);
+      assert.deepEqual(respostas.map(resposta => resposta.status).sort(), [201, 409]);
+      assert.equal(corpos.find(corpo => corpo.error)?.error, "email_already_exists");
+      const quantidade = await consultar<{ quantidade: string }>(
+        "SELECT COUNT(*)::text AS quantidade FROM usuarios WHERE email = $1", [email],
+      );
+      assert.equal(quantidade.rows[0].quantidade, "1");
+
+      const emailInvalido = `invalido-${randomUUID()}@example.com`;
+      const invalida = await cadastrar({ nome: "Inválida", email: emailInvalido, senha: "curta" });
+      assert.equal(invalida.status, 400);
+      await invalida.json();
+      const inexistente = await consultar("SELECT id FROM usuarios WHERE email = $1", [emailInvalido]);
+      assert.equal(inexistente.rows.length, 0);
+    });
+  }
 });

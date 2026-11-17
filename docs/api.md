@@ -432,6 +432,26 @@ Os estados de `monitoramento.situacao` são `aguardando`, `ok` e `degradado`. Em
 
 ### 3.6. Autenticação
 
+#### `POST /auth/register`
+
+Cria uma conta sem exigir token. Enviar `Content-Type: application/json` e um objeto com `nome`, `email` e `senha` como texto:
+
+```json
+{
+  "nome": "Pessoa de Teste",
+  "email": "cadastro@example.com",
+  "senha": "SenhaTeste123!"
+}
+```
+
+O nome deve conter de 1 a 100 caracteres após remover espaços das extremidades. O e-mail deve ser válido e conter até 150 caracteres; espaços das extremidades são removidos, mantendo maiúsculas e minúsculas. A senha deve ter ao menos 8 caracteres, até 72 bytes em UTF-8 e não conter caractere nulo; seus espaços são preservados. O nome também não aceita caractere nulo.
+
+**Sucesso:** HTTP `201`, corpo `{ "id": "<identificador>" }` e `Cache-Control: no-store`. A senha é persistida somente como hash bcrypt. A conta criada pode entrar por `POST /auth/login`; o cadastro não emite token.
+
+**Erros:** `400 invalid_request` para campos obrigatórios ausentes ou inválidos; `400 invalid_json` para JSON malformado; `409 email_already_exists` para e-mail já utilizado; `413 payload_too_large` para corpo acima de 8 KiB; `415 unsupported_media_type` para conteúdo diferente de JSON; `500 internal_server_error` para falhas inesperadas. Erros de validação e conflito usam `{ "error": "<código>", "message": "<mensagem>" }`.
+
+Os campos adicionais `tipoPessoa` e `documento`, enviados pela tela atual, são aceitos e ignorados. Não há validação de CPF/CNPJ, persistência desses campos ou garantia de unicidade de documentos neste cadastro.
+
 #### `POST /auth/login`
 
 Valida as credenciais do usuário e emite um token JWT.
