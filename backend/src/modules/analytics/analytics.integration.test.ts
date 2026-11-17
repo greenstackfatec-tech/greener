@@ -33,10 +33,10 @@ test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
   // O fuso da sessão difere de UTC para detectar dependência acidental do servidor.
   process.env.PGOPTIONS = `-c search_path=${schema} -c TimeZone=Pacific/Auckland`;
   let schemaCriado = false;
-  let encerrarRepositorio: (() => Promise<void>) | undefined;
+let _encerrarRepositorio: (() => Promise<void>) | undefined = undefined;
   t.after(async () => {
     try {
-      await encerrarRepositorio?.();
+      await _encerrarRepositorio?.();
     } finally {
       try {
         await banco.end();
@@ -60,7 +60,7 @@ test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
     agregarMetricasPorPeriodo,
     encerrarPool,
   } = await import("./analytics.repository.ts");
-  encerrarRepositorio = encerrarPool;
+  _encerrarRepositorio = encerrarPool;
 
   // Dados de teste base
   const app = await banco.query("INSERT INTO aplicacoes (nome) VALUES ('App Teste') RETURNING id");
