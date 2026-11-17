@@ -6,9 +6,10 @@ process.env.PGUSER ??= "greener";
 process.env.PGPASSWORD ??= "greener_dev_only";
 
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import test from "node:test";
+import { gerarToken } from "../auth/jwt.ts";
 import { tratarRequisicao } from "../../app.ts";
 import { consultar, encerrarConexao } from "../../db/connection.ts";
 import { salvarServico } from "../services/services.repository.ts";
@@ -16,6 +17,13 @@ import { gravarColeta } from "./collections.repository.ts";
 
 // Exige o PostgreSQL com schema e seed; apaga no fim só o que o teste criou.
 test("GET /collections passa por route, controller, service e repository", async (t) => {
+  const segredoAnterior = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = randomBytes(48).toString("base64url");
+  t.after(() => {
+    if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = segredoAnterior;
+  });
+  const headersAutenticacao = { authorization: `Bearer ${await gerarToken("1")}` };
   const idExterno = `teste-${randomUUID()}`;
   const servidor = createServer((request, response) => {
     void tratarRequisicao(request, response);
@@ -53,7 +61,7 @@ test("GET /collections passa por route, controller, service e repository", async
   });
 
   await t.test("com serviceId devolve só as coletas daquele serviço", async () => {
-    const resposta = await fetch(`${baseUrl}/collections?serviceId=${servico.id}`);
+    const resposta = await fetch(`${baseUrl}/collections?serviceId=${servico.id}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const coletas = (await resposta.json()) as Array<{ id: number; energiaKwh: number }>;
     assert.equal(coletas.length, 1);
@@ -62,21 +70,21 @@ test("GET /collections passa por route, controller, service e repository", async
   });
 
   await t.test("serviceId sem coletas devolve lista vazia", async () => {
-    const resposta = await fetch(`${baseUrl}/collections?serviceId=999999`);
+    const resposta = await fetch(`${baseUrl}/collections?serviceId=999999`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     assert.deepEqual(await resposta.json(), []);
   });
 
   await t.test("serviceId inválido responde 400 em JSON", async () => {
     for (const valor of ["", "abc", "0"]) {
-      const resposta = await fetch(`${baseUrl}/collections?serviceId=${valor}`);
+      const resposta = await fetch(`${baseUrl}/collections?serviceId=${valor}`, { headers: headersAutenticacao });
       assert.equal(resposta.status, 400, `serviceId=${valor}`);
       assert.equal(((await resposta.json()) as { error: string }).error, "invalid_id");
     }
   });
 
   await t.test("sem serviceId continua listando todas", async () => {
-    const resposta = await fetch(`${baseUrl}/collections`);
+    const resposta = await fetch(`${baseUrl}/collections`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const coletas = (await resposta.json()) as Array<{ id: number }>;
     assert.ok(coletas.some((coleta) => coleta.id === coletaId));

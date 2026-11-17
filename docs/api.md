@@ -23,8 +23,8 @@ As chamadas feitas pelo frontend passam pelo proxy `/api`, por exemplo `GET http
 - As respostas da API são fornecidas em JSON.
 - Requisições com corpo JSON devem utilizar `Content-Type: application/json`.
 - Os identificadores internos de serviços são números inteiros positivos.
-- Os endpoints públicos não exigem autenticação.
-- `GET /monitoring-settings` exige um token JWT válido no cabeçalho `Authorization`.
+- Login, cadastro e verificações de saúde permanecem públicos.
+- Todas as rotas de `/services`, `/collections` e `/analytics`, além de `GET /dashboard/indicadores` e `GET /monitoring-settings`, exigem JWT válido no cabeçalho `Authorization`.
 
 ### Autenticação JWT
 
@@ -35,6 +35,8 @@ Authorization: Bearer <token>
 ```
 
 O backend utiliza a variável `JWT_SECRET` para assinar e validar os tokens. Ela deve conter pelo menos 32 bytes e ser definida no arquivo `.env`, criado a partir de `.env.example`. Não compartilhe nem versione o arquivo `.env`.
+
+Nas rotas protegidas, token ausente, inválido ou expirado retorna HTTP `401`, `Cache-Control: no-store` e `{ "error": "unauthorized", "message": "Token ausente ou inválido." }`. A resposta inclui `WWW-Authenticate: Bearer` sem credenciais ou `Bearer error="invalid_token"` quando o cabeçalho de autorização é rejeitado. A autenticação ocorre antes das ações e da validação dos parâmetros; com token válido, os contratos de negócio abaixo são preservados.
 
 ## 3. Endpoints do backend
 
@@ -90,7 +92,7 @@ Retorna os serviços cadastrados no GreenER, incluindo seus dados de identifica�
 
 **Parâmetros:** nenhum.
 
-**Autenticação:** não exige.
+**Autenticação:** obrigatória. Enviar `Authorization: Bearer <token>`.
 
 **Resposta de sucesso — HTTP 200:** array de serviços. A implementação inclui os dados de localização disponíveis e um objeto `localizacao` com valores de apresentação. Quando a origem não informa a localização, os campos estruturados (`pais`, `regiao`, `cidade`, `latitude` e `longitude`) são `null` e os campos de apresentação de `localizacao` recebem `"Não informado"`, individualmente: um serviço com país e região, mas sem cidade, traz `"cidade": "Não informado"` e mantém os demais valores (RF12). Texto vazio ou só com espaços também é tratado como ausente.
 
@@ -126,7 +128,7 @@ Retorna os dados de um serviço específico, identificado pelo ID interno do ban
 |---|---|---|---|
 | `id` | Inteiro positivo | Sim | Identificador interno do serviço. |
 
-**Autenticação:** não exige.
+**Autenticação:** obrigatória. Enviar `Authorization: Bearer <token>`.
 
 **Exemplo de requisição:**
 
@@ -173,7 +175,7 @@ Retorna as últimas 100 coletas registradas no banco de dados, ordenadas da mais
 
 **Parâmetros:** nenhum.
 
-**Autenticação:** não exige.
+**Autenticação:** obrigatória. Enviar `Authorization: Bearer <token>`.
 
 **Resposta de sucesso — HTTP 200:**
 
@@ -206,7 +208,7 @@ Retorna o histórico detalhado de coletas de um serviço específico. O resultad
 |---|---|---|---|
 | `serviceId` | Inteiro positivo | Sim, para filtrar | ID interno do serviço no banco de dados. |
 
-**Autenticação:** não exige.
+**Autenticação:** obrigatória. Enviar `Authorization: Bearer <token>`.
 
 **Exemplo de requisição:**
 
@@ -255,7 +257,7 @@ Executa manualmente uma rodada de coleta. O backend consulta a lista de serviço
 
 **Parâmetros:** nenhum.
 
-**Autenticação:** não exige.
+**Autenticação:** obrigatória. Enviar `Authorization: Bearer <token>`.
 
 **Corpo da requisição:** não é necessário.
 
@@ -335,7 +337,7 @@ Inicia manualmente a rotina de coleta periódica.
 
 **Parâmetros:** nenhum.
 
-**Autenticação:** não exige.
+**Autenticação:** obrigatória. Enviar `Authorization: Bearer <token>`.
 
 **Cabeçalho obrigatório:** `Content-Type: application/json`.
 
@@ -382,7 +384,7 @@ Solicita a parada da rotina, cancela os agendamentos e aguarda as coletas já in
 
 **Parâmetros e corpo:** nenhum.
 
-**Autenticação:** não exige.
+**Autenticação:** obrigatória. Enviar `Authorization: Bearer <token>`.
 
 **Resposta de sucesso — HTTP 200:**
 
@@ -401,7 +403,7 @@ Retorna o estado atual da rotina e o diagnóstico das coletas. A resposta é um 
 
 **Parâmetros:** nenhum.
 
-**Autenticação:** não exige.
+**Autenticação:** obrigatória. Enviar `Authorization: Bearer <token>`.
 
 **Cabeçalho de resposta:** `Cache-Control: no-store`.
 
@@ -547,7 +549,7 @@ Retorna os indicadores consolidados utilizados no dashboard. Os totais de energi
 
 **Parâmetros:** nenhum.
 
-**Autenticação:** não exige.
+**Autenticação:** obrigatória. Enviar `Authorization: Bearer <token>`.
 
 **Resposta de sucesso — HTTP 200:**
 

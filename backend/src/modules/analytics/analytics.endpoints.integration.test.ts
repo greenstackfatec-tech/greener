@@ -6,9 +6,10 @@ process.env.PGUSER ??= "greener";
 process.env.PGPASSWORD ??= "greener_dev_only";
 
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import test from "node:test";
+import { gerarToken } from "../auth/jwt.ts";
 import { tratarRequisicao } from "../../app.ts";
 import { consultar, encerrarConexao } from "../../db/connection.ts";
 import { salvarServico } from "../services/services.repository.ts";
@@ -65,6 +66,13 @@ interface ErrorResponse {
  * Exige o PostgreSQL com schema e seed; apaga no fim só o que o teste criou.
  */
 test("GET /analytics/* — rotas de histórico, ranking e comparação", async (t) => {
+  const segredoAnterior = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = randomBytes(48).toString("base64url");
+  t.after(() => {
+    if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = segredoAnterior;
+  });
+  const headersAutenticacao = { authorization: `Bearer ${await gerarToken("1")}` };
   // Criar dados de teste: aplicação, região, serviços e coletas
   const idExterno = `teste-analytics-${randomUUID()}`;
   const servidor = createServer((request, response) => {
@@ -167,7 +175,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   // 1. Histórico por serviço
   // ------------------------------------------------------------------
   await t.test("GET /analytics/historico/:servicoId — retorna coletas do período", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/historico/${s1.id}?${periodoParams}`);
+    const resposta = await fetch(`${baseUrl}/analytics/historico/${s1.id}?${periodoParams}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as HistoricoResponse;
     assert.ok(Array.isArray(body.dados), "dados deve ser array");
@@ -198,7 +206,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
       duracaoSegundos: 60, energiaKwh: 0, emissaoCo2eG: 0,
     });
 
-    const resposta = await fetch(`${baseUrl}/analytics/historico/${s1.id}?${periodoParams}&apenasSucesso=false`);
+    const resposta = await fetch(`${baseUrl}/analytics/historico/${s1.id}?${periodoParams}&apenasSucesso=false`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as HistoricoResponse;
     assert.equal(body.dados.length, 3); // 2 sucesso + 1 sem_metricas
@@ -207,7 +215,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   });
 
   await t.test("GET /analytics/historico/:servicoId — ordenacao=ASC", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/historico/${s1.id}?${periodoParams}&ordenacao=ASC`);
+    const resposta = await fetch(`${baseUrl}/analytics/historico/${s1.id}?${periodoParams}&ordenacao=ASC`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as HistoricoResponse;
     // ASC = mais antigo primeiro
@@ -216,7 +224,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   });
 
   await t.test("GET /analytics/historico/:servicoId — paginação (limite, offset)", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/historico/${s1.id}?${periodoParams}&limite=1&offset=1`);
+    const resposta = await fetch(`${baseUrl}/analytics/historico/${s1.id}?${periodoParams}&limite=1&offset=1`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as HistoricoResponse;
     assert.equal(body.dados.length, 1);
@@ -233,7 +241,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
       regiaoId: seed.regiao,
       cidade: null, latitude: null, longitude: null,
     });
-    const resposta = await fetch(`${baseUrl}/analytics/historico/${sSemColeta.id}?${periodoParams}`);
+    const resposta = await fetch(`${baseUrl}/analytics/historico/${sSemColeta.id}?${periodoParams}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as HistoricoResponse;
     assert.deepEqual(body.dados, []);
@@ -241,7 +249,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
 
   await t.test("GET /analytics/historico/:servicoId — ID inválido retorna 400", async () => {
     for (const id of ["abc", "0", "-1", "1.5"]) {
-      const resposta = await fetch(`${baseUrl}/analytics/historico/${id}?${periodoParams}`);
+      const resposta = await fetch(`${baseUrl}/analytics/historico/${id}?${periodoParams}`, { headers: headersAutenticacao });
       assert.equal(resposta.status, 400, `id=${id}`);
       const body = await resposta.json() as ErrorResponse;
       assert.equal(body.error, "invalid_id");
@@ -250,7 +258,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
 
   await t.test("GET /analytics/historico/:servicoId — período inválido retorna 400", async () => {
     // Início depois do fim
-    const resposta = await fetch(`${baseUrl}/analytics/historico/${s1.id}?inicio=2026-11-16T00:00:00Z&fim=2026-11-15T00:00:00Z`);
+    const resposta = await fetch(`${baseUrl}/analytics/historico/${s1.id}?inicio=2026-11-16T00:00:00Z&fim=2026-11-15T00:00:00Z`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 400);
     const body = await resposta.json() as ErrorResponse;
     assert.equal(body.error, "invalid_period");
@@ -260,7 +268,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   // 2. Ranking
   // ------------------------------------------------------------------
   await t.test("GET /analytics/ranking — ordena por energia DESC (padrão)", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=energia`);
+    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=energia`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as RankingResponse;
     assert.ok(Array.isArray(body.dados));
@@ -286,7 +294,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   });
 
   await t.test("GET /analytics/ranking — ordena por co2e DESC", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=co2e`);
+    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=co2e`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as RankingResponse;
     assert.equal(body.metrica, "co2e");
@@ -309,7 +317,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   });
 
   await t.test("GET /analytics/ranking — ordenacao=ASC", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=energia&ordenacao=ASC`);
+    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=energia&ordenacao=ASC`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as RankingResponse;
     assert.equal(body.ordenacao, "ASC");
@@ -323,7 +331,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   });
 
   await t.test("GET /analytics/ranking — filtro aplicacaoId", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=energia&aplicacaoId=${seed.aplicacao}`);
+    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=energia&aplicacaoId=${seed.aplicacao}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as RankingResponse;
     // Verificar que nossos 3 serviços aparecem com dados corretos
@@ -334,7 +342,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   });
 
   await t.test("GET /analytics/ranking — filtro regiaoId", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=energia&regiaoId=${seed.regiao}`);
+    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=energia&regiaoId=${seed.regiao}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as RankingResponse;
     // s1 e s2 estão no Sudeste (região do seed)
@@ -347,7 +355,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   });
 
   await t.test("GET /analytics/ranking — apenasAtivos=false", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=energia&apenasAtivos=false`);
+    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=energia&apenasAtivos=false`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as RankingResponse;
     // Nossos 3 serviços estão ativos, devem aparecer
@@ -358,7 +366,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   });
 
   await t.test("GET /analytics/ranking — métrica inválida retorna 400", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=invalida`);
+    const resposta = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}&metrica=invalida`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 400);
     const body = await resposta.json() as ErrorResponse;
     assert.equal(body.error, "invalid_metric");
@@ -366,17 +374,17 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
 
   await t.test("GET /analytics/ranking — parâmetros obrigatórios ausentes retorna 400", async () => {
     // Sem inicio
-    const resposta1 = await fetch(`${baseUrl}/analytics/ranking?fim=${encodeURIComponent(fim)}&metrica=energia`);
+    const resposta1 = await fetch(`${baseUrl}/analytics/ranking?fim=${encodeURIComponent(fim)}&metrica=energia`, { headers: headersAutenticacao });
     assert.equal(resposta1.status, 400);
     const body1 = await resposta1.json() as ErrorResponse;
     assert.equal(body1.error, "invalid_period");
     // Sem fim
-    const resposta2 = await fetch(`${baseUrl}/analytics/ranking?inicio=${encodeURIComponent(inicio)}&metrica=energia`);
+    const resposta2 = await fetch(`${baseUrl}/analytics/ranking?inicio=${encodeURIComponent(inicio)}&metrica=energia`, { headers: headersAutenticacao });
     assert.equal(resposta2.status, 400);
     const body2 = await resposta2.json() as ErrorResponse;
     assert.equal(body2.error, "invalid_period");
     // Sem metrica
-    const resposta3 = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}`);
+    const resposta3 = await fetch(`${baseUrl}/analytics/ranking?${periodoParams}`, { headers: headersAutenticacao });
     assert.equal(resposta3.status, 400);
     const body3 = await resposta3.json() as ErrorResponse;
     assert.equal(body3.error, "invalid_metric");
@@ -387,7 +395,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   // ------------------------------------------------------------------
   await t.test("GET /analytics/comparacao — 2+ serviços com dados", async () => {
     const servicosParam = `${s1.id},${s2.id},${s3.id}`;
-    const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}`);
+    const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as ComparacaoResponse;
     assert.ok(Array.isArray(body.dados));
@@ -420,7 +428,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
       cidade: null, latitude: null, longitude: null,
     });
     const servicosParam = `${s1.id},${sSemDados.id}`;
-    const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}`);
+    const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as ComparacaoResponse;
     assert.equal(body.dados.length, 2);
@@ -437,8 +445,8 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
 
   await t.test("GET /analytics/comparacao — ordenacao=DESC inverte ordem", async () => {
     const servicosParam = `${s1.id},${s3.id}`;
-    const respostaAsc = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}&ordenacao=ASC`);
-    const respostaDesc = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}&ordenacao=DESC`);
+    const respostaAsc = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}&ordenacao=ASC`, { headers: headersAutenticacao });
+    const respostaDesc = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}&ordenacao=DESC`, { headers: headersAutenticacao });
     assert.equal(respostaAsc.status, 200);
     assert.equal(respostaDesc.status, 200);
     const bodyAsc = await respostaAsc.json() as ComparacaoResponse;
@@ -450,7 +458,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
 
   await t.test("GET /analytics/comparacao — deduplica IDs", async () => {
     const servicosParam = `${s1.id},${s1.id},${s2.id}`;
-    const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}`);
+    const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200);
     const body = await resposta.json() as ComparacaoResponse;
     assert.equal(body.dados.length, 2); // deduplicado
@@ -458,7 +466,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
 
   await t.test("GET /analytics/comparacao — menos de 2 serviços distintos retorna 400", async () => {
     for (const servicosParam of ["", `${s1.id}`, `${s1.id},${s1.id}`]) {
-      const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}`);
+      const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}`, { headers: headersAutenticacao });
       assert.equal(resposta.status, 400, `servicos=${servicosParam}`);
       const body = await resposta.json() as ErrorResponse;
       assert.equal(body.error, "invalid_services");
@@ -468,7 +476,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   await t.test("GET /analytics/comparacao — mais de 5 serviços retorna 400", async () => {
     const extraIds = Array.from({ length: 4 }, (_, i) => 999999 + i).join(",");
     const servicosParam = `${s1.id},${s2.id},${s3.id},${extraIds}`;
-    const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}`);
+    const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=${servicosParam}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 400);
     const body = await resposta.json() as ErrorResponse;
     assert.equal(body.error, "invalid_services");
@@ -476,14 +484,14 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   });
 
   await t.test("GET /analytics/comparacao — ID inválido retorna 400", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=abc,${s2.id}`);
+    const resposta = await fetch(`${baseUrl}/analytics/comparacao?${periodoParams}&servicos=abc,${s2.id}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 400);
     const body = await resposta.json() as ErrorResponse;
     assert.equal(body.error, "invalid_services");
   });
 
   await t.test("GET /analytics/comparacao — período inválido retorna 400", async () => {
-    const resposta = await fetch(`${baseUrl}/analytics/comparacao?inicio=2026-11-16T00:00:00Z&fim=2026-11-15T00:00:00Z&servicos=${s1.id},${s2.id}`);
+    const resposta = await fetch(`${baseUrl}/analytics/comparacao?inicio=2026-11-16T00:00:00Z&fim=2026-11-15T00:00:00Z&servicos=${s1.id},${s2.id}`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 400);
     const body = await resposta.json() as ErrorResponse;
     assert.equal(body.error, "invalid_period");
