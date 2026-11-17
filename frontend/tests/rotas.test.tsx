@@ -1,12 +1,11 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom";
 import { RouterProvider } from "react-router";
-import { afterAll, afterEach, beforeEach, expect, test, vi } from "vitest";
 import { router } from "../src/rotas.tsx";
 import { removerToken } from "../src/services/token.ts";
 
 beforeEach(() => {
   removerToken();
-  // O painel de consumo das telas de autenticação não depende de um backend real.
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({
     consumo_total_kwh: 0,
     emissao_total_co2e_g: 0,

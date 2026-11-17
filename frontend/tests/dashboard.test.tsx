@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import "@testing-library/jest-dom";
 import { DashboardPage } from "../src/pages/DashboardPage.tsx";
 import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../src/config.ts";
 import * as servicos from "../src/services/servicos.ts";
