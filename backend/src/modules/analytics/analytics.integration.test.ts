@@ -33,7 +33,7 @@ test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
   // O fuso da sessão difere de UTC para detectar dependência acidental do servidor.
   process.env.PGOPTIONS = `-c search_path=${schema} -c TimeZone=Pacific/Auckland`;
   let schemaCriado = false;
-  const encerrarRepositorio: (() => Promise<void>) | undefined = undefined;
+  let encerrarRepositorio: (() => Promise<void>) | undefined;
   t.after(async () => {
     try {
       await encerrarRepositorio?.();
