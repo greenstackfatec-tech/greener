@@ -336,7 +336,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
     const body = await resposta.json() as RankingResponse;
     // Verificar que nossos 3 serviços aparecem com dados corretos
     for (const nome of ["Serviço Histórico A", "Serviço Histórico B", "Serviço Virginia"]) {
-      const svc = body.dados.find((r: any) => r.nome === nome);
+      const svc = body.dados.find((r: { nome: string }) => r.nome === nome);
       assert.ok(svc, `Serviço ${nome} deve aparecer no ranking`);
     }
   });
@@ -347,11 +347,11 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
     const body = await resposta.json() as RankingResponse;
     // s1 e s2 estão no Sudeste (região do seed)
     for (const nome of ["Serviço Histórico A", "Serviço Histórico B"]) {
-      const svc = body.dados.find((r: any) => r.nome === nome);
+      const svc = body.dados.find((r: { nome: string }) => r.nome === nome);
       assert.ok(svc, `Serviço ${nome} deve aparecer no ranking`);
     }
     // Todos os resultados devem ser da região Sudeste
-    assert.ok(body.dados.every((r: any) => r.regiao === "Sudeste"));
+    assert.ok(body.dados.every((r: { regiao: string | null }) => r.regiao === "Sudeste"));
   });
 
   await t.test("GET /analytics/ranking — apenasAtivos=false", async () => {
@@ -360,7 +360,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
     const body = await resposta.json() as RankingResponse;
     // Nossos 3 serviços estão ativos, devem aparecer
     for (const nome of ["Serviço Histórico A", "Serviço Histórico B", "Serviço Virginia"]) {
-      const svc = body.dados.find((r: any) => r.nome === nome);
+      const svc = body.dados.find((r: { nome: string }) => r.nome === nome);
       assert.ok(svc, `Serviço ${nome} deve aparecer no ranking`);
     }
   });

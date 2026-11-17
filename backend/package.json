@@ -11,7 +11,8 @@
     "test:analytics:integration": "node --experimental-strip-types --test src/modules/analytics/analytics.integration.test.ts",
     "test:collections:integration": "node --experimental-strip-types --test src/modules/collections/collections.integration.test.ts src/db/migrations.integration.test.ts src/db/connection.integration.test.ts",
     "test:persistence": "node --experimental-strip-types scripts/verify-persistence.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "dependencies": {
     "bcryptjs": "3.0.3",
@@ -19,8 +20,12 @@
     "pg": "8.16.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "24.19.2",
     "@types/pg": "8.15.5",
-    "typescript": "^7.0.2"
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0"
   }
 }

@@ -70,6 +70,6 @@ export async function buscarIndicadoresConsolidados(): Promise<IndicadoresConsol
     };
   } catch (erro) {
     console.error("[DASHBOARD-INDICATORS-REPOSITORY] Erro ao buscar indicadores:", erro);
-    throw new Error("Falha ao buscar indicadores consolidados no banco de dados");
+    throw new Error("Falha ao buscar indicadores consolidados no banco de dados", { cause: erro });
   }
 }

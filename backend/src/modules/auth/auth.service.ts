@@ -22,9 +22,12 @@ function validarCredenciais(dados: unknown): CredenciaisLogin {
     throw new ErroHttp(400, "invalid_request", "Informe e-mail e senha como texto.");
   }
   const { email, senha } = dados as Record<string, unknown>;
+  // Regex sem caracteres de controle literais (evita no-control-regex)
+  // Usa \p{C} (Unicode "Other, control") para excluir caracteres de controle
+  const EMAIL_REGEX = /^[^\s@\p{C}]+@[^\s@\p{C}]+\.[^\s@\p{C}]+$/u;
   if (
     typeof email !== "string" || email.trim().length > 150
-    || !/^[^\s@\u0000-\u001f\u007f]+@[^\s@\u0000-\u001f\u007f]+\.[^\s@\u0000-\u001f\u007f]+$/.test(email.trim())
+    || !EMAIL_REGEX.test(email.trim())
     || typeof senha !== "string" || senha.length === 0
     || Buffer.byteLength(senha, "utf8") > 72 || senha.includes("\0")
   ) {
