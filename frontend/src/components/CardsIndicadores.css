@@ -15,6 +15,7 @@
   color: #7d8980;
   cursor: help;
   flex-shrink: 0;
+  position: relative;
 }
 .ind-info:hover,
 .ind-info:focus {
@@ -24,6 +25,50 @@
   outline: 2px solid #25863c;
   outline-offset: 2px;
   border-radius: 3px;
+}
+
+/* Tooltip visual via data-tooltip */
+.ind-info::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 280px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #20352a;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+}
+.ind-info::before {
+  content: "";
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #20352a;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+}
+.ind-info:hover::after,
+.ind-info:hover::before,
+.ind-info:focus::after,
+.ind-info:focus::before {
+  opacity: 1;
+}
+@media (max-width: 700px) {
+  .ind-info::after { max-width: 220px; font-size: 12px; }
 }
 
 /* Carregando: bloco cinza no lugar do número, com brilho suave. */

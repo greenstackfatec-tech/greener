@@ -6,12 +6,14 @@ function formatar(valor: number, casas: number): string {
 
 /** Ícone de informação com tooltip explicando a diferença energia vs CO₂e. */
 function InfoEnergiaCarbono() {
+  const texto = "Energia (kWh) é o consumo medido. CO₂e (g) = energia × intensidade de carbono da região (gCO₂e/kWh).";
   return (
     <span
       className="resumo-info"
       tabIndex={0}
       role="tooltip"
-      aria-label="Energia (kWh) é o consumo medido. CO₂e (g) = energia × intensidade de carbono da região (gCO₂e/kWh)."
+      aria-label={texto}
+      data-tooltip={texto}
     >
       <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <circle cx="8" cy="8" r="7" />
