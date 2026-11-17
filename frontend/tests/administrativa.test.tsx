@@ -98,7 +98,7 @@ test("lista os serviços reais com energia e emissão da última coleta", async 
   expect(screen.getByText("2 serviços · última coleta de cada um")).toBeTruthy();
 });
 
-test("serviço sem coleta mostra traço, e serviço removido não aparece", async () => {
+test("serviço sem coleta mostra traço na energia, explicação no CO₂e, e serviço removido não aparece", async () => {
   vi.mocked(servicos.listarServicos).mockResolvedValue([
     servico({
       id: 4,
@@ -115,7 +115,9 @@ test("serviço sem coleta mostra traço, e serviço removido não aparece", asyn
   abrirPagina();
 
   const item = (await screen.findByText("Inventory Sync")).closest("li") as HTMLElement;
-  expect(within(item).getAllByText("—")).toHaveLength(2);
+  // Energia mostra traço (—), CO₂e mostra explicação quando não há valor
+  expect(within(item).getAllByText("—")).toHaveLength(1);
+  expect(within(item).getByText("CO₂e = energia × intensidade de carbono")).toBeTruthy();
   expect(within(item).getByText("Sem métricas · Localização não informada")).toBeTruthy();
   expect(screen.queryByText("Serviço Antigo")).toBeNull();
   expect(screen.getByText("1 serviço · última coleta de cada um")).toBeTruthy();

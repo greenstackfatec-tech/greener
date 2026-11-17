@@ -290,6 +290,83 @@
   color: var(--texto-apoio);
 }
 
+/* Ícone de informação com tooltip (energia vs CO₂e) */
+.adm-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  color: var(--texto-apoio);
+  cursor: help;
+  flex-shrink: 0;
+  vertical-align: middle;
+  position: relative;
+}
+.adm-info:hover,
+.adm-info:focus {
+  color: var(--verde);
+}
+.adm-info:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Tooltip visual via data-tooltip */
+.adm-info::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 280px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--texto);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+}
+.adm-info::before {
+  content: "";
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--texto);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+}
+.adm-info:hover::after,
+.adm-info:hover::before,
+.adm-info:focus::after,
+.adm-info:focus::before {
+  opacity: 1;
+}
+@media (max-width: 700px) {
+  .adm-info::after { max-width: 220px; font-size: 12px; }
+}
+
+/* Explicação CO₂e na lista de serviços */
+.adm-co2e-explicacao {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--texto-apoio);
+}
+
 /* ---------- Desktop ---------- */
 
 @media (min-width: 1024px) {

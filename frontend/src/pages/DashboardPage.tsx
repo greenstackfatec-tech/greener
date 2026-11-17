@@ -17,6 +17,25 @@ import { situacaoDoServico, type Servico } from "../services/servicos.ts";
 import { localizacaoDoServico, NAO_INFORMADO } from "../localizacao.ts";
 import "./DashboardPage.css";
 
+/** Ícone de informação com tooltip explicando a diferença energia vs CO₂e. */
+function InfoEnergiaCarbono() {
+  const texto = "Energia (kWh) é o consumo medido. CO₂e (g) = energia × intensidade de carbono da região (gCO₂e/kWh).";
+  return (
+    <span
+      className="dash-info"
+      tabIndex={0}
+      role="tooltip"
+      aria-label={texto}
+      data-tooltip={texto}
+    >
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <circle cx="8" cy="8" r="7" />
+        <path d="M8 5v4M8 11v1" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
+
 type Ordem = "nome" | "energia" | "co2e";
 
 const COMPARAR: Record<Ordem, (a: Servico, b: Servico) => number> = {
@@ -107,7 +126,19 @@ export function DashboardPage() {
               titulo={s.nome}
               selo={textos.selo}
               descricao={textos.descricao}
-              valor={s.energiaKwh === null ? null : `${numero(s.energiaKwh, 4)} kWh`}
+              valor={s.energiaKwh === null ? null : (
+                <>
+                  <span className="dash-valor-com-info">
+                    {numero(s.energiaKwh, 4)} kWh
+                    <InfoEnergiaCarbono />
+                  </span>
+                  {s.emissaoCo2eG !== null && (
+                    <small className="dash-co2e-explicacao">
+                      CO₂e: {numero(s.emissaoCo2eG, 3)} g = energia × intensidade de carbono
+                    </small>
+                  )}
+                </>
+              )}
               rodape={rodapeDaSituacao(s, estado, agora)}
               localizacao={localizacaoDoServico(s)}
             />
@@ -118,7 +149,7 @@ export function DashboardPage() {
       <div className={erroExibido ? "dash-table-wrap desatualizado" : "dash-table-wrap"}>
         <table className="dash-table">
           <thead>
-            <tr><th>Serviço</th><th>Estado</th><th>País</th><th>Região</th><th>Cidade</th><th>CPU</th><th>RAM</th><th>Disco</th><th>Rede</th><th>Energia</th><th>CO₂e</th></tr>
+            <tr><th>Serviço</th><th>Estado</th><th>País</th><th>Região</th><th>Cidade</th><th>CPU</th><th>RAM</th><th>Disco</th><th>Rede</th><th>Energia</th><th><span className="dash-th-com-info">CO₂e <InfoEnergiaCarbono /></span></th></tr>
           </thead>
           <tbody>
             {filtrados.map((s) => {
@@ -139,7 +170,12 @@ export function DashboardPage() {
                     <span className="dash-energia-valor">{s.energiaKwh === null ? "—" : `${numero(s.energiaKwh, 4)} kWh`}</span>
                     <small>{rodapeDaSituacao(s, estado, agora)}</small>
                   </td>
-                  <td>{s.emissaoCo2eG === null ? "—" : `${numero(s.emissaoCo2eG, 3)} g`}</td>
+                  <td>{s.emissaoCo2eG === null ? "—" : (
+                    <>
+                      <span>{numero(s.emissaoCo2eG, 3)} g</span>
+                      <small className="dash-co2e-explicacao-tabela">= energia × intensidade de carbono</small>
+                    </>
+                  )}</td>
                 </tr>
               );
             })}
