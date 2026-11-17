@@ -316,6 +316,38 @@
   color: var(--erro);
 }
 
+/* Ícone de informação com tooltip (energia vs CO₂e) */
+.resumo-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  color: var(--texto-apoio);
+  cursor: help;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.resumo-info:hover,
+.resumo-info:focus {
+  color: var(--verde);
+}
+.resumo-info:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Explicação CO₂e no resumo */
+.resumo-explicacao {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--texto-apoio);
+}
+
 /* ---------- Desktop ---------- */
 
 @media (min-width: 1024px) {

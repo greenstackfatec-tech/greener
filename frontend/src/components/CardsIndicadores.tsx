@@ -3,6 +3,23 @@ import type { EstadoIndicadores } from "../hooks/useIndicadores.ts";
 import { dataHoraSaoPaulo, duracao, numero } from "../formatacao.ts";
 import "./CardsIndicadores.css";
 
+/** Pequeno ícone de informação com tooltip explicando a diferença energia vs CO₂e. */
+function InfoEnergiaCarbono() {
+  return (
+    <span
+      className="ind-info"
+      tabIndex={0}
+      role="tooltip"
+      aria-label="Energia (kWh) é o consumo medido. CO₂e (g) = energia × intensidade de carbono da região (gCO₂e/kWh)."
+    >
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <circle cx="8" cy="8" r="7" />
+        <path d="M8 5v4M8 11v1" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
+
 interface Props {
   estado: EstadoIndicadores;
   /** Ação do botão "Tentar de novo" do aviso de erro. */
@@ -14,8 +31,8 @@ interface Props {
 interface CartaoProps {
   icone: ReactNode;
   cor: "green" | "gray";
-  titulo: string;
-  valor: string;
+  titulo: ReactNode;
+  valor: ReactNode;
   unidade?: string;
   legenda: string;
   carregando: boolean;
@@ -105,10 +122,10 @@ export function CardsIndicadores({ estado, aoTentarDeNovo, intervaloAtualizacaoS
         <Cartao
           icone={IconeEmissao}
           cor="green"
-          titulo="Emissão total"
+          titulo={<><span>Emissão total</span> <InfoEnergiaCarbono /></>}
           valor={numero(dados?.emissaoTotalCo2eG ?? null, 3)}
           unidade="g CO₂e"
-          legenda={legenda("CO₂e estimado", true)}
+          legenda={legenda("CO₂e = energia × intensidade de carbono da região", true)}
           carregando={carregando}
         />
         <Cartao

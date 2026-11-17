@@ -11,7 +11,7 @@ interface Props {
   selo: string;
   descricao: string;
   /** Texto grande. `null` mostra o traço de "sem leitura"; ignorado em "carregando" (mostra os pontos). */
-  valor?: string | null;
+  valor?: React.ReactNode | string | null;
   rodape: string;
   /** Ação ao lado do rodapé, como "Tentar de novo". */
   acao?: { rotulo: string; aoClicar: () => void; desabilitada?: boolean };

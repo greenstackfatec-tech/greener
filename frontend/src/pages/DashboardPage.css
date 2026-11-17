@@ -49,3 +49,59 @@
 /* Filtros (DW14) */
 .dash-filtros-nota{margin:0;padding:0 22px 12px;font-size:11px;color:#748078}
 @media(max-width:700px){.dash-filtros-nota{padding:0 14px 12px;font-size:12px}}
+
+/* Ícone de informação com tooltip (energia vs CO₂e) */
+.dash-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  color: #7d8980;
+  cursor: help;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.dash-info:hover,
+.dash-info:focus {
+  color: #25863c;
+}
+.dash-info:focus-visible {
+  outline: 2px solid #25863c;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Valor com ícone de info alinhado */
+.dash-valor-com-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Explicação CO₂e nos cards */
+.dash-co2e-explicacao {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  color: #8a958d;
+  line-height: 1.3;
+}
+
+/* Cabeçalho da tabela com ícone de info */
+.dash-th-com-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+}
+
+/* Explicação CO₂e na tabela */
+.dash-co2e-explicacao-tabela {
+  display: block;
+  margin-top: 3px;
+  font-size: 9px;
+  color: #98a29a;
+  line-height: 1.2;
+}
