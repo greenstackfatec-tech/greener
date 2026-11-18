@@ -60,6 +60,28 @@ export function mockServicos(): Plugin {
           responder(200, { cenario, opcoes: CENARIOS });
           return;
         }
+        // Comparação (DW13): usa a última coleta de cada serviço como se fossem 6 coletas no período.
+        if (url.pathname === "/api/analytics/comparacao") {
+          const ids = (url.searchParams.get("servicos") ?? "").split(",").map(Number);
+          const lista = servicos();
+          const dados = ids.map((id) => {
+            const s = lista.find((item) => item.id === id);
+            const energia = s?.energiaKwh ?? 0;
+            const co2e = s?.emissaoCo2eG ?? 0;
+            const qtdColetas = energia > 0 ? 6 : 0;
+            return {
+              servicoId: id, nome: s?.nome ?? `Serviço ${id}`, regiao: s?.regiao ?? null, pais: s?.pais ?? null,
+              totalEnergiaKwh: energia * qtdColetas, totalEmissaoCo2eG: co2e * qtdColetas, qtdColetas,
+              mediaEnergiaKwh: energia, mediaEmissaoCo2eG: co2e,
+            };
+          });
+          const avisos = dados.filter((d) => d.qtdColetas === 0)
+            .map((d) => `Serviço "${d.nome}" (ID ${d.servicoId}) não possui dados de coleta no período informado. Retornando zeros.`);
+          if (cenario === "erro") responder(502, { error: "bad_gateway", message: "Mock: backend fora do ar" });
+          else responder(200, { dados, periodo: { inicio: url.searchParams.get("inicio"), fim: url.searchParams.get("fim") }, avisos });
+          return;
+        }
+
         const ehIndicadores = url.pathname === "/api/dashboard/indicadores";
         if (url.pathname !== "/api/services" && !ehIndicadores) {
           next();
