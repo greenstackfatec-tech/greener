@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useMemo } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import "./GraficoLinha.css";
 
 /** Um ponto do gráfico de linha (energia ou CO₂e). */
@@ -49,6 +49,16 @@ interface Props {
   vazioTexto?: string;
   /** Callback quando a visibilidade de uma série muda. */
   aoAlternarSerie?: (id: "energia" | "co2e", visivel: boolean) => void;
+}
+
+/** Ponto projetado para detecção de hover. */
+interface PontoProjetado {
+  x: number;
+  y: number;
+  valor: number;
+  data: string;
+  serie: Serie;
+  timestamp: number;
 }
 
 /** Formata valor para tooltip. */
@@ -113,7 +123,6 @@ function gerarPath(pontos: PontoGrafico[], serieId: "energia" | "co2e", minX: nu
 
   if (validos.length < 2) return "";
 
-  // Curva suave usando quadratic Bézier
   let path = `M${validos[0].x.toFixed(2)},${validos[0].y.toFixed(2)}`;
   for (let i = 1; i < validos.length; i++) {
     const xMid = (validos[i - 1].x + validos[i].x) / 2;
@@ -124,7 +133,6 @@ function gerarPath(pontos: PontoGrafico[], serieId: "energia" | "co2e", minX: nu
       path += ` Q${validos[i - 1].x.toFixed(2)},${validos[i - 1].y.toFixed(2)} ${xMid.toFixed(2)},${yMid.toFixed(2)}`;
     }
   }
-  // Último segmento (para suavizar a curva até o final)
   if (validos.length > 1) {
     const last = validos[validos.length - 1];
     const prev = validos[validos.length - 2];
@@ -189,16 +197,6 @@ const SERIES_PADRAO: Serie[] = [
   },
 ];
 
-/** Ponto projetado para detecção de hover. */
-interface PontoProjetado {
-  x: number;
-  y: number;
-  valor: number;
-  data: string;
-  serie: Serie;
-  timestamp: number;
-}
-
 export function GraficoLinha({
   pontos,
   series = SERIES_PADRAO,
@@ -207,6 +205,7 @@ export function GraficoLinha({
   vazioTexto = "Nenhum dado de coleta no período selecionado.",
   aoAlternarSerie,
 }: Props) {
+  // ===== TODOS OS HOOKS NO TOPO =====
   const [hoveredPoint, setHoveredPoint] = useState<PontoProjetado | null>(null);
   const [seriesVisiveis, setSeriesVisiveis] = useState<Record<"energia" | "co2e", boolean>>({
     energia: true,
@@ -219,51 +218,40 @@ export function GraficoLinha({
     aoAlternarSerie?.(id, !seriesVisiveis[id]);
   }, [aoAlternarSerie, seriesVisiveis]);
 
-  // Filtra séries visíveis
-  const seriesAtivas = series.filter((s) => seriesVisiveis[s.id]);
-
-  // Se não há pontos, mostra estado vazio
-  if (pontos.length === 0) {
-    return (
-      <div className="grafico-linha" role="img" aria-label={vazioTexto}>
-        <div className="grafico-linha-vazio">
-          <svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-            <circle cx="24" cy="24" r="20" strokeDasharray="8 4" opacity="0.3" />
-            <path d="M16 24l6 6 10-12" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
-          </svg>
-          <p>{vazioTexto}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Calcula min/max globais para as séries que têm dados
-  const seriesComDados = seriesAtivas.map((s) => {
-    const valores = pontos.map((p) => valorDaSerie(p, s.id)).filter((v): v is number => v !== null);
-    const min = valores.length > 0 ? Math.min(...valores) : 0;
-    const max = valores.length > 0 ? Math.max(...valores) : 0;
-    const margem = (max - min) * 0.1 || (max * 0.1) || 1;
-    return { ...s, min: Math.max(0, min - margem * 0.5), max: max + margem };
-  });
-
-  // Domínio X (tempo)
-  const minX = dataParaTimestamp(pontos[0].data);
-  const maxX = dataParaTimestamp(pontos[pontos.length - 1].data);
-
-  // Domínio Y (valor) - usa o maior max entre as séries
-  const minY = Math.min(...seriesComDados.map((s) => s.min));
-  const maxY = Math.max(...seriesComDados.map((s) => s.max));
-
+  // Largura calculada (antes dos callbacks que a usam)
   const larguraTotal = typeof window !== "undefined" ? window.innerWidth : 800;
   const largura = Math.max(300, larguraTotal - margens.esquerda - margens.direita - 40);
-  const alturaInterna = altura - margens.topo - margens.fundo;
   const larguraInterna = largura - margens.esquerda - margens.direita;
+  const alturaInterna = altura - margens.topo - margens.fundo;
 
-  const ticksX = gerarTicksX(pontos);
-  const ticksY = gerarTicksY(minY, maxY);
+  // Filtra séries visíveis
+  const seriesAtivas = useMemo(() => series.filter((s) => seriesVisiveis[s.id]), [series, seriesVisiveis]);
 
-  // Prepara todos os pontos projetados para detecção de hover (voronoi/overlay)
-  const pontosProjetados = useMemo((): PontoProjetado[] => {
+  // Domínio X (tempo)
+  const minX = useMemo(() => (pontos.length > 0 ? dataParaTimestamp(pontos[0].data) : 0), [pontos]);
+  const maxX = useMemo(() => (pontos.length > 0 ? dataParaTimestamp(pontos[pontos.length - 1].data) : 0), [pontos]);
+
+  // Séries com dados (min/max calculados)
+  const seriesComDados = useMemo(() => {
+    return seriesAtivas.map((s) => {
+      const valores = pontos.map((p) => valorDaSerie(p, s.id)).filter((v): v is number => v !== null);
+      const min = valores.length > 0 ? Math.min(...valores) : 0;
+      const max = valores.length > 0 ? Math.max(...valores) : 0;
+      const margem = (max - min) * 0.1 || (max * 0.1) || 1;
+      return { ...s, min: Math.max(0, min - margem * 0.5), max: max + margem };
+    });
+  }, [seriesAtivas, pontos]);
+
+  // Domínio Y (valor)
+  const minY = useMemo(() => Math.min(...seriesComDados.map((s) => s.min)), [seriesComDados]);
+  const maxY = useMemo(() => Math.max(...seriesComDados.map((s) => s.max)), [seriesComDados]);
+
+  // Ticks
+  const ticksX = useMemo(() => gerarTicksX(pontos), [pontos]);
+  const ticksY = useMemo(() => gerarTicksY(minY, maxY), [minY, maxY]);
+
+  // Pontos projetados - useMemo em vez de ref (calculado durante render)
+  const pontosProjetados = useMemo(() => {
     const resultado: PontoProjetado[] = [];
     for (const s of seriesComDados) {
       for (const p of pontos) {
@@ -280,35 +268,19 @@ export function GraficoLinha({
         }
       }
     }
-    // Ordena por timestamp para busca binária
     return resultado.sort((a, b) => a.timestamp - b.timestamp);
-  }, [pontos, seriesComDados, minX, maxX, minY, maxY, larguraInterna, alturaInterna, margens]);
-
-  // Estatísticas para mostrar abaixo do gráfico
-  const estatisticas = seriesComDados.map((s) => {
-    const valores = pontos.map((p) => valorDaSerie(p, s.id)).filter((v): v is number => v !== null);
-    if (valores.length === 0) return null;
-    const soma = valores.reduce((a, b) => a + b, 0);
-    const media = soma / valores.length;
-    const min = Math.min(...valores);
-    const max = Math.max(...valores);
-    const ultimo = valores[valores.length - 1];
-    return { serie: s, soma, media, min, max, ultimo, count: valores.length };
-  }).filter(Boolean);
+  }, [seriesComDados, pontos, minX, maxX, minY, maxY, larguraInterna, alturaInterna, margens]);
 
   // Handler de mousemove na área de detecção
   const handleMouseMove = useCallback((event: React.MouseEvent<SVGRectElement>) => {
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    // Coordenadas relativas ao SVG
     const clientX = event.clientX - rect.left;
-    // Converte para coordenadas do viewBox
     const svgWidth = rect.width;
     const scaleX = largura / svgWidth;
     const mouseX = clientX * scaleX;
 
-    // Encontra o timestamp mais próximo do mouse
     let melhorTimestamp: number | null = null;
     let menorDistancia = Infinity;
 
@@ -320,11 +292,9 @@ export function GraficoLinha({
       }
     }
 
-    // Se encontrou timestamp próximo, pega TODOS os pontos nesse timestamp (todas as séries)
     if (melhorTimestamp !== null && menorDistancia <= 30) {
       const pontosNoTimestamp = pontosProjetados.filter((p) => p.timestamp === melhorTimestamp);
       if (pontosNoTimestamp.length > 0) {
-        // Usa o primeiro ponto como referência (mesmo x, y diferente por série)
         setHoveredPoint(pontosNoTimestamp[0]);
       }
     } else {
@@ -336,11 +306,40 @@ export function GraficoLinha({
     setHoveredPoint(null);
   }, []);
 
+  // Estatísticas para mostrar abaixo do gráfico
+  const estatisticas = useMemo(() => {
+    return seriesComDados.map((s) => {
+      const valores = pontos.map((p) => valorDaSerie(p, s.id)).filter((v): v is number => v !== null);
+      if (valores.length === 0) return null;
+      const soma = valores.reduce((a, b) => a + b, 0);
+      const media = soma / valores.length;
+      const min = Math.min(...valores);
+      const max = Math.max(...valores);
+      const ultimo = valores[valores.length - 1];
+      return { serie: s, soma, media, min, max, ultimo, count: valores.length };
+    }).filter(Boolean);
+  }, [seriesComDados, pontos]);
+
   // Coleta todos os pontos no timestamp do hover (todas as séries visíveis)
   const pontosNoHover = useMemo(() => {
     if (!hoveredPoint) return [];
     return pontosProjetados.filter((p) => p.timestamp === hoveredPoint.timestamp);
   }, [hoveredPoint, pontosProjetados]);
+
+  // Se não há pontos, mostra estado vazio (early return DEPOIS dos hooks)
+  if (pontos.length === 0) {
+    return (
+      <div className="grafico-linha" role="img" aria-label={vazioTexto}>
+        <div className="grafico-linha-vazio">
+          <svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <circle cx="24" cy="24" r="20" strokeDasharray="8 4" opacity="0.3" />
+            <path d="M16 24l6 6 10-12" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
+          </svg>
+          <p>{vazioTexto}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grafico-linha" role="img" aria-label="Gráfico de linha da evolução de energia e CO₂e">
@@ -478,7 +477,7 @@ export function GraficoLinha({
                     d={pathLinha}
                     fill="none"
                     stroke={s.cor}
-                    strokeWidth={2.5}
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     className="grafico-linha-linha"

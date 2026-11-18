@@ -97,9 +97,9 @@ export function HistoricoPage() {
 
   // Busca histórico quando serviço ou período mudam
   useEffect(() => {
+    // Não busca se não há serviço selecionado ou período inválido
+    // O estado vazio é derivado no render (historico = null, erroHistorico = null)
     if (!servicoSelecionado || "erro" in periodoResolvido) {
-      setHistorico(null);
-      setErroHistorico(null);
       return;
     }
 
@@ -132,16 +132,20 @@ export function HistoricoPage() {
 
     buscar();
     return () => { cancelado = true; };
-  }, [servicoSelecionado?.id, periodoResolvido, agora, refetchTrigger]);
+  }, [servicoSelecionado, periodoResolvido, agora, refetchTrigger]);
+
+  // Histórico válido: null se não há serviço selecionado ou período inválido
+  const historicoValido = (!servicoSelecionado || "erro" in periodoResolvido) ? null : historico;
+  const erroHistoricoValido = (!servicoSelecionado || "erro" in periodoResolvido) ? null : erroHistorico;
 
   // Prepara pontos para o gráfico (filtra apenas coletas com sucesso e valores válidos)
   const pontosGrafico = useMemo((): PontoGrafico[] => {
-    if (!historico?.dados) return [];
-    return historico.dados
+    if (!historicoValido?.dados) return [];
+    return historicoValido.dados
       .filter((p: import("../services/analytics.ts").PontoHistorico) => p.statusColeta === "sucesso" && (p.energiaKwh !== null || p.emissaoCo2eG !== null))
       .map(paraPontoGrafico)
       .sort(ordenarCronologico);
-  }, [historico]);
+  }, [historicoValido]);
 
   const ultimaAtualizacao = haQuanto(atualizadoEm, agora);
   const estatisticas = useMemo(() => calcularEstatisticas(pontosGrafico), [pontosGrafico]);
@@ -205,7 +209,7 @@ export function HistoricoPage() {
         />
       </div>
     );
-  } else if (erroHistorico) {
+  } else if (erroHistoricoValido) {
     // Erro ao buscar histórico
     corpo = (
       <div className="hist-estado">
@@ -213,7 +217,7 @@ export function HistoricoPage() {
           tom="erro"
           titulo="Erro ao carregar histórico"
           selo="Atenção"
-          descricao={erroHistorico}
+          descricao={erroHistoricoValido}
           valor={null}
           rodape={ultimaAtualizacao ? `Última atualização ${ultimaAtualizacao}` : "Sem atualização anterior"}
           acao={{ rotulo: "Tentar de novo", aoClicar: recarregarHistorico }}
