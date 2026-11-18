@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado, type MetricasRecurso } from "../components/CartaoEstado.tsx";
 import { FiltrosAnalise } from "../components/FiltrosAnalise.tsx";
 import { GraficoLinha, type PontoGrafico } from "../components/GraficoLinha.tsx";
-import { regioesDisponiveis, resolverPeriodo } from "../filtros.ts";
+import { regioesDisponiveis, resolverPeriodo, filtrarPorServicoERegiao } from "../filtros.ts";
 import { TEXTOS_SITUACAO, rodapeDaSituacao } from "../estadosServico.ts";
 import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
 import { dataHora, duracao, haQuanto, numero } from "../formatacao.ts";
@@ -23,11 +23,6 @@ function paraPontoGrafico(ph: PontoHistorico): PontoGrafico {
     energia: ph.energiaKwh,
     co2e: ph.emissaoCo2eG,
   };
-}
-
-/** Ordena pontos do mais antigo para o mais novo (gráfico precisa assim). */
-function ordenarCronologico(a: PontoGrafico, b: PontoGrafico): number {
-  return new Date(a.data).getTime() - new Date(b.data).getTime();
 }
 
 /** Calcula estatísticas dos pontos para os cards de resumo. */
@@ -82,20 +77,27 @@ export function HistoricoPage() {
 
   const lista = useMemo(() => servicos ?? [], [servicos]);
   const regioes = useMemo(() => regioesDisponiveis(lista), [lista]);
-  const opcoesServico = useMemo(() => [...lista].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")), [lista]);
 
-  // Serviço selecionado (ou o primeiro da lista se não houver filtro)
+  // Aplica filtros de serviço e região à lista
+  const listaFiltrada = useMemo(() => filtrarPorServicoERegiao(lista, filtros), [lista, filtros.servicoId, filtros.regiao]);
+  const opcoesServico = useMemo(() => [...listaFiltrada].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")), [listaFiltrada]);
+
+  // Serviço selecionado (ou o primeiro ativo da lista filtrada se não houver filtro)
   const servicoSelecionado = useMemo(() => {
     if (filtros.servicoId !== null) {
       return lista.find((s) => s.id === filtros.servicoId) ?? null;
     }
-    return lista.length > 0 ? lista[0] : null;
-  }, [lista, filtros.servicoId]);
+    // Prioriza serviços ativos na lista filtrada; se não houver, pega o primeiro da lista filtrada
+    const ativo = listaFiltrada.find((s) => s.status === "ativo");
+    return ativo ?? (listaFiltrada.length > 0 ? listaFiltrada[0] : null);
+  }, [lista, listaFiltrada, filtros.servicoId]);
 
   // Resolve período a partir dos filtros
   const periodoResolvido = useMemo(() => resolverPeriodo(filtros, agora), [filtros, agora]);
 
   // Busca histórico quando serviço ou período mudam
+  // Usa valores primitivos como dependências para evitar re-fetch a cada 30s (useAgora)
+  // Em atualização em segundo plano, mantém o gráfico anterior na tela
   useEffect(() => {
     // Não busca se não há serviço selecionado ou período inválido
     // O estado vazio é derivado no render (historico = null, erroHistorico = null)
@@ -106,15 +108,19 @@ export function HistoricoPage() {
     let cancelado = false;
     const { inicio, fim } = periodoResolvido;
     const servicoId = servicoSelecionado.id;
+    const jaTemDados = historico !== null;
 
     async function buscar() {
-      setCarregandoHistorico(true);
+      // Só mostra loading se não há dados anteriores
+      if (!jaTemDados) {
+        setCarregandoHistorico(true);
+      }
       setErroHistorico(null);
       try {
         const dados = await consultarHistorico(servicoId, {
           inicio: inicio.toISOString(),
           fim: fim.toISOString(),
-          ordenacao: "ASC",
+          ordenacao: "DESC", // Pede DESC para pegar os mais recentes (backend limita a 1000)
         });
         if (!cancelado) {
           setHistorico(dados);
@@ -123,7 +129,10 @@ export function HistoricoPage() {
         if (!cancelado) {
           const msg = e instanceof Error ? e.message : "Erro ao buscar histórico";
           setErroHistorico(msg);
-          setHistorico(null);
+          // Só limpa o histórico se não tínhamos dados antes
+          if (!jaTemDados) {
+            setHistorico(null);
+          }
         }
       } finally {
         if (!cancelado) setCarregandoHistorico(false);
@@ -132,19 +141,20 @@ export function HistoricoPage() {
 
     buscar();
     return () => { cancelado = true; };
-  }, [servicoSelecionado, periodoResolvido, agora, refetchTrigger]);
+  }, [servicoSelecionado?.id, filtros.periodo, filtros.inicio, filtros.fim, refetchTrigger]);
 
   // Histórico válido: null se não há serviço selecionado ou período inválido
   const historicoValido = (!servicoSelecionado || "erro" in periodoResolvido) ? null : historico;
   const erroHistoricoValido = (!servicoSelecionado || "erro" in periodoResolvido) ? null : erroHistorico;
 
   // Prepara pontos para o gráfico (filtra apenas coletas com sucesso e valores válidos)
+  // Backend devolve DESC (mais recentes primeiro); inverte para ordem cronológica (mais antigo primeiro)
   const pontosGrafico = useMemo((): PontoGrafico[] => {
     if (!historicoValido?.dados) return [];
     return historicoValido.dados
-      .filter((p: import("../services/analytics.ts").PontoHistorico) => p.statusColeta === "sucesso" && (p.energiaKwh !== null || p.emissaoCo2eG !== null))
+      .filter((p: PontoHistorico) => p.statusColeta === "sucesso" && (p.energiaKwh !== null || p.emissaoCo2eG !== null))
       .map(paraPontoGrafico)
-      .sort(ordenarCronologico);
+      .reverse(); // Inverte DESC -> ASC para o gráfico
   }, [historicoValido]);
 
   const ultimaAtualizacao = haQuanto(atualizadoEm, agora);
@@ -404,6 +414,7 @@ export function HistoricoPage() {
           pontos={pontosGrafico}
           altura={380}
           vazioTexto="Nenhum dado de coleta com métricas válidas no período."
+          mostrarEstatisticas={false}
         />
       </section>
     );

@@ -2,9 +2,14 @@ import type { Plugin, Connect } from "vite";
 
 /**
  * Mock para desenvolvimento: responde GET /api/services, GET /api/dashboard/indicadores,
- * GET /api/analytics/historico/:servicoId e POST /api/auth/login sem backend nem banco.
- * Ligado por `npm run dev:mock`.
+ * GET /api/analytics/historico/:servicoId, POST /api/auth/login e GET /api/__mock
+ * sem backend nem banco. Ligado por `npm run dev:mock`.
  */
+
+type CenarioMock = "ok" | "vazio" | "erro" | "lento" | "rede";
+
+let cenarioAtual: CenarioMock = "ok";
+
 function servicos() {
   const minutosAtras = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
   const base = { cidade: "São Paulo", latitude: -23.55, longitude: -46.63, regiao: "sa-east-1", pais: "Brasil" };
@@ -17,6 +22,14 @@ function servicos() {
     { id: 5, nome: "Notifications", status: "ativo", statusColeta: null, coletadoEm: null, ...vazio, ...base, cidade: null, latitude: null, longitude: null, regiao: null, pais: null },
     { id: 6, nome: "Legacy Cron", status: "removido", statusColeta: null, coletadoEm: null, ...vazio, ...base },
   ];
+}
+
+function servicosVazio() {
+  return [];
+}
+
+function servicosErro() {
+  throw new Error("Erro simulado");
 }
 
 function indicadores(zerados: boolean) {
@@ -102,9 +115,44 @@ export function mockServicos(): Plugin {
           res.end(JSON.stringify(corpo));
         };
 
+        // Endpoint para trocar cenário: GET /api/__mock?cenario=ok|vazio|erro|lento|rede
+        if (url.pathname === "/api/__mock") {
+          const cenario = url.searchParams.get("cenario") as CenarioMock | null;
+          if (cenario && ["ok", "vazio", "erro", "lento", "rede"].includes(cenario)) {
+            cenarioAtual = cenario;
+            responder(200, { ok: true, cenario: cenarioAtual });
+            return;
+          }
+          responder(200, { cenario: cenarioAtual });
+          return;
+        }
+
+        // Aplica cenário atual às rotas principais
+        const aplicarCenario = (): boolean => {
+          switch (cenarioAtual) {
+            case "vazio":
+              return true; // Deixa passar para handlers que retornam vazio
+            case "erro":
+              responder(502, { codigo: "MOCK_ERRO", mensagem: "Erro simulado do mock" });
+              return true;
+            case "lento":
+              // Atraso de 3s antes de continuar
+              setTimeout(() => {}, 3000);
+              return false; // Continua para handlers normais
+            case "rede":
+              // Simula falha de rede fechando a conexão
+              req.socket?.destroy();
+              return true;
+            case "ok":
+            default:
+              return false; // Comportamento normal
+          }
+        };
+
         // Histórico: /api/analytics/historico/:servicoId
         const matchHistorico = url.pathname.match(/^\/api\/analytics\/historico\/(\d+)$/);
         if (matchHistorico) {
+          if (aplicarCenario()) return;
           const servicoId = Number(matchHistorico[1]);
           const inicio = url.searchParams.get("inicio") ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
           const fim = url.searchParams.get("fim") ?? new Date().toISOString();
@@ -114,6 +162,7 @@ export function mockServicos(): Plugin {
 
         // Login: aceita qualquer email/senha
         if (url.pathname === "/api/auth/login") {
+          if (aplicarCenario()) return;
           // Gera JWT válido com exp em 1 hora (token.ts valida expiração)
           const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
           const exp = Math.floor(Date.now() / 1000) + 3600;
@@ -126,12 +175,24 @@ export function mockServicos(): Plugin {
 
         // Indicadores
         if (url.pathname === "/api/dashboard/indicadores") {
+          if (aplicarCenario()) {
+            if (cenarioAtual === "vazio") {
+              responder(200, indicadores(true));
+            }
+            return;
+          }
           responder(200, indicadores(false));
           return;
         }
 
         // Serviços
         if (url.pathname === "/api/services") {
+          if (aplicarCenario()) {
+            if (cenarioAtual === "vazio") {
+              responder(200, servicosVazio());
+            }
+            return;
+          }
           responder(200, servicos());
           return;
         }

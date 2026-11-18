@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
       unstubGlobals: true,
       globals: true,
       tsconfig: "tsconfig.test.json",
+      setupFiles: ["tests/setup.ts"],
     },
     server: {
       // Em modo mock, não usa proxy (o mock atende /api/*).

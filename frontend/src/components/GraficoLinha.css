@@ -16,6 +16,19 @@
   position: relative;
 }
 
+/* Utilitário para esconder visualmente mas manter acessível */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Estado vazio */
 .grafico-linha-vazio {
   display: flex;
@@ -97,6 +110,16 @@
   font-size: 10px;
   fill: var(--cor-muted);
   user-select: none;
+}
+
+/* Eixo Y esquerdo (Energia) - rótulos à esquerda */
+.grafico-linha-eixo-y--esquerda text {
+  fill: var(--cor-energia);
+}
+
+/* Eixo Y direito (CO₂e) - rótulos à direita */
+.grafico-linha-eixo-y--direita text {
+  fill: var(--cor-co2e);
 }
 
 /* Grid */

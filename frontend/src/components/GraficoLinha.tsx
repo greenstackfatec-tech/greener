@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./GraficoLinha.css";
 
 /** Um ponto do gráfico de linha (energia ou CO₂e). */
@@ -33,6 +33,8 @@ interface Serie {
   max: number;
   /** Se a série está visível. */
   visivel: boolean;
+  /** Qual eixo Y usar ("esquerda" | "direita"). */
+  eixoY: "esquerda" | "direita";
 }
 
 /** Props do componente GraficoLinha. */
@@ -49,9 +51,11 @@ interface Props {
   vazioTexto?: string;
   /** Callback quando a visibilidade de uma série muda. */
   aoAlternarSerie?: (id: "energia" | "co2e", visivel: boolean) => void;
+  /** Mostra estatísticas abaixo do gráfico (padrão: true). */
+  mostrarEstatisticas?: boolean;
 }
 
-/** Ponto projetado para detecção de hover. */
+/** Ponto projetado para detecção de hover/focus. */
 interface PontoProjetado {
   x: number;
   y: number;
@@ -59,6 +63,14 @@ interface PontoProjetado {
   data: string;
   serie: Serie;
   timestamp: number;
+}
+
+/** Configuração de eixo Y. */
+interface EixoYConfig {
+  min: number;
+  max: number;
+  ticks: number[];
+  series: Serie[];
 }
 
 /** Formata valor para tooltip. */
@@ -116,9 +128,22 @@ function mapearY(valor: number, minY: number, maxY: number, altura: number): num
 }
 
 /** Gera path SVG para linha suave (curva catmull-rom simplificada). */
-function gerarPath(pontos: PontoGrafico[], serieId: "energia" | "co2e", minX: number, maxX: number, minY: number, maxY: number, largura: number, altura: number): string {
+function gerarPath(
+  pontos: PontoGrafico[],
+  serieId: "energia" | "co2e",
+  minX: number,
+  maxX: number,
+  minY: number,
+  maxY: number,
+  largura: number,
+  altura: number
+): string {
   const validos = pontos
-    .map((p) => ({ x: mapearX(dataParaTimestamp(p.data), minX, maxX, largura), y: mapearY(valorDaSerie(p, serieId)!, minY, maxY, altura), valor: valorDaSerie(p, serieId) }))
+    .map((p) => ({
+      x: mapearX(dataParaTimestamp(p.data), minX, maxX, largura),
+      y: mapearY(valorDaSerie(p, serieId)!, minY, maxY, altura),
+      valor: valorDaSerie(p, serieId),
+    }))
     .filter((p) => p.valor !== null);
 
   if (validos.length < 2) return "";
@@ -142,9 +167,22 @@ function gerarPath(pontos: PontoGrafico[], serieId: "energia" | "co2e", minX: nu
 }
 
 /** Gera path SVG para área sob a linha. */
-function gerarPathArea(pontos: PontoGrafico[], serieId: "energia" | "co2e", minX: number, maxX: number, minY: number, maxY: number, largura: number, altura: number): string {
+function gerarPathArea(
+  pontos: PontoGrafico[],
+  serieId: "energia" | "co2e",
+  minX: number,
+  maxX: number,
+  minY: number,
+  maxY: number,
+  largura: number,
+  altura: number
+): string {
   const validos = pontos
-    .map((p) => ({ x: mapearX(dataParaTimestamp(p.data), minX, maxX, largura), y: mapearY(valorDaSerie(p, serieId)!, minY, maxY, altura), valor: valorDaSerie(p, serieId) }))
+    .map((p) => ({
+      x: mapearX(dataParaTimestamp(p.data), minX, maxX, largura),
+      y: mapearY(valorDaSerie(p, serieId)!, minY, maxY, altura),
+      valor: valorDaSerie(p, serieId),
+    }))
     .filter((p) => p.valor !== null);
 
   if (validos.length < 2) return "";
@@ -182,6 +220,7 @@ const SERIES_PADRAO: Serie[] = [
     min: 0,
     max: 0,
     visivel: true,
+    eixoY: "esquerda",
   },
   {
     id: "co2e",
@@ -194,6 +233,7 @@ const SERIES_PADRAO: Serie[] = [
     min: 0,
     max: 0,
     visivel: true,
+    eixoY: "direita",
   },
 ];
 
@@ -201,26 +241,48 @@ export function GraficoLinha({
   pontos,
   series = SERIES_PADRAO,
   altura = 320,
-  margens = { topo: 20, direita: 30, fundo: 50, esquerda: 60 },
+  margens = { topo: 20, direita: 60, fundo: 50, esquerda: 60 },
   vazioTexto = "Nenhum dado de coleta no período selecionado.",
   aoAlternarSerie,
+  mostrarEstatisticas = true,
 }: Props) {
   // ===== TODOS OS HOOKS NO TOPO =====
   const [hoveredPoint, setHoveredPoint] = useState<PontoProjetado | null>(null);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [seriesVisiveis, setSeriesVisiveis] = useState<Record<"energia" | "co2e", boolean>>({
     energia: true,
     co2e: true,
   });
+  const [larguraContainer, setLarguraContainer] = useState(800);
+  const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const legendButtonsRef = useRef<HTMLButtonElement[]>([]);
 
-  const handleAlternarSerie = useCallback((id: "energia" | "co2e") => {
-    setSeriesVisiveis((prev) => ({ ...prev, [id]: !prev[id] }));
-    aoAlternarSerie?.(id, !seriesVisiveis[id]);
-  }, [aoAlternarSerie, seriesVisiveis]);
+  const handleAlternarSerie = useCallback(
+    (id: "energia" | "co2e") => {
+      setSeriesVisiveis((prev) => ({ ...prev, [id]: !prev[id] }));
+      aoAlternarSerie?.(id, !seriesVisiveis[id]);
+    },
+    [aoAlternarSerie, seriesVisiveis]
+  );
 
-  // Largura calculada (antes dos callbacks que a usam)
-  const larguraTotal = typeof window !== "undefined" ? window.innerWidth : 800;
-  const largura = Math.max(300, larguraTotal - margens.esquerda - margens.direita - 40);
+  // ResizeObserver para medir o container e recalcular largura
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setLarguraContainer(entry.contentRect.width);
+      }
+    });
+    ro.observe(container);
+    // Valor inicial
+    setLarguraContainer(container.clientWidth);
+    return () => ro.disconnect();
+  }, []);
+
+  const largura = Math.max(300, larguraContainer - margens.esquerda - margens.direita);
   const larguraInterna = largura - margens.esquerda - margens.direita;
   const alturaInterna = altura - margens.topo - margens.fundo;
 
@@ -231,35 +293,55 @@ export function GraficoLinha({
   const minX = useMemo(() => (pontos.length > 0 ? dataParaTimestamp(pontos[0].data) : 0), [pontos]);
   const maxX = useMemo(() => (pontos.length > 0 ? dataParaTimestamp(pontos[pontos.length - 1].data) : 0), [pontos]);
 
-  // Séries com dados (min/max calculados)
-  const seriesComDados = useMemo(() => {
-    return seriesAtivas.map((s) => {
-      const valores = pontos.map((p) => valorDaSerie(p, s.id)).filter((v): v is number => v !== null);
-      const min = valores.length > 0 ? Math.min(...valores) : 0;
-      const max = valores.length > 0 ? Math.max(...valores) : 0;
-      const margem = (max - min) * 0.1 || (max * 0.1) || 1;
-      return { ...s, min: Math.max(0, min - margem * 0.5), max: max + margem };
-    });
+  // Configuração dos eixos Y (um por lado)
+  const eixosY = useMemo((): { esquerda: EixoYConfig; direita: EixoYConfig } => {
+    const seriesPorEixo = {
+      esquerda: seriesAtivas.filter((s) => s.eixoY === "esquerda"),
+      direita: seriesAtivas.filter((s) => s.eixoY === "direita"),
+    };
+
+    const calcularEixo = (seriesDoEixo: Serie[]): EixoYConfig => {
+      if (seriesDoEixo.length === 0) {
+        return { min: 0, max: 1, ticks: [0, 1], series: [] };
+      }
+      let minGlobal = Infinity;
+      let maxGlobal = -Infinity;
+      for (const s of seriesDoEixo) {
+        const valores = pontos.map((p) => valorDaSerie(p, s.id)).filter((v): v is number => v !== null);
+        if (valores.length > 0) {
+          minGlobal = Math.min(minGlobal, Math.min(...valores));
+          maxGlobal = Math.max(maxGlobal, Math.max(...valores));
+        }
+      }
+      if (!Number.isFinite(minGlobal) || !Number.isFinite(maxGlobal)) {
+        return { min: 0, max: 1, ticks: [0, 1], series: seriesDoEixo };
+      }
+      const margem = (maxGlobal - minGlobal) * 0.1 || (maxGlobal * 0.1) || 1;
+      const min = Math.max(0, minGlobal - margem * 0.5);
+      const max = maxGlobal + margem;
+      return { min, max, ticks: gerarTicksY(min, max), series: seriesDoEixo };
+    };
+
+    return {
+      esquerda: calcularEixo(seriesPorEixo.esquerda),
+      direita: calcularEixo(seriesPorEixo.direita),
+    };
   }, [seriesAtivas, pontos]);
 
-  // Domínio Y (valor)
-  const minY = useMemo(() => Math.min(...seriesComDados.map((s) => s.min)), [seriesComDados]);
-  const maxY = useMemo(() => Math.max(...seriesComDados.map((s) => s.max)), [seriesComDados]);
-
-  // Ticks
+  // Ticks do eixo X
   const ticksX = useMemo(() => gerarTicksX(pontos), [pontos]);
-  const ticksY = useMemo(() => gerarTicksY(minY, maxY), [minY, maxY]);
 
   // Pontos projetados - useMemo em vez de ref (calculado durante render)
   const pontosProjetados = useMemo(() => {
     const resultado: PontoProjetado[] = [];
-    for (const s of seriesComDados) {
+    for (const s of seriesAtivas) {
+      const eixo = s.eixoY === "esquerda" ? eixosY.esquerda : eixosY.direita;
       for (const p of pontos) {
         const valor = valorDaSerie(p, s.id);
         if (valor !== null) {
           resultado.push({
             x: mapearX(dataParaTimestamp(p.data), minX, maxX, larguraInterna) + margens.esquerda,
-            y: mapearY(valor, minY, maxY, alturaInterna) + margens.topo,
+            y: mapearY(valor, eixo.min, eixo.max, alturaInterna) + margens.topo,
             valor,
             data: p.data,
             serie: s,
@@ -269,46 +351,115 @@ export function GraficoLinha({
       }
     }
     return resultado.sort((a, b) => a.timestamp - b.timestamp);
-  }, [seriesComDados, pontos, minX, maxX, minY, maxY, larguraInterna, alturaInterna, margens]);
+  }, [seriesAtivas, pontos, minX, maxX, larguraInterna, alturaInterna, margens, eixosY]);
 
   // Handler de mousemove na área de detecção
-  const handleMouseMove = useCallback((event: React.MouseEvent<SVGRectElement>) => {
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return;
+  const handleMouseMove = useCallback(
+    (event: React.MouseEvent<SVGRectElement>) => {
+      const rect = svgRef.current?.getBoundingClientRect();
+      if (!rect) return;
 
-    const clientX = event.clientX - rect.left;
-    const svgWidth = rect.width;
-    const scaleX = largura / svgWidth;
-    const mouseX = clientX * scaleX;
+      const clientX = event.clientX - rect.left;
+      const svgWidth = rect.width;
+      const scaleX = largura / svgWidth;
+      const mouseX = clientX * scaleX;
 
-    let melhorTimestamp: number | null = null;
-    let menorDistancia = Infinity;
+      let melhorTimestamp: number | null = null;
+      let menorDistancia = Infinity;
 
-    for (const p of pontosProjetados) {
-      const dist = Math.abs(p.x - mouseX);
-      if (dist < menorDistancia) {
-        menorDistancia = dist;
-        melhorTimestamp = p.timestamp;
+      for (const p of pontosProjetados) {
+        const dist = Math.abs(p.x - mouseX);
+        if (dist < menorDistancia) {
+          menorDistancia = dist;
+          melhorTimestamp = p.timestamp;
+        }
       }
-    }
 
-    if (melhorTimestamp !== null && menorDistancia <= 30) {
-      const pontosNoTimestamp = pontosProjetados.filter((p) => p.timestamp === melhorTimestamp);
-      if (pontosNoTimestamp.length > 0) {
-        setHoveredPoint(pontosNoTimestamp[0]);
+      if (melhorTimestamp !== null && menorDistancia <= 30) {
+        const pontosNoTimestamp = pontosProjetados.filter((p) => p.timestamp === melhorTimestamp);
+        if (pontosNoTimestamp.length > 0) {
+          setHoveredPoint(pontosNoTimestamp[0]);
+        }
+      } else {
+        setHoveredPoint(null);
       }
-    } else {
-      setHoveredPoint(null);
-    }
-  }, [largura, pontosProjetados]);
+    },
+    [largura, pontosProjetados]
+  );
 
   const handleMouseLeave = useCallback(() => {
     setHoveredPoint(null);
   }, []);
 
+  // Navegação por teclado para acessibilidade
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (pontosProjetados.length === 0) return;
+
+      // Agrupa pontos por timestamp
+      const timestampsUnicos = [...new Set(pontosProjetados.map((p) => p.timestamp))].sort((a, b) => a - b);
+      if (timestampsUnicos.length === 0) return;
+
+      let idxAtual = focusedIndex ?? -1;
+      if (idxAtual === -1) {
+        // Se nada focado, foca no último (mais recente) com ArrowRight/Down
+        if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+          event.preventDefault();
+          setFocusedIndex(timestampsUnicos.length - 1);
+        } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+          event.preventDefault();
+          setFocusedIndex(0);
+        }
+        return;
+      }
+
+      switch (event.key) {
+        case "ArrowRight":
+        case "ArrowDown":
+          event.preventDefault();
+          setFocusedIndex((prev) => (prev === null ? timestampsUnicos.length - 1 : Math.min((prev ?? 0) + 1, timestampsUnicos.length - 1)));
+          break;
+        case "ArrowLeft":
+        case "ArrowUp":
+          event.preventDefault();
+          setFocusedIndex((prev) => (prev === null ? 0 : Math.max((prev ?? 0) - 1, 0)));
+          break;
+        case "Home":
+          event.preventDefault();
+          setFocusedIndex(0);
+          break;
+        case "End":
+          event.preventDefault();
+          setFocusedIndex(timestampsUnicos.length - 1);
+          break;
+        case "Escape":
+          event.preventDefault();
+          setFocusedIndex(null);
+          setHoveredPoint(null);
+          break;
+      }
+    },
+    [pontosProjetados, focusedIndex]
+  );
+
+  // Sincroniza hoveredPoint com focusedIndex
+  useEffect(() => {
+    if (focusedIndex !== null) {
+      const timestampsUnicos = [...new Set(pontosProjetados.map((p) => p.timestamp))].sort((a, b) => a - b);
+      const ts = timestampsUnicos[focusedIndex];
+      if (ts !== undefined) {
+        const pontosNoTs = pontosProjetados.filter((p) => p.timestamp === ts);
+        if (pontosNoTs.length > 0) {
+          setHoveredPoint(pontosNoTs[0]);
+        }
+      }
+    }
+  }, [focusedIndex, pontosProjetados]);
+
   // Estatísticas para mostrar abaixo do gráfico
   const estatisticas = useMemo(() => {
-    return seriesComDados.map((s) => {
+    return seriesAtivas.map((s) => {
+      const eixo = s.eixoY === "esquerda" ? eixosY.esquerda : eixosY.direita;
       const valores = pontos.map((p) => valorDaSerie(p, s.id)).filter((v): v is number => v !== null);
       if (valores.length === 0) return null;
       const soma = valores.reduce((a, b) => a + b, 0);
@@ -316,9 +467,9 @@ export function GraficoLinha({
       const min = Math.min(...valores);
       const max = Math.max(...valores);
       const ultimo = valores[valores.length - 1];
-      return { serie: s, soma, media, min, max, ultimo, count: valores.length };
+      return { serie: s, soma, media, min, max, ultimo, count: valores.length, eixo };
     }).filter(Boolean);
-  }, [seriesComDados, pontos]);
+  }, [seriesAtivas, pontos, eixosY]);
 
   // Coleta todos os pontos no timestamp do hover (todas as séries visíveis)
   const pontosNoHover = useMemo(() => {
@@ -329,7 +480,7 @@ export function GraficoLinha({
   // Se não há pontos, mostra estado vazio (early return DEPOIS dos hooks)
   if (pontos.length === 0) {
     return (
-      <div className="grafico-linha" role="img" aria-label={vazioTexto}>
+      <div className="grafico-linha" aria-live="polite">
         <div className="grafico-linha-vazio">
           <svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
             <circle cx="24" cy="24" r="20" strokeDasharray="8 4" opacity="0.3" />
@@ -342,12 +493,21 @@ export function GraficoLinha({
   }
 
   return (
-    <div className="grafico-linha" role="img" aria-label="Gráfico de linha da evolução de energia e CO₂e">
-      {/* Legenda interativa */}
-      <div className="grafico-linha-legenda" aria-label="Legenda das séries">
-        {series.map((s) => (
+    <div
+      ref={containerRef}
+      className="grafico-linha"
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="region"
+      aria-label="Gráfico de linha da evolução de energia e CO₂e. Use as setas para navegar entre os pontos de dados."
+    >
+      {/* Legenda interativa - fora do role="img" para ser acessível */}
+      <div className="grafico-linha-legenda" aria-label="Legenda das séries" role="group" aria-labelledby="grafico-legenda-titulo">
+        <span id="grafico-legenda-titulo" className="visually-hidden">Séries do gráfico</span>
+        {series.map((s, idx) => (
           <button
             key={s.id}
+            ref={(el) => { legendButtonsRef.current[idx] = el!; }}
             className={`grafico-linha-legenda-item ${seriesVisiveis[s.id] ? "" : "grafico-linha-legenda-item--oculta"}`}
             style={{ color: s.cor }}
             onClick={() => handleAlternarSerie(s.id)}
@@ -355,7 +515,7 @@ export function GraficoLinha({
             data-serie={s.id}
             type="button"
           >
-            <span className="grafico-linha-legenda-cor" style={{ background: s.cor }} />
+            <span className="grafico-linha-legenda-cor" style={{ background: s.cor }} aria-hidden="true" />
             {s.rotulo}
             <span className="grafico-linha-legenda-toggle" aria-hidden="true">
               {seriesVisiveis[s.id] ? "👁" : "👁‍🗨"}
@@ -371,6 +531,7 @@ export function GraficoLinha({
         width="100%"
         height={altura}
         preserveAspectRatio="none"
+        aria-hidden="true"
       >
         <defs>
           {/* Gradiente para área da energia */}
@@ -403,10 +564,10 @@ export function GraficoLinha({
           style={{ cursor: "crosshair" }}
         />
 
-        {/* Grid horizontal */}
+        {/* Grid horizontal - usa ticks do eixo esquerdo como referência visual principal */}
         <g className="grafico-linha-grid" stroke="#e8eee9" strokeWidth="1">
-          {ticksY.map((valor, i) => {
-            const y = mapearY(valor, minY, maxY, alturaInterna) + margens.topo;
+          {eixosY.esquerda.ticks.map((valor, i) => {
+            const y = mapearY(valor, eixosY.esquerda.min, eixosY.esquerda.max, alturaInterna) + margens.topo;
             return (
               <line key={`grid-y-${i}`} x1={margens.esquerda} y1={y} x2={largura - margens.direita} y2={y} />
             );
@@ -418,19 +579,61 @@ export function GraficoLinha({
           })}
         </g>
 
-        {/* Eixo Y */}
-        <g className="grafico-linha-eixo-y" fontSize="10" fill="#748078">
-          {ticksY.map((valor, i) => {
-            const y = mapearY(valor, minY, maxY, alturaInterna) + margens.topo;
-            const serieRef = seriesComDados.find((s) => valor >= s.min && valor <= s.max) || seriesComDados[0];
-            const rotulo = formatarValor(valor, serieRef.casasDecimais);
-            return (
-              <text key={`eixo-y-${i}`} x={margens.esquerda - 8} y={y + 3} textAnchor="end" dominantBaseline="middle">
-                {rotulo}
-              </text>
-            );
-          })}
-        </g>
+        {/* Eixo Y Esquerda (Energia) */}
+        {eixosY.esquerda.series.length > 0 && (
+          <g className="grafico-linha-eixo-y grafico-linha-eixo-y--esquerda" fontSize="10" fill="#748078" aria-label="Eixo Y - Energia (kWh)">
+            {eixosY.esquerda.ticks.map((valor, i) => {
+              const y = mapearY(valor, eixosY.esquerda.min, eixosY.esquerda.max, alturaInterna) + margens.topo;
+              const rotulo = formatarValor(valor, eixosY.esquerda.series[0]?.casasDecimais ?? 4);
+              return (
+                <text key={`eixo-y-esq-${i}`} x={margens.esquerda - 8} y={y + 3} textAnchor="end" dominantBaseline="middle">
+                  {rotulo}
+                </text>
+              );
+            })}
+            {/* Rótulo do eixo */}
+            <text
+              x={margens.esquerda - 40}
+              y={margens.topo + alturaInterna / 2}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              transform={`rotate(-90, ${margens.esquerda - 40}, ${margens.topo + alturaInterna / 2})`}
+              fontSize="11"
+              fill="#5a645d"
+              fontWeight="600"
+            >
+              Energia (kWh)
+            </text>
+          </g>
+        )}
+
+        {/* Eixo Y Direita (CO₂e) */}
+        {eixosY.direita.series.length > 0 && (
+          <g className="grafico-linha-eixo-y grafico-linha-eixo-y--direita" fontSize="10" fill="#748078" aria-label="Eixo Y - CO₂e (g)">
+            {eixosY.direita.ticks.map((valor, i) => {
+              const y = mapearY(valor, eixosY.direita.min, eixosY.direita.max, alturaInterna) + margens.topo;
+              const rotulo = formatarValor(valor, eixosY.direita.series[0]?.casasDecimais ?? 3);
+              return (
+                <text key={`eixo-y-dir-${i}`} x={largura - margens.direita + 8} y={y + 3} textAnchor="start" dominantBaseline="middle">
+                  {rotulo}
+                </text>
+              );
+            })}
+            {/* Rótulo do eixo */}
+            <text
+              x={largura - margens.direita + 40}
+              y={margens.topo + alturaInterna / 2}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              transform={`rotate(90, ${largura - margens.direita + 40}, ${margens.topo + alturaInterna / 2})`}
+              fontSize="11"
+              fill="#5a645d"
+              fontWeight="600"
+            >
+              CO₂e (g)
+            </text>
+          </g>
+        )}
 
         {/* Eixo X */}
         <g className="grafico-linha-eixo-x" fontSize="10" fill="#748078">
@@ -446,13 +649,14 @@ export function GraficoLinha({
 
         {/* Áreas e linhas das séries */}
         <g className="grafico-linha-series">
-          {seriesComDados.map((s) => {
-            const pathArea = gerarPathArea(pontos, s.id, minX, maxX, minY, maxY, larguraInterna, alturaInterna);
-            const pathLinha = gerarPath(pontos, s.id, minX, maxX, minY, maxY, larguraInterna, alturaInterna);
+          {seriesAtivas.map((s) => {
+            const eixo = s.eixoY === "esquerda" ? eixosY.esquerda : eixosY.direita;
+            const pathArea = gerarPathArea(pontos, s.id, minX, maxX, eixo.min, eixo.max, larguraInterna, alturaInterna);
+            const pathLinha = gerarPath(pontos, s.id, minX, maxX, eixo.min, eixo.max, larguraInterna, alturaInterna);
             const pontosValidos = pontos
               .map((p) => ({
                 x: mapearX(dataParaTimestamp(p.data), minX, maxX, larguraInterna) + margens.esquerda,
-                y: mapearY(valorDaSerie(p, s.id)!, minY, maxY, alturaInterna) + margens.topo,
+                y: mapearY(valorDaSerie(p, s.id)!, eixo.min, eixo.max, alturaInterna) + margens.topo,
                 valor: valorDaSerie(p, s.id),
                 data: p.data,
               }))
@@ -499,7 +703,7 @@ export function GraficoLinha({
                         className="grafico-linha-ponto"
                         pointerEvents="none"
                       />
-                      {/* Halo no hover */}
+                      {/* Halo no hover/focus */}
                       {estaHover && (
                         <circle
                           cx={p.x}
@@ -520,7 +724,7 @@ export function GraficoLinha({
           })}
         </g>
 
-        {/* Linha vertical de referência no hover */}
+        {/* Linha vertical de referência no hover/focus */}
         {hoveredPoint && (
           <line
             x1={hoveredPoint.x}
@@ -546,6 +750,7 @@ export function GraficoLinha({
             top: hoveredPoint.y - 40,
           }}
           role="tooltip"
+          aria-live="polite"
         >
           <div className="grafico-linha-tooltip-conteudo">
             <div className="grafico-linha-tooltip-data">
@@ -567,7 +772,7 @@ export function GraficoLinha({
       )}
 
       {/* Estatísticas abaixo do gráfico */}
-      {estatisticas.length > 0 && (
+      {mostrarEstatisticas && estatisticas.length > 0 && (
         <div className="grafico-linha-estatisticas" aria-label="Estatísticas do período">
           {estatisticas.map((stat) => (
             <div key={stat!.serie.id} className="grafico-linha-stat" style={{ borderColor: stat!.serie.cor }}>
