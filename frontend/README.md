@@ -25,6 +25,7 @@ As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. A
 | `/cadastro` | Cadastro | DW20 | Página provisória |
 | `/administrativa` | Administrativa | DW21, DW22 | Implementada (indicadores e serviços da API, intervalo de coleta; o card "Por recurso" aguarda endpoint) |
 | `/dashboard` | Dashboard | DW05, DW06, DW07 | Implementada (cards de indicadores, tabela e estados visuais) |
+| `/comparacao` | Comparação | DW13 | Implementada (2 a 5 serviços no mesmo período, com aviso de serviço sem dados) |
 | `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
 
 O cliente HTTP fica em `src/services/api.ts`. `requisitar<T>(caminho)` (GET) e `enviar<T>(caminho, corpo)` (POST com JSON) fazem as chamadas a partir de `/api`; as telas não usam `fetch` diretamente. Respostas fora de 2xx viram `ErroApi` (com `status`, `codigo` e, no HTTP 429, `tentarNovamenteEmSegundos`). Se houver token salvo, o cliente envia `Authorization: Bearer <token>` automaticamente.
@@ -69,6 +70,7 @@ As rotas estão declaradas em `src/rotas.tsx`, e seus caminhos ficam centralizad
 | `/cadastro` | Cadastro | Formulário de pessoa física ou jurídica com validação no frontend. O endpoint de cadastro ainda não existe no backend, portanto o envio não conclui o registro. |
 | `/dashboard` | Dashboard | Apresenta serviços, estados, busca e filtros. Os dados dependem dos campos enviados pelo backend. |
 | `/administrativa` | Área administrativa | Indicadores e lista de serviços vindos da API (`GET /dashboard/indicadores` e `GET /services`) e leitura da configuração de monitoramento. O card "Por recurso" aguarda endpoint, e a alteração do intervalo depende de endpoint ainda não disponível. |
+| `/comparacao` | Comparação | Seleção de 2 a 5 serviços e de um período; mostra energia e CO₂e totais lado a lado (`GET /analytics/comparacao`). Serviço sem coleta no período aparece como "Sem dados no período". |
 | `/dashboard/estados` | Galeria de estados | Disponível somente em desenvolvimento para conferência com os mocks. |
 
 **Observação sobre as rotas:** `src/rotas.tsx` contém mais de uma declaração para `/cadastro` e `/administrativa`. Revise essas entradas e mantenha uma única configuração por caminho antes de considerar a navegação dessas páginas definitiva.
