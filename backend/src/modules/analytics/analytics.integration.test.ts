@@ -33,10 +33,10 @@ test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
   // O fuso da sessão difere de UTC para detectar dependência acidental do servidor.
   process.env.PGOPTIONS = `-c search_path=${schema} -c TimeZone=Pacific/Auckland`;
   let schemaCriado = false;
-  let encerrarRepositorio: (() => Promise<void>) | undefined;
+let _encerrarRepositorio: (() => Promise<void>) | undefined = undefined;
   t.after(async () => {
     try {
-      await encerrarRepositorio?.();
+      await _encerrarRepositorio?.();
     } finally {
       try {
         await banco.end();
@@ -60,7 +60,7 @@ test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
     agregarMetricasPorPeriodo,
     encerrarPool,
   } = await import("./analytics.repository.ts");
-  encerrarRepositorio = encerrarPool;
+  _encerrarRepositorio = encerrarPool;
 
   // Dados de teste base
   const app = await banco.query("INSERT INTO aplicacoes (nome) VALUES ('App Teste') RETURNING id");
@@ -85,7 +85,7 @@ test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
      RETURNING id`,
     [appId, rSudesteId, rVirginiaId],
   );
-  const [s1, s2, s3, s4] = servicos.rows.map((s) => s.id); // s1,s2 = Sudeste; s3,s4 = Virginia
+  const [s1, s2, s3, _s4] = servicos.rows.map((s) => s.id); // s1,s2 = Sudeste; s3,s4 = Virginia
 
   // Coletas: s1 e s2 têm coletas bem-sucedidas; s3 tem uma; s4 é indisponível
   await banco.query(

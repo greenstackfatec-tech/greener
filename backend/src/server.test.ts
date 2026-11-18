@@ -63,7 +63,9 @@ async function preparar(t: TestContext, automatico?: string) {
     try {
       const resposta = await fetch(`${base}/health/live`, { signal: AbortSignal.timeout(1000) });
       if (resposta.ok) break;
-    } catch {}
+    } catch {
+      // Ignora erros de conexão até o servidor subir
+    }
     assert.ok(Date.now() < limite, saida || "Servidor não iniciou");
     await setTimeout(10);
   }

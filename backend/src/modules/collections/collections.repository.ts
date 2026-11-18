@@ -78,7 +78,7 @@ export async function gravarColeta(coleta: ColetaParaGravar): Promise<number> {
     return resultado.rows[0].id;
   } catch (erro) {
     console.error("[REPOSITORY] Erro ao gravar coleta:", erro);
-    throw new Error("Falha ao persistir coleta no banco de dados");
+    throw new Error("Falha ao persistir coleta no banco de dados", { cause: erro });
   }
 }
 

@@ -5,7 +5,6 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { obterIndicadoresDashboard } from "./dashboard-indicators.service.ts";
 import type { IndicadoresConsolidados } from "./dashboard-indicators.repository.ts";
 
 // Mock do repository
@@ -19,15 +18,6 @@ const mockRepository = {
   }),
 };
 
-// Substitui o import do repository pelo mock
-const originalModule = await import("./dashboard-indicators.repository.ts");
-const mockModule = {
-  ...originalModule,
-  buscarIndicadoresConsolidados: mockRepository.buscarIndicadoresConsolidados,
-};
-
-// Para testar, vamos mockar o módulo
-const serviceModule = await import("./dashboard-indicators.service.ts");
 
 // Testa a função de arredondamento interno
 test("obterIndicadoresDashboard - arredonda para 8 casas decimais", async () => {
