@@ -160,36 +160,55 @@
   position: absolute;
   pointer-events: none;
   z-index: 10;
-  transform: translateX(-50%) translateY(-100%);
   animation: grafico-tooltip-entrada 0.12s ease-out;
 }
 @keyframes grafico-tooltip-entrada {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-90%) scale(0.95);
+    transform: translateY(-8px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(-100%) scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 .grafico-linha-tooltip-conteudo {
   background: #fff;
-  border: 1px solid;
   border-radius: 10px;
   padding: 10px 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
-  min-width: 140px;
+  min-width: 160px;
+}
+.grafico-linha-tooltip-data {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--cor-muted);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cor-grid);
+}
+.grafico-linha-tooltip-serie {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0 6px 10px;
+  border-left: 3px solid;
+  margin: 0 -4px;
+}
+.grafico-linha-tooltip-serie:first-of-type {
+  padding-top: 2px;
+}
+.grafico-linha-tooltip-serie:last-of-type {
+  padding-bottom: 2px;
 }
 .grafico-linha-tooltip-cabecalho {
   font-size: 11px;
   font-weight: 650;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
 }
 .grafico-linha-tooltip-valor {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--cor-texto);
   line-height: 1.2;
@@ -200,19 +219,15 @@
   color: var(--cor-muted);
   margin-left: 4px;
 }
-.grafico-linha-tooltip-data {
-  font-size: 10px;
-  color: var(--cor-muted);
-  margin-top: 4px;
-}
 .grafico-linha-tooltip-seta {
   width: 0;
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid;
-  margin-left: 20px;
-  margin-top: -1px;
+  border-top: 6px solid var(--cor-grid);
+  position: absolute;
+  bottom: -6px;
+  left: 20px;
 }
 
 /* Estatísticas */

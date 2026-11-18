@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useMemo } from "react";
 import "./GraficoLinha.css";
 
 /** Um ponto do gráfico de linha (energia ou CO₂e). */
@@ -189,6 +189,16 @@ const SERIES_PADRAO: Serie[] = [
   },
 ];
 
+/** Ponto projetado para detecção de hover. */
+interface PontoProjetado {
+  x: number;
+  y: number;
+  valor: number;
+  data: string;
+  serie: Serie;
+  timestamp: number;
+}
+
 export function GraficoLinha({
   pontos,
   series = SERIES_PADRAO,
@@ -197,13 +207,12 @@ export function GraficoLinha({
   vazioTexto = "Nenhum dado de coleta no período selecionado.",
   aoAlternarSerie,
 }: Props) {
-  const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; serie: Serie; valor: number; data: string } | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<PontoProjetado | null>(null);
   const [seriesVisiveis, setSeriesVisiveis] = useState<Record<"energia" | "co2e", boolean>>({
     energia: true,
     co2e: true,
   });
   const svgRef = useRef<SVGSVGElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
 
   const handleAlternarSerie = useCallback((id: "energia" | "co2e") => {
     setSeriesVisiveis((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -253,6 +262,28 @@ export function GraficoLinha({
   const ticksX = gerarTicksX(pontos);
   const ticksY = gerarTicksY(minY, maxY);
 
+  // Prepara todos os pontos projetados para detecção de hover (voronoi/overlay)
+  const pontosProjetados = useMemo((): PontoProjetado[] => {
+    const resultado: PontoProjetado[] = [];
+    for (const s of seriesComDados) {
+      for (const p of pontos) {
+        const valor = valorDaSerie(p, s.id);
+        if (valor !== null) {
+          resultado.push({
+            x: mapearX(dataParaTimestamp(p.data), minX, maxX, larguraInterna) + margens.esquerda,
+            y: mapearY(valor, minY, maxY, alturaInterna) + margens.topo,
+            valor,
+            data: p.data,
+            serie: s,
+            timestamp: dataParaTimestamp(p.data),
+          });
+        }
+      }
+    }
+    // Ordena por timestamp para busca binária
+    return resultado.sort((a, b) => a.timestamp - b.timestamp);
+  }, [pontos, seriesComDados, minX, maxX, minY, maxY, larguraInterna, alturaInterna, margens]);
+
   // Estatísticas para mostrar abaixo do gráfico
   const estatisticas = seriesComDados.map((s) => {
     const valores = pontos.map((p) => valorDaSerie(p, s.id)).filter((v): v is number => v !== null);
@@ -264,6 +295,52 @@ export function GraficoLinha({
     const ultimo = valores[valores.length - 1];
     return { serie: s, soma, media, min, max, ultimo, count: valores.length };
   }).filter(Boolean);
+
+  // Handler de mousemove na área de detecção
+  const handleMouseMove = useCallback((event: React.MouseEvent<SVGRectElement>) => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    // Coordenadas relativas ao SVG
+    const clientX = event.clientX - rect.left;
+    // Converte para coordenadas do viewBox
+    const svgWidth = rect.width;
+    const scaleX = largura / svgWidth;
+    const mouseX = clientX * scaleX;
+
+    // Encontra o timestamp mais próximo do mouse
+    let melhorTimestamp: number | null = null;
+    let menorDistancia = Infinity;
+
+    for (const p of pontosProjetados) {
+      const dist = Math.abs(p.x - mouseX);
+      if (dist < menorDistancia) {
+        menorDistancia = dist;
+        melhorTimestamp = p.timestamp;
+      }
+    }
+
+    // Se encontrou timestamp próximo, pega TODOS os pontos nesse timestamp (todas as séries)
+    if (melhorTimestamp !== null && menorDistancia <= 30) {
+      const pontosNoTimestamp = pontosProjetados.filter((p) => p.timestamp === melhorTimestamp);
+      if (pontosNoTimestamp.length > 0) {
+        // Usa o primeiro ponto como referência (mesmo x, y diferente por série)
+        setHoveredPoint(pontosNoTimestamp[0]);
+      }
+    } else {
+      setHoveredPoint(null);
+    }
+  }, [largura, pontosProjetados]);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredPoint(null);
+  }, []);
+
+  // Coleta todos os pontos no timestamp do hover (todas as séries visíveis)
+  const pontosNoHover = useMemo(() => {
+    if (!hoveredPoint) return [];
+    return pontosProjetados.filter((p) => p.timestamp === hoveredPoint.timestamp);
+  }, [hoveredPoint, pontosProjetados]);
 
   return (
     <div className="grafico-linha" role="img" aria-label="Gráfico de linha da evolução de energia e CO₂e">
@@ -295,7 +372,6 @@ export function GraficoLinha({
         width="100%"
         height={altura}
         preserveAspectRatio="none"
-        onMouseLeave={() => setHoveredPoint(null)}
       >
         <defs>
           {/* Gradiente para área da energia */}
@@ -308,13 +384,25 @@ export function GraficoLinha({
             <stop offset="0%" stopColor="#2e63a8" stopOpacity="0.18" />
             <stop offset="100%" stopColor="#2e63a8" stopOpacity="0" />
           </linearGradient>
-          {/* Gradiente para linha hover */}
+          {/* Gradiente para halo hover */}
           <linearGradient id="grad-hover" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#fff" stopOpacity="0" />
             <stop offset="50%" stopColor="#fff" stopOpacity="1" />
             <stop offset="100%" stopColor="#fff" stopOpacity="0" />
           </linearGradient>
         </defs>
+
+        {/* Área de detecção de hover transparente (cobre toda a área do gráfico) */}
+        <rect
+          x={margens.esquerda}
+          y={margens.topo}
+          width={larguraInterna}
+          height={alturaInterna}
+          fill="transparent"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          style={{ cursor: "crosshair" }}
+        />
 
         {/* Grid horizontal */}
         <g className="grafico-linha-grid" stroke="#e8eee9" strokeWidth="1">
@@ -371,6 +459,8 @@ export function GraficoLinha({
               }))
               .filter((p) => p.valor !== null);
 
+            const isHovered = hoveredPoint?.serie.id === s.id;
+
             return (
               <g key={s.id} className="grafico-linha-serie">
                 {/* Área */}
@@ -388,7 +478,7 @@ export function GraficoLinha({
                     d={pathLinha}
                     fill="none"
                     stroke={s.cor}
-                    strokeWidth="2.5"
+                    strokeWidth={2.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     className="grafico-linha-linha"
@@ -396,51 +486,36 @@ export function GraficoLinha({
                   />
                 )}
                 {/* Pontos */}
-                {pontosValidos.map((p, idx) => (
-                  <g key={`${s.id}-${idx}`}>
-                    <circle
-                      cx={p.x}
-                      cy={p.y}
-                      r={4.5}
-                      fill={s.cor}
-                      stroke="#fff"
-                      strokeWidth={2}
-                      className="grafico-linha-ponto"
-                      data-valor={formatarValor(p.valor, s.casasDecimais)}
-                      data-data={p.data}
-                      data-serie={s.rotulo}
-                      onMouseEnter={() => {
-                        const rect = svgRef.current?.getBoundingClientRect();
-                        if (rect) {
-                          setHoveredPoint({
-                            x: p.x,
-                            y: p.y,
-                            serie: s,
-                            valor: p.valor!,
-                            data: p.data,
-                          });
-                        }
-                      }}
-                      onMouseLeave={() => setHoveredPoint(null)}
-                      tabIndex={0}
-                      role="img"
-                      aria-label={`${s.rotulo}: ${formatarValor(p.valor, s.casasDecimais)} ${s.unidade} em ${new Date(p.data).toLocaleString("pt-BR")}`}
-                    />
-                    {/* Halo no hover */}
-                    {hoveredPoint?.data === p.data && hoveredPoint?.serie.id === s.id && (
+                {pontosValidos.map((p, idx) => {
+                  const estaHover = isHovered && hoveredPoint?.data === p.data;
+                  return (
+                    <g key={`${s.id}-${idx}`}>
                       <circle
                         cx={p.x}
                         cy={p.y}
-                        r={10}
-                        fill="url(#grad-hover)"
-                        stroke={s.cor}
-                        strokeWidth={1.5}
-                        className="grafico-linha-ponto-halo"
+                        r={estaHover ? 7 : 4.5}
+                        fill={s.cor}
+                        stroke="#fff"
+                        strokeWidth={estaHover ? 3 : 2}
+                        className="grafico-linha-ponto"
                         pointerEvents="none"
                       />
-                    )}
-                  </g>
-                ))}
+                      {/* Halo no hover */}
+                      {estaHover && (
+                        <circle
+                          cx={p.x}
+                          cy={p.y}
+                          r={12}
+                          fill="url(#grad-hover)"
+                          stroke={s.cor}
+                          strokeWidth={1.5}
+                          className="grafico-linha-ponto-halo"
+                          pointerEvents="none"
+                        />
+                      )}
+                    </g>
+                  );
+                })}
               </g>
             );
           })}
@@ -463,30 +538,32 @@ export function GraficoLinha({
         )}
       </svg>
 
-      {/* Tooltip flutuante */}
-      {hoveredPoint && (
+      {/* Tooltip flutuante - posicionado fora do SVG, no container pai */}
+      {hoveredPoint && pontosNoHover.length > 0 && (
         <div
-          ref={tooltipRef}
           className="grafico-linha-tooltip"
           style={{
-            left: hoveredPoint.x + margens.esquerda + 16,
-            top: hoveredPoint.y + margens.topo - 40,
+            left: hoveredPoint.x + 16,
+            top: hoveredPoint.y - 40,
           }}
           role="tooltip"
-          aria-label={`${hoveredPoint.serie.rotulo}: ${formatarValor(hoveredPoint.valor, hoveredPoint.serie.casasDecimais)} ${hoveredPoint.serie.unidade}`}
         >
-          <div className="grafico-linha-tooltip-conteudo" style={{ borderColor: hoveredPoint.serie.cor }}>
-            <div className="grafico-linha-tooltip-cabecalho" style={{ color: hoveredPoint.serie.cor }}>
-              {hoveredPoint.serie.rotulo}
-            </div>
-            <div className="grafico-linha-tooltip-valor">
-              {formatarValor(hoveredPoint.valor, hoveredPoint.serie.casasDecimais)} <span>{hoveredPoint.serie.unidade}</span>
-            </div>
+          <div className="grafico-linha-tooltip-conteudo">
             <div className="grafico-linha-tooltip-data">
               {new Date(hoveredPoint.data).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
             </div>
+            {pontosNoHover.map((p) => (
+              <div key={p.serie.id} className="grafico-linha-tooltip-serie" style={{ borderLeftColor: p.serie.cor }}>
+                <div className="grafico-linha-tooltip-cabecalho" style={{ color: p.serie.cor }}>
+                  {p.serie.rotulo}
+                </div>
+                <div className="grafico-linha-tooltip-valor">
+                  {formatarValor(p.valor, p.serie.casasDecimais)} <span>{p.serie.unidade}</span>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="grafico-linha-tooltip-seta" style={{ borderTopColor: hoveredPoint.serie.cor }} />
+          <div className="grafico-linha-tooltip-seta" />
         </div>
       )}
 

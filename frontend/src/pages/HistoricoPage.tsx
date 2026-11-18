@@ -30,6 +30,41 @@ function ordenarCronologico(a: PontoGrafico, b: PontoGrafico): number {
   return new Date(a.data).getTime() - new Date(b.data).getTime();
 }
 
+/** Calcula estatísticas dos pontos para os cards de resumo. */
+function calcularEstatisticas(pontos: PontoGrafico[]) {
+  const energiaValida = pontos.map((p) => p.energia).filter((v): v is number => v !== null);
+  const co2eValida = pontos.map((p) => p.co2e).filter((v): v is number => v !== null);
+
+  const estatEnergia = energiaValida.length > 0 ? {
+    atual: energiaValida[energiaValida.length - 1],
+    media: energiaValida.reduce((a, b) => a + b, 0) / energiaValida.length,
+    min: Math.min(...energiaValida),
+    max: Math.max(...energiaValida),
+    total: energiaValida.reduce((a, b) => a + b, 0),
+    count: energiaValida.length,
+  } : null;
+
+  const estatCo2e = co2eValida.length > 0 ? {
+    atual: co2eValida[co2eValida.length - 1],
+    media: co2eValida.reduce((a, b) => a + b, 0) / co2eValida.length,
+    min: Math.min(...co2eValida),
+    max: Math.max(...co2eValida),
+    total: co2eValida.reduce((a, b) => a + b, 0),
+    count: co2eValida.length,
+  } : null;
+
+  return { energia: estatEnergia, co2e: estatCo2e };
+}
+
+/** Formata data relativa para exibição amigável. */
+function formatarPeriodo(inicio: Date, fim: Date): string {
+  const mesmoDia = inicio.toDateString() === fim.toDateString();
+  if (mesmoDia) {
+    return `${inicio.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} – ${fim.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  }
+  return `${inicio.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} a ${fim.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`;
+}
+
 export function HistoricoPage() {
   const { servicos, carregando, atualizando, erro, atualizadoEm, recarregar } = useServicos(INTERVALO_ATUALIZACAO_SEGUNDOS * 1000);
   const agora = useAgora();
@@ -42,7 +77,7 @@ export function HistoricoPage() {
   const [refetchTrigger, setRefetchTrigger] = useState(0);
 
   const recarregarHistorico = useCallback(() => {
-    setRefetchTrigger((t) => t + 1);
+    setRefetchTrigger((t: number) => t + 1);
   }, []);
 
   const lista = useMemo(() => servicos ?? [], [servicos]);
@@ -103,12 +138,14 @@ export function HistoricoPage() {
   const pontosGrafico = useMemo((): PontoGrafico[] => {
     if (!historico?.dados) return [];
     return historico.dados
-      .filter((p) => p.statusColeta === "sucesso" && (p.energiaKwh !== null || p.emissaoCo2eG !== null))
+      .filter((p: import("../services/analytics.ts").PontoHistorico) => p.statusColeta === "sucesso" && (p.energiaKwh !== null || p.emissaoCo2eG !== null))
       .map(paraPontoGrafico)
       .sort(ordenarCronologico);
   }, [historico]);
 
   const ultimaAtualizacao = haQuanto(atualizadoEm, agora);
+  const estatisticas = useMemo(() => calcularEstatisticas(pontosGrafico), [pontosGrafico]);
+  const temDados = pontosGrafico.length > 0;
 
   // Determina o conteúdo principal
   let corpo: ReactNode;
@@ -132,11 +169,11 @@ export function HistoricoPage() {
       <div className="hist-estado">
         <CartaoEstado
           tom="vazio"
-          titulo="Estado vazio"
+          titulo="Nenhum serviço cadastrado"
           selo="Primeiro passo"
-          descricao="Nenhum serviço cadastrado"
+          descricao="Adicione um serviço para começar a monitorar o consumo de energia e emissões de CO₂e."
           valor="Comece adicionando"
-          rodape="Adicione um serviço para ver o histórico"
+          rodape="Acesse a área administrativa para cadastrar seu primeiro serviço"
         />
       </div>
     );
@@ -148,7 +185,7 @@ export function HistoricoPage() {
           tom="vazio"
           titulo="Serviço não encontrado"
           selo="Filtro ativo"
-          descricao="O serviço selecionado não existe ou foi removido"
+          descricao="O serviço selecionado não existe ou foi removido."
           valor="Ajuste o filtro"
           rodape="Escolha outro serviço no seletor acima"
         />
@@ -196,10 +233,10 @@ export function HistoricoPage() {
         />
       </div>
     );
-  } else if (pontosGrafico.length === 0) {
+  } else if (!temDados) {
     // Sem dados no período
     const periodoTexto = periodoResolvido && "inicio" in periodoResolvido
-      ? `${new Date(periodoResolvido.inicio).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} a ${new Date(periodoResolvido.fim).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`
+      ? formatarPeriodo(periodoResolvido.inicio, periodoResolvido.fim)
       : "período selecionado";
 
     corpo = (
@@ -210,12 +247,12 @@ export function HistoricoPage() {
           selo="Histórico vazio"
           descricao={`O serviço "${servicoSelecionado.nome}" não possui coletas com métricas no período: ${periodoTexto}`}
           valor="Nenhum ponto para exibir"
-          rodape="Tente ampliar o período ou verifique se houve coletas"
+          rodape="Tente ampliar o período ou verifique se houve coletas bem-sucedidas"
         />
       </div>
     );
   } else {
-    // Tem dados - mostra o gráfico
+    // Tem dados - mostra o gráfico com cards de resumo
     const estado = situacaoDoServico(servicoSelecionado);
     const textos = TEXTOS_SITUACAO[estado];
     const metricas: MetricasRecurso = {
@@ -224,6 +261,10 @@ export function HistoricoPage() {
       discoGb: servicoSelecionado.discoGb,
       redeGb: servicoSelecionado.redeGb,
     };
+
+    const periodoFormatado = periodoResolvido && "inicio" in periodoResolvido
+      ? formatarPeriodo(periodoResolvido.inicio, periodoResolvido.fim)
+      : "Período não disponível";
 
     // Card de resumo do serviço
     const resumoServico = (
@@ -253,8 +294,84 @@ export function HistoricoPage() {
       </div>
     );
 
-    // Período formatado para o gráfico
-    const periodoFormatado = `${new Date(periodoResolvido.inicio).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} a ${new Date(periodoResolvido.fim).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`;
+    // Cards de estatísticas do período
+    const cardsEstatisticas = (
+      <div className="hist-estatisticas" aria-label="Estatísticas do período">
+        {estatisticas.energia && (
+          <article className="hist-stat-card hist-stat-card--energia">
+            <div className="hist-stat-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+            </div>
+            <div className="hist-stat-content">
+              <span className="hist-stat-label">Energia no período</span>
+              <div className="hist-stat-valores">
+                <span className="hist-stat-item" title="Valor da última coleta">
+                  <span className="hist-stat-sublabel">Atual</span>
+                  <strong>{numero(estatisticas.energia.atual, 4)}</strong>
+                  <small>kWh</small>
+                </span>
+                <span className="hist-stat-divider" aria-hidden="true">|</span>
+                <span className="hist-stat-item" title="Média do período">
+                  <span className="hist-stat-sublabel">Média</span>
+                  <strong>{numero(estatisticas.energia.media, 4)}</strong>
+                  <small>kWh</small>
+                </span>
+                <span className="hist-stat-divider" aria-hidden="true">|</span>
+                <span className="hist-stat-item" title="Total do período">
+                  <span className="hist-stat-sublabel">Total</span>
+                  <strong>{numero(estatisticas.energia.total, 4)}</strong>
+                  <small>kWh</small>
+                </span>
+              </div>
+              <div className="hist-stat-minmax">
+                <span>Mín: <strong>{numero(estatisticas.energia.min, 4)} kWh</strong></span>
+                <span>Máx: <strong>{numero(estatisticas.energia.max, 4)} kWh</strong></span>
+                <span>{estatisticas.energia.count} ponto{estatisticas.energia.count !== 1 ? "s" : ""}</span>
+              </div>
+            </div>
+          </article>
+        )}
+        {estatisticas.co2e && (
+          <article className="hist-stat-card hist-stat-card--co2e">
+            <div className="hist-stat-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4M12 16v.01" />
+              </svg>
+            </div>
+            <div className="hist-stat-content">
+              <span className="hist-stat-label">Emissões CO₂e no período</span>
+              <div className="hist-stat-valores">
+                <span className="hist-stat-item" title="Valor da última coleta">
+                  <span className="hist-stat-sublabel">Atual</span>
+                  <strong>{numero(estatisticas.co2e.atual, 3)}</strong>
+                  <small>g</small>
+                </span>
+                <span className="hist-stat-divider" aria-hidden="true">|</span>
+                <span className="hist-stat-item" title="Média do período">
+                  <span className="hist-stat-sublabel">Média</span>
+                  <strong>{numero(estatisticas.co2e.media, 3)}</strong>
+                  <small>g</small>
+                </span>
+                <span className="hist-stat-divider" aria-hidden="true">|</span>
+                <span className="hist-stat-item" title="Total do período">
+                  <span className="hist-stat-sublabel">Total</span>
+                  <strong>{numero(estatisticas.co2e.total, 3)}</strong>
+                  <small>g</small>
+                </span>
+              </div>
+              <div className="hist-stat-minmax">
+                <span>Mín: <strong>{numero(estatisticas.co2e.min, 3)} g</strong></span>
+                <span>Máx: <strong>{numero(estatisticas.co2e.max, 3)} g</strong></span>
+                <span>{estatisticas.co2e.count} ponto{estatisticas.co2e.count !== 1 ? "s" : ""}</span>
+              </div>
+            </div>
+          </article>
+        )}
+      </div>
+    );
 
     // Gráfico
     const grafico = (
@@ -281,7 +398,7 @@ export function HistoricoPage() {
         </div>
         <GraficoLinha
           pontos={pontosGrafico}
-          altura={340}
+          altura={380}
           vazioTexto="Nenhum dado de coleta com métricas válidas no período."
         />
       </section>
@@ -290,6 +407,7 @@ export function HistoricoPage() {
     corpo = (
       <>
         {resumoServico}
+        {cardsEstatisticas}
         {grafico}
       </>
     );
@@ -363,14 +481,17 @@ export function HistoricoPage() {
                 </span>
               )}
             </div>
-            <FiltrosAnalise
-              filtros={filtros}
-              servicos={opcoesServico}
-              regioes={regioes}
-              aoAlterar={alterarFiltros}
-              aoLimpar={limparFiltros}
-            />
-            <p className="hist-filtros-nota">O gráfico mostra apenas coletas com status "sucesso" e métricas válidas.</p>
+
+            <div className="hist-filtros-content">
+              <FiltrosAnalise
+                filtros={filtros}
+                servicos={opcoesServico}
+                regioes={regioes}
+                aoAlterar={alterarFiltros}
+                aoLimpar={limparFiltros}
+              />
+              <p className="hist-filtros-nota">O gráfico mostra apenas coletas com status "sucesso" e métricas válidas.</p>
+            </div>
 
             {erro && servicos !== null && (
               <div className="hist-aviso-erro" role="alert">
