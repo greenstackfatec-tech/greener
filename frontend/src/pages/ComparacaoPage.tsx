@@ -184,14 +184,14 @@ export function ComparacaoPage() {
                 onClick={recarregarComparacao}
                 disabled={atualizando || servicosCarregando}
               >
-                <span className="dash-refresh-icone" aria-hidden="true">↻</span>
-                <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span>
+                ↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span>
               </button>
               <p className="dash-atualizacao">
                 {atualizadoEm === null
                   ? "Aguardando a primeira atualização"
                   : `Última atualização: ${dataHora(atualizadoEm)}`}
-                · Atualiza a cada {duracao(INTERVALO_ATUALIZACAO_SEGUNDOS)}
+                {" · "}
+                Atualiza a cada {duracao(INTERVALO_ATUALIZACAO_SEGUNDOS)}
               </p>
             </div>
           </div>
