@@ -14,7 +14,7 @@ import { useFiltrosAnalise } from "../hooks/useFiltrosAnalise.ts";
 import { situacaoDoServico } from "../services/servicos.ts";
 import { localizacaoDoServico } from "../localizacao.ts";
 import { consultarHistorico, type HistoricoResposta, type PontoHistorico } from "../services/analytics.ts";
-import "./HistoricoPage.css";
+import "./DashboardPage.css";
 
 /** Converte PontoHistorico do backend para PontoGrafico do gráfico. */
 function paraPontoGrafico(ph: PontoHistorico): PontoGrafico {
@@ -198,7 +198,7 @@ export function HistoricoPage() {
   if (servicos === null) {
     // Carregando serviços
     corpo = (
-      <div className="hist-estado">
+      <div className="dash-estado">
         <CartaoEstado
           tom="carregando"
           titulo="Carregando serviços"
@@ -211,7 +211,7 @@ export function HistoricoPage() {
   } else if (servicos.length === 0) {
     // Nenhum serviço cadastrado
     corpo = (
-      <div className="hist-estado">
+      <div className="dash-estado">
         <CartaoEstado
           tom="vazio"
           titulo="Nenhum serviço cadastrado"
@@ -225,7 +225,7 @@ export function HistoricoPage() {
   } else if (!servicoSelecionado) {
     // Serviço filtrado não encontrado
     corpo = (
-      <div className="hist-estado">
+      <div className="dash-estado">
         <CartaoEstado
           tom="vazio"
           titulo="Serviço não encontrado"
@@ -239,7 +239,7 @@ export function HistoricoPage() {
   } else if ("erro" in periodoResolvido) {
     // Período inválido
     corpo = (
-      <div className="hist-estado">
+      <div className="dash-estado">
         <CartaoEstado
           tom="erro"
           titulo="Período inválido"
@@ -253,7 +253,7 @@ export function HistoricoPage() {
   } else if (erroHistoricoValido) {
     // Erro ao buscar histórico
     corpo = (
-      <div className="hist-estado">
+      <div className="dash-estado">
         <CartaoEstado
           tom="erro"
           titulo="Erro ao carregar histórico"
@@ -268,7 +268,7 @@ export function HistoricoPage() {
   } else if (carregandoHistorico) {
     // Carregando histórico
     corpo = (
-      <div className="hist-estado">
+      <div className="dash-estado">
         <CartaoEstado
           tom="carregando"
           titulo="Carregando histórico"
@@ -285,7 +285,7 @@ export function HistoricoPage() {
       : "período selecionado";
 
     corpo = (
-      <div className="hist-estado">
+      <div className="dash-estado">
         <CartaoEstado
           tom="vazio"
           titulo="Sem dados no período"
@@ -313,7 +313,7 @@ export function HistoricoPage() {
 
     // Card de resumo do serviço
     const resumoServico = (
-      <div className="hist-resumo-servico" key="resumo">
+      <div className="dash-estado" key="resumo">
         <CartaoEstado
           tom={estado === "removido" ? "indisponivel" : estado}
           titulo={servicoSelecionado.nome}
@@ -321,11 +321,11 @@ export function HistoricoPage() {
           descricao={textos.descricao}
           valor={
             <>
-              <span className="hist-valor-com-info">
+              <span className="dash-valor-com-info">
                 {servicoSelecionado.energiaKwh === null ? "—" : `${numero(servicoSelecionado.energiaKwh, 4)} kWh`}
               </span>
               {servicoSelecionado.emissaoCo2eG !== null && (
-                <small className="hist-co2e-explicacao">
+                <small className="dash-co2e-explicacao">
                   CO₂e: {numero(servicoSelecionado.emissaoCo2eG, 3)} g = energia × intensidade de carbono
                 </small>
               )}
@@ -341,36 +341,36 @@ export function HistoricoPage() {
 
     // Cards de estatísticas do período
     const cardsEstatisticas = (
-      <div className="hist-estatisticas" aria-label="Estatísticas do período">
+      <div className="dash-estatisticas" aria-label="Estatísticas do período">
         {estatisticas.energia && (
-          <article className="hist-stat-card hist-stat-card--energia">
-            <div className="hist-stat-icon" aria-hidden="true">
+          <article className="dash-stat-card dash-stat-card--energia">
+            <div className="dash-stat-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
               </svg>
             </div>
-            <div className="hist-stat-content">
-              <span className="hist-stat-label">Energia no período</span>
-              <div className="hist-stat-valores">
-                <span className="hist-stat-item" title="Valor da última coleta">
-                  <span className="hist-stat-sublabel">Atual</span>
+            <div className="dash-stat-content">
+              <span className="dash-stat-label">Energia no período</span>
+              <div className="dash-stat-valores">
+                <span className="dash-stat-item" title="Valor da última coleta">
+                  <span className="dash-stat-sublabel">Atual</span>
                   <strong>{numero(estatisticas.energia.atual, 4)}</strong>
                   <small>kWh</small>
                 </span>
-                <span className="hist-stat-divider" aria-hidden="true">|</span>
-                <span className="hist-stat-item" title="Média do período">
-                  <span className="hist-stat-sublabel">Média</span>
+                <span className="dash-stat-divider" aria-hidden="true">|</span>
+                <span className="dash-stat-item" title="Média do período">
+                  <span className="dash-stat-sublabel">Média</span>
                   <strong>{numero(estatisticas.energia.media, 4)}</strong>
                   <small>kWh</small>
                 </span>
-                <span className="hist-stat-divider" aria-hidden="true">|</span>
-                <span className="hist-stat-item" title="Total do período">
-                  <span className="hist-stat-sublabel">Total</span>
+                <span className="dash-stat-divider" aria-hidden="true">|</span>
+                <span className="dash-stat-item" title="Total do período">
+                  <span className="dash-stat-sublabel">Total</span>
                   <strong>{numero(estatisticas.energia.total, 4)}</strong>
                   <small>kWh</small>
                 </span>
               </div>
-              <div className="hist-stat-minmax">
+              <div className="dash-stat-minmax">
                 <span>Mín: <strong>{numero(estatisticas.energia.min, 4)} kWh</strong></span>
                 <span>Máx: <strong>{numero(estatisticas.energia.max, 4)} kWh</strong></span>
                 <span>{estatisticas.energia.count} ponto{estatisticas.energia.count !== 1 ? "s" : ""}</span>
@@ -379,35 +379,35 @@ export function HistoricoPage() {
           </article>
         )}
         {estatisticas.co2e && (
-          <article className="hist-stat-card hist-stat-card--co2e">
-            <div className="hist-stat-icon" aria-hidden="true">
+          <article className="dash-stat-card dash-stat-card--co2e">
+            <div className="dash-stat-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 8v4M12 16v.01" />
               </svg>
             </div>
-            <div className="hist-stat-content">
-              <span className="hist-stat-label">Emissões CO₂e no período</span>
-              <div className="hist-stat-valores">
-                <span className="hist-stat-item" title="Valor da última coleta">
-                  <span className="hist-stat-sublabel">Atual</span>
+            <div className="dash-stat-content">
+              <span className="dash-stat-label">Emissões CO₂e no período</span>
+              <div className="dash-stat-valores">
+                <span className="dash-stat-item" title="Valor da última coleta">
+                  <span className="dash-stat-sublabel">Atual</span>
                   <strong>{numero(estatisticas.co2e.atual, 3)}</strong>
                   <small>g</small>
                 </span>
-                <span className="hist-stat-divider" aria-hidden="true">|</span>
-                <span className="hist-stat-item" title="Média do período">
-                  <span className="hist-stat-sublabel">Média</span>
+                <span className="dash-stat-divider" aria-hidden="true">|</span>
+                <span className="dash-stat-item" title="Média do período">
+                  <span className="dash-stat-sublabel">Média</span>
                   <strong>{numero(estatisticas.co2e.media, 3)}</strong>
                   <small>g</small>
                 </span>
-                <span className="hist-stat-divider" aria-hidden="true">|</span>
-                <span className="hist-stat-item" title="Total do período">
-                  <span className="hist-stat-sublabel">Total</span>
+                <span className="dash-stat-divider" aria-hidden="true">|</span>
+                <span className="dash-stat-item" title="Total do período">
+                  <span className="dash-stat-sublabel">Total</span>
                   <strong>{numero(estatisticas.co2e.total, 3)}</strong>
                   <small>g</small>
                 </span>
               </div>
-              <div className="hist-stat-minmax">
+              <div className="dash-stat-minmax">
                 <span>Mín: <strong>{numero(estatisticas.co2e.min, 3)} g</strong></span>
                 <span>Máx: <strong>{numero(estatisticas.co2e.max, 3)} g</strong></span>
                 <span>{estatisticas.co2e.count} ponto{estatisticas.co2e.count !== 1 ? "s" : ""}</span>
@@ -420,23 +420,23 @@ export function HistoricoPage() {
 
     // Gráfico
     const grafico = (
-      <section className="hist-grafico" aria-labelledby="hist-grafico-titulo">
-        <div className="hist-grafico-cabecalho">
+      <section className="dash-grafico" aria-labelledby="dash-grafico-titulo">
+        <div className="dash-grafico-cabecalho">
           <div>
-            <h2 id="hist-grafico-titulo">Evolução no período</h2>
-            <p className="hist-grafico-periodo">
+            <h2 id="dash-grafico-titulo">Evolução no período</h2>
+            <p className="dash-grafico-periodo">
               {periodoFormatado} · {pontosGrafico.length} ponto{pontosGrafico.length !== 1 ? "s" : ""} de coleta
             </p>
           </div>
-          <div className="hist-grafico-acoes">
+          <div className="dash-grafico-acoes">
             <button
               type="button"
-              className="hist-grafico-botao"
+              className="dash-grafico-botao"
               onClick={recarregarHistorico}
               disabled={carregandoHistorico}
               aria-label="Atualizar gráfico"
             >
-              <span className="hist-grafico-botao-icone" aria-hidden="true">↻</span>
+              <span className="dash-grafico-botao-icone" aria-hidden="true">↻</span>
               <span>Atualizar</span>
             </button>
           </div>
@@ -460,54 +460,54 @@ export function HistoricoPage() {
   }
 
   return (
-    <div className="hist-shell">
-      <aside className="hist-sidebar" aria-label="Navegação principal">
-        <a className="hist-brand" href={ROTAS.inicio}>
+    <div className="dash-shell">
+      <aside className="dash-sidebar" aria-label="Navegação principal">
+        <a className="dash-brand" href={ROTAS.inicio}>
           <img src={logo} alt="" />
           <span>GreenER</span>
         </a>
-        <p className="hist-nav-label">MENU PRINCIPAL</p>
+        <p className="dash-nav-label">MENU PRINCIPAL</p>
         <nav>
-          <a className="hist-nav-item" href={ROTAS.dashboard}><span aria-hidden="true">▦</span> Visão geral</a>
-          <a className="hist-nav-item hist-nav-active" href="#historico" aria-current="page"><span aria-hidden="true">⎔</span> Histórico</a>
-          <a className="hist-nav-item" href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
+          <a className="dash-nav-item" href={ROTAS.dashboard}><span aria-hidden="true">▦</span> Visão geral</a>
+          <a className="dash-nav-item dash-nav-active" href={ROTAS.historico} aria-current="page"><span aria-hidden="true">⎔</span> Histórico</a>
+          <a className="dash-nav-item" href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
         </nav>
-        <div className="hist-sidebar-bottom">
-          <span className="hist-avatar" aria-hidden="true">GE</span>
+        <div className="dash-sidebar-bottom">
+          <span className="dash-avatar" aria-hidden="true">GE</span>
           <span><strong>GreenER</strong><small>Monitoramento ambiental</small></span>
         </div>
       </aside>
 
-      <main className="hist-main" role="main">
-        <header className="hist-topbar">
+      <main className="dash-main" role="main">
+        <header className="dash-topbar">
           <div>
-            <span className="hist-breadcrumb">GreenER / </span>
+            <span className="dash-breadcrumb">GreenER / </span>
             <strong>Histórico</strong>
           </div>
-          <div className="hist-live" aria-live="polite" aria-atomic="true">
+          <div className="dash-live" aria-live="polite" aria-atomic="true">
             <i aria-hidden="true" />
             Dados do monitoramento
           </div>
         </header>
-        <div className="hist-content">
-          <div className="hist-heading">
+        <div className="dash-content">
+          <div className="dash-heading">
             <div>
-              <p className="hist-eyebrow">MONITORAMENTO AMBIENTAL</p>
+              <p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p>
               <h1>Histórico de consumo</h1>
               <p>Acompanhe a evolução de energia e CO₂e de um serviço ao longo do tempo.</p>
             </div>
-            <div className="hist-heading-acoes">
+            <div className="dash-heading-acoes">
               <button
-                className="hist-refresh"
+                className="dash-refresh"
                 aria-label={atualizando ? "Atualizando dados" : "Atualizar dados"}
                 aria-busy={atualizando}
                 onClick={() => { recarregar(); }}
                 disabled={atualizando || carregando}
               >
-                <span className="hist-refresh-icone" aria-hidden="true">↻</span>
+                <span className="dash-refresh-icone" aria-hidden="true">↻</span>
                 <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span>
               </button>
-              <p className="hist-atualizacao">
+              <p className="dash-atualizacao">
                 {atualizadoEm === null
                   ? "Aguardando a primeira atualização"
                   : `Última atualização: ${dataHora(atualizadoEm)}`}
@@ -516,20 +516,20 @@ export function HistoricoPage() {
             </div>
           </div>
 
-          <section className="hist-panel" id="historico" aria-labelledby="hist-panel-titulo">
-            <div className="hist-panel-heading">
+          <section className="dash-panel" id="historico" aria-labelledby="dash-panel-titulo">
+            <div className="dash-panel-heading">
               <div>
-                <h2 id="hist-panel-titulo">Filtros</h2>
+                <h2 id="dash-panel-titulo">Filtros</h2>
                 <p>Escolha o serviço e o período para visualizar o gráfico.</p>
               </div>
               {servicoSelecionado && (
-                <span className="hist-servico-selecionado" aria-live="polite">
+                <span className="dash-servico-selecionado" aria-live="polite">
                   {servicoSelecionado.nome}
                 </span>
               )}
             </div>
 
-            <div className="hist-filtros-content">
+            <div className="dash-filtros-content">
               <FiltrosAnalise
                 filtros={filtros}
                 servicos={opcoesServico}
@@ -537,11 +537,11 @@ export function HistoricoPage() {
                 aoAlterar={alterarFiltros}
                 aoLimpar={limparFiltros}
               />
-              <p className="hist-filtros-nota">O gráfico mostra apenas coletas com status "sucesso" e métricas válidas.</p>
+              <p className="dash-filtros-nota">O gráfico mostra apenas coletas com status "sucesso" e métricas válidas.</p>
             </div>
 
             {erro && servicos !== null && (
-              <div className="hist-aviso-erro" role="alert">
+              <div className="dash-aviso-erro" role="alert">
                 <i aria-hidden="true" />
                 <div>
                   <strong>Erro de atualização</strong>
@@ -551,9 +551,9 @@ export function HistoricoPage() {
               </div>
             )}
 
-            <div className="hist-corpo">{corpo}</div>
+            <div className="dash-corpo">{corpo}</div>
           </section>
-          <p className="hist-footnote">GreenER · Monitoramento de energia e emissões de CO₂e</p>
+          <p className="dash-footnote">GreenER · Monitoramento de energia e emissões de CO₂e</p>
         </div>
       </main>
     </div>

@@ -682,8 +682,8 @@
   color: #98a29a;
 }
 
-/* ---------- Desktop Large (≥1400px) ---------- */
-@media (min-width: 1400px) {
+/* ---------- Desktop (≥1024px): ajuste responsivo interno ---------- */
+@media (min-width: 1024px) {
   .dash-content {
     padding-left: clamp(38px, 4vw, 64px);
     padding-right: clamp(38px, 4vw, 64px);
@@ -1020,4 +1020,262 @@
   font-size: 9px;
   color: #98a29a;
   line-height: 1.2;
+}
+
+/* ====== Histórico (compartilhado com Dashboard) ====== */
+
+/* Cards de estatísticas do período */
+.dash-estatisticas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dash-stat-card {
+  background: var(--fundo-card, #fff);
+  border: 1px solid var(--line, #e8eee9);
+  border-radius: var(--raio, 12px);
+  padding: 20px 24px;
+  display: flex;
+  gap: 16px;
+}
+
+.dash-stat-card--energia {
+  border-left: 4px solid var(--g, #25863c);
+}
+
+.dash-stat-card--co2e {
+  border-left: 4px solid var(--azul, #2e63a8);
+}
+
+.dash-stat-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  color: var(--g, #25863c);
+  background: var(--verde-claro, #e9f4eb);
+}
+
+.dash-stat-card--co2e .dash-stat-icon {
+  color: var(--azul, #2e63a8);
+  background: var(--azul-claro, #e8f0fa);
+}
+
+.dash-stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-stat-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #748078);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.dash-stat-valores {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.dash-stat-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--ink, #20352a);
+}
+
+.dash-stat-sublabel {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--muted-claro, #9aa49d);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.dash-stat-item strong {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.dash-stat-item small {
+  font-size: 10px;
+  color: var(--muted, #748078);
+  font-weight: 500;
+}
+
+.dash-stat-divider {
+  color: var(--line, #e8eee9);
+  font-size: 14px;
+}
+
+.dash-stat-minmax {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--muted, #748078);
+}
+
+.dash-stat-minmax span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dash-stat-minmax strong {
+  color: var(--ink, #20352a);
+  font-size: 11px;
+}
+
+/* Gráfico (Histórico) */
+.dash-grafico {
+  animation: dash-slide-up 0.5s ease-out 0.1s both;
+}
+
+@keyframes dash-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dash-grafico-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.dash-grafico-cabecalho h2 {
+  font-size: 16px;
+  margin: 0 0 4px;
+  font-weight: 650;
+}
+
+.dash-grafico-periodo {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted, #748078);
+}
+
+.dash-grafico-acoes {
+  flex-shrink: 0;
+}
+
+.dash-grafico-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line, #e8eee9);
+  background: var(--fundo-card, #fff);
+  color: var(--ink, #20352a);
+  border-radius: var(--raio-sm, 8px);
+  padding: 9px 14px;
+  font: 550 12px inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.dash-grafico-botao:hover:not(:disabled) {
+  background: var(--verde-claro, #e9f4eb);
+  border-color: var(--g, #25863c);
+  color: var(--g, #25863c);
+}
+
+.dash-grafico-botao:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.dash-grafico-botao-icone {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Serviço selecionado no painel de filtros */
+.dash-servico-selecionado {
+  font-size: 11px;
+  color: var(--muted, #748078);
+  background: #f3f6f3;
+  padding: 7px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Corpo do conteúdo (abaixo dos filtros) */
+.dash-corpo {
+  padding: 0 24px 24px;
+}
+
+@media (max-width: 700px) {
+  .dash-corpo {
+    padding: 0 16px 18px;
+  }
+
+  .dash-grafico-cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dash-grafico-acoes {
+    width: 100%;
+  }
+
+  .dash-grafico-botao {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dash-estatisticas {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-stat-card {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .dash-stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .dash-stat-valores {
+    gap: 8px;
+  }
+
+  .dash-stat-item strong {
+    font-size: 14px;
+  }
+
+  .dash-stat-divider {
+    display: none;
+  }
+
+  .dash-stat-minmax {
+    gap: 12px;
+  }
+}
+
+/* Celular (DW10 / RNF01): alvos de 44 px */
+@media (max-width: 700px) {
+  .dash-grafico-botao {
+    min-height: 44px;
+  }
 }

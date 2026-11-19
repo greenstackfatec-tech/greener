@@ -722,9 +722,3 @@
   .preview-status div { flex-wrap: wrap; row-gap: 2px; font-size: 0.75rem; }
   .preview-status div b { flex-basis: 100%; padding-left: 16px; }
 }
-
-/* 320–359 px: sem espaço para três colunas. */
-@media (max-width: 359px) {
-  .preview-status { grid-template-columns: 1fr; }
-  .preview-status div b { flex-basis: auto; padding-left: 0; }
-}
