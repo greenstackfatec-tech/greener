@@ -8,6 +8,7 @@ export const ROTAS = {
   cadastro: "/cadastro",
   administrativa: "/administrativa",
   dashboard: "/dashboard",
+  historico: "/historico",
   comparacao: "/comparacao",
   /** Galeria do DD07; só registrada em desenvolvimento. */
   dashboardEstados: "/dashboard/estados",
