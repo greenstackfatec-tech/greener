@@ -145,6 +145,30 @@ export function mockServicos(): Plugin {
           }
         };
 
+        // Comparação (DW13): usa a última coleta de cada serviço como se fossem 6 coletas no período.
+        if (url.pathname === "/api/analytics/comparacao") {
+          // No cenário "vazio", todos os serviços chegam sem coleta no período.
+          const semColetas = cenarioAtual === "vazio";
+          if (!semColetas && aplicarCenario()) return;
+          const ids = (url.searchParams.get("servicos") ?? "").split(",").map(Number);
+          const lista = servicos();
+          const dados = ids.map((id) => {
+            const s = lista.find((item) => item.id === id);
+            const energia = semColetas ? 0 : s?.energiaKwh ?? 0;
+            const co2e = semColetas ? 0 : s?.emissaoCo2eG ?? 0;
+            const qtdColetas = energia > 0 ? 6 : 0;
+            return {
+              servicoId: id, nome: s?.nome ?? `Serviço ${id}`, regiao: s?.regiao ?? null, pais: s?.pais ?? null,
+              totalEnergiaKwh: energia * qtdColetas, totalEmissaoCo2eG: co2e * qtdColetas, qtdColetas,
+              mediaEnergiaKwh: energia, mediaEmissaoCo2eG: co2e,
+            };
+          });
+          const avisos = dados.filter((d) => d.qtdColetas === 0)
+            .map((d) => `Serviço "${d.nome}" (ID ${d.servicoId}) não possui dados de coleta no período informado. Retornando zeros.`);
+          responder(200, { dados, periodo: { inicio: url.searchParams.get("inicio"), fim: url.searchParams.get("fim") }, avisos });
+          return;
+        }
+
         // Histórico: /api/analytics/historico/:servicoId
         const matchHistorico = url.pathname.match(/^\/api\/analytics\/historico\/(\d+)$/);
         if (matchHistorico) {

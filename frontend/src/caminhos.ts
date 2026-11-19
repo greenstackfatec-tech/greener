@@ -9,6 +9,7 @@ export const ROTAS = {
   administrativa: "/administrativa",
   dashboard: "/dashboard",
   historico: "/historico",
+  comparacao: "/comparacao",
   /** Galeria do DD07; só registrada em desenvolvimento. */
   dashboardEstados: "/dashboard/estados",
   /** Página 404 - rota catch-all */

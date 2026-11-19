@@ -1,0 +1,160 @@
+/* Tela de comparação (DW13). O layout geral vem do DashboardPage.css. */
+.comp-servicos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0 22px 16px;
+  border: 0;
+}
+
+.comp-servicos legend {
+  font-size: 11px;
+  font-weight: 650;
+  color: #526056;
+  margin-bottom: 8px;
+}
+
+.comp-opcao {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #e2e9e3;
+  border-radius: 20px;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: #4b5b50;
+  cursor: pointer;
+}
+
+.comp-opcao.marcada {
+  border-color: #25863c;
+  background: #edf6ef;
+  color: #25863c;
+}
+
+.comp-opcao:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.comp-nota {
+  font-size: 12px;
+  color: #849087;
+  margin: 0;
+}
+
+.comp-periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 0 22px 12px;
+}
+
+.comp-periodo label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 650;
+  color: #526056;
+}
+
+.comp-periodo select,
+.comp-periodo input {
+  height: 38px;
+  border: 1px solid #e2e9e3;
+  border-radius: 7px;
+  padding: 0 11px;
+  background: #fff;
+  color: #33463a;
+  font: 12px inherit;
+}
+
+.comp-periodo input[aria-invalid="true"] {
+  border-color: var(--estado-erro);
+}
+
+.comp-botao {
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 20px;
+  background: #25863c;
+  color: #fff;
+  font: 600 12px inherit;
+  cursor: pointer;
+}
+
+.comp-botao:disabled {
+  background: #b9c8bd;
+  cursor: not-allowed;
+}
+
+.comp-motivo {
+  margin: 0;
+  padding: 0 22px 14px;
+  font-size: 12px;
+  color: #8a5a00;
+}
+
+.comp-avisos {
+  margin: 0 22px 14px;
+  padding: 10px 14px 10px 30px;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #6b5200;
+  font-size: 11px;
+}
+
+.comp-barra {
+  display: block;
+  width: 120px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 3px;
+  background: #eef3ef;
+  overflow: hidden;
+}
+
+.comp-barra i {
+  display: block;
+  height: 100%;
+  background: #25863c;
+}
+
+.comp-barra-co2e i {
+  background: #2e63a8;
+}
+
+.comp-sem-dados {
+  display: inline-block;
+  border-radius: 20px;
+  padding: 5px 9px;
+  font-size: 10px;
+  font-weight: 650;
+  color: #737d75;
+  box-shadow: inset 0 0 0 1px #d5dbd6;
+}
+
+@media (max-width: 700px) {
+  .comp-servicos,
+  .comp-periodo {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .comp-periodo label,
+  .comp-botao {
+    width: 100%;
+  }
+
+  .comp-motivo {
+    padding: 0 14px 14px;
+  }
+
+  .comp-avisos {
+    margin: 0 14px 14px;
+  }
+}

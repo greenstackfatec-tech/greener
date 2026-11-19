@@ -199,6 +199,7 @@ export function DashboardPage() {
         <p className="dash-nav-label">MENU PRINCIPAL</p>
         <a className="dash-nav-item dash-nav-active" href={ROTAS.dashboard}><span>▦</span> Visão geral</a>
         <a className="dash-nav-item" href={ROTAS.historico}><span>⎔</span> Histórico</a>
+        <a className="dash-nav-item" href={ROTAS.comparacao}><span>⇄</span> Comparação</a>
         <div className="dash-sidebar-bottom"><span className="dash-avatar">GE</span><span><strong>GreenER</strong><small>Monitoramento ambiental</small></span></div>
       </aside>
 
