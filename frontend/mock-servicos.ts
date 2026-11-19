@@ -28,10 +28,6 @@ function servicosVazio() {
   return [];
 }
 
-function servicosErro() {
-  throw new Error("Erro simulado");
-}
-
 function indicadores(zerados: boolean) {
   const lista = zerados ? [] : servicos();
   const comColeta = lista.filter((s) => s.statusColeta === "sucesso");

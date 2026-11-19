@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado, type MetricasRecurso } from "../components/CartaoEstado.tsx";
@@ -65,8 +65,8 @@ export function HistoricoPage() {
   const agora = useAgora();
   const { filtros, alterar: alterarFiltros, limpar: limparFiltros } = useFiltrosAnalise();
 
-  // Estado do histórico
-  const [historico, setHistorico] = useState<HistoricoResposta | null>(null);
+  // Estado do histórico (inclui servicoId para evitar mostrar dados do serviço anterior durante transição)
+  const [historico, setHistorico] = useState<{ servicoId: number; dados: HistoricoResposta | null } | null>(null);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
   const [erroHistorico, setErroHistorico] = useState<string | null>(null);
   const [refetchTrigger, setRefetchTrigger] = useState(0);
@@ -79,7 +79,7 @@ export function HistoricoPage() {
   const regioes = useMemo(() => regioesDisponiveis(lista), [lista]);
 
   // Aplica filtros de serviço e região à lista
-  const listaFiltrada = useMemo(() => filtrarPorServicoERegiao(lista, filtros), [lista, filtros.servicoId, filtros.regiao]);
+  const listaFiltrada = useMemo(() => filtrarPorServicoERegiao(lista, filtros), [lista, filtros]);
   const opcoesServico = useMemo(() => [...listaFiltrada].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")), [listaFiltrada]);
 
   // Serviço selecionado (ou o primeiro ativo da lista filtrada se não houver filtro)
@@ -95,12 +95,11 @@ export function HistoricoPage() {
   // Resolve período a partir dos filtros
   const periodoResolvido = useMemo(() => resolverPeriodo(filtros, agora), [filtros, agora]);
 
-  // Busca histórico quando serviço ou período mudam
+  // Busca histórico quando serviço ou período mudam (limpa e busca)
+  // Ao trocar de serviço ou período, limpa o histórico (mostra loading)
   // Usa valores primitivos como dependências para evitar re-fetch a cada 30s (useAgora)
-  // Em atualização em segundo plano, mantém o gráfico anterior na tela
   useEffect(() => {
     // Não busca se não há serviço selecionado ou período inválido
-    // O estado vazio é derivado no render (historico = null, erroHistorico = null)
     if (!servicoSelecionado || "erro" in periodoResolvido) {
       return;
     }
@@ -108,31 +107,25 @@ export function HistoricoPage() {
     let cancelado = false;
     const { inicio, fim } = periodoResolvido;
     const servicoId = servicoSelecionado.id;
-    const jaTemDados = historico !== null;
 
     async function buscar() {
-      // Só mostra loading se não há dados anteriores
-      if (!jaTemDados) {
-        setCarregandoHistorico(true);
-      }
+      setHistorico({ servicoId, dados: null }); // Limpa imediatamente ao trocar serviço/período
       setErroHistorico(null);
+      setCarregandoHistorico(true);
       try {
         const dados = await consultarHistorico(servicoId, {
           inicio: inicio.toISOString(),
           fim: fim.toISOString(),
-          ordenacao: "DESC", // Pede DESC para pegar os mais recentes (backend limita a 1000)
+          ordenacao: "DESC",
         });
         if (!cancelado) {
-          setHistorico(dados);
+          setHistorico({ servicoId, dados });
         }
       } catch (e) {
         if (!cancelado) {
           const msg = e instanceof Error ? e.message : "Erro ao buscar histórico";
           setErroHistorico(msg);
-          // Só limpa o histórico se não tínhamos dados antes
-          if (!jaTemDados) {
-            setHistorico(null);
-          }
+          setHistorico({ servicoId, dados: null });
         }
       } finally {
         if (!cancelado) setCarregandoHistorico(false);
@@ -141,10 +134,48 @@ export function HistoricoPage() {
 
     buscar();
     return () => { cancelado = true; };
-  }, [servicoSelecionado?.id, filtros.periodo, filtros.inicio, filtros.fim, refetchTrigger]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- dependências primitivas intencionais para evitar refetch no useAgora
+  }, [servicoSelecionado?.id, filtros.periodo, filtros.inicio, filtros.fim]);
 
-  // Histórico válido: null se não há serviço selecionado ou período inválido
-  const historicoValido = (!servicoSelecionado || "erro" in periodoResolvido) ? null : historico;
+  // Atualização manual ("Atualizar"): mantém gráfico anterior até resposta chegar
+  useEffect(() => {
+    if (!servicoSelecionado || "erro" in periodoResolvido) return;
+    if (refetchTrigger === 0) return; // Ignora valor inicial
+
+    let cancelado = false;
+    const { inicio, fim } = periodoResolvido;
+    const servicoId = servicoSelecionado.id;
+
+    async function buscar() {
+      setErroHistorico(null);
+      setCarregandoHistorico(true);
+      // NÃO limpa historico aqui - mantém gráfico anterior
+      try {
+        const dados = await consultarHistorico(servicoId, {
+          inicio: inicio.toISOString(),
+          fim: fim.toISOString(),
+          ordenacao: "DESC",
+        });
+        if (!cancelado) {
+          setHistorico({ servicoId, dados });
+        }
+      } catch (e) {
+        if (!cancelado) {
+          const msg = e instanceof Error ? e.message : "Erro ao buscar histórico";
+          setErroHistorico(msg);
+        }
+      } finally {
+        if (!cancelado) setCarregandoHistorico(false);
+      }
+    }
+
+    buscar();
+    return () => { cancelado = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- dependências primitivas intencionais
+  }, [refetchTrigger]);
+
+  // Histórico válido: null se não há serviço selecionado, período inválido ou serviço não corresponde
+  const historicoValido = (!servicoSelecionado || "erro" in periodoResolvido || historico?.servicoId !== servicoSelecionado.id) ? null : historico.dados ?? null;
   const erroHistoricoValido = (!servicoSelecionado || "erro" in periodoResolvido) ? null : erroHistorico;
 
   // Prepara pontos para o gráfico (filtra apenas coletas com sucesso e valores válidos)

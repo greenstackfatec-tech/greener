@@ -353,6 +353,20 @@ export function GraficoLinha({
     return resultado.sort((a, b) => a.timestamp - b.timestamp);
   }, [seriesAtivas, pontos, minX, maxX, larguraInterna, alturaInterna, margens, eixosY]);
 
+  // Ponto ativo para tooltip/render (prioridade: hover do mouse > foco do teclado)
+  const activePoint = useMemo(() => {
+    if (hoveredPoint) return hoveredPoint;
+    if (focusedIndex !== null) {
+      const timestampsUnicos = [...new Set(pontosProjetados.map((p) => p.timestamp))].sort((a, b) => a - b);
+      const ts = timestampsUnicos[focusedIndex];
+      if (ts !== undefined) {
+        const pontosNoTs = pontosProjetados.filter((p) => p.timestamp === ts);
+        if (pontosNoTs.length > 0) return pontosNoTs[0];
+      }
+    }
+    return null;
+  }, [hoveredPoint, focusedIndex, pontosProjetados]);
+
   // Handler de mousemove na área de detecção
   const handleMouseMove = useCallback(
     (event: React.MouseEvent<SVGRectElement>) => {
@@ -400,7 +414,7 @@ export function GraficoLinha({
       const timestampsUnicos = [...new Set(pontosProjetados.map((p) => p.timestamp))].sort((a, b) => a - b);
       if (timestampsUnicos.length === 0) return;
 
-      let idxAtual = focusedIndex ?? -1;
+      const idxAtual = focusedIndex ?? -1;
       if (idxAtual === -1) {
         // Se nada focado, foca no último (mais recente) com ArrowRight/Down
         if (event.key === "ArrowRight" || event.key === "ArrowDown") {
@@ -442,20 +456,6 @@ export function GraficoLinha({
     [pontosProjetados, focusedIndex]
   );
 
-  // Sincroniza hoveredPoint com focusedIndex
-  useEffect(() => {
-    if (focusedIndex !== null) {
-      const timestampsUnicos = [...new Set(pontosProjetados.map((p) => p.timestamp))].sort((a, b) => a - b);
-      const ts = timestampsUnicos[focusedIndex];
-      if (ts !== undefined) {
-        const pontosNoTs = pontosProjetados.filter((p) => p.timestamp === ts);
-        if (pontosNoTs.length > 0) {
-          setHoveredPoint(pontosNoTs[0]);
-        }
-      }
-    }
-  }, [focusedIndex, pontosProjetados]);
-
   // Estatísticas para mostrar abaixo do gráfico
   const estatisticas = useMemo(() => {
     return seriesAtivas.map((s) => {
@@ -471,11 +471,11 @@ export function GraficoLinha({
     }).filter(Boolean);
   }, [seriesAtivas, pontos, eixosY]);
 
-  // Coleta todos os pontos no timestamp do hover (todas as séries visíveis)
+  // Coleta todos os pontos no timestamp do hover/focus (todas as séries visíveis)
   const pontosNoHover = useMemo(() => {
-    if (!hoveredPoint) return [];
-    return pontosProjetados.filter((p) => p.timestamp === hoveredPoint.timestamp);
-  }, [hoveredPoint, pontosProjetados]);
+    if (!activePoint) return [];
+    return pontosProjetados.filter((p) => p.timestamp === activePoint.timestamp);
+  }, [activePoint, pontosProjetados]);
 
   // Se não há pontos, mostra estado vazio (early return DEPOIS dos hooks)
   if (pontos.length === 0) {
@@ -662,7 +662,7 @@ export function GraficoLinha({
               }))
               .filter((p) => p.valor !== null);
 
-            const isHovered = hoveredPoint?.serie.id === s.id;
+            const isHovered = activePoint?.serie.id === s.id;
 
             return (
               <g key={s.id} className="grafico-linha-serie">
@@ -690,7 +690,7 @@ export function GraficoLinha({
                 )}
                 {/* Pontos */}
                 {pontosValidos.map((p, idx) => {
-                  const estaHover = isHovered && hoveredPoint?.data === p.data;
+                  const estaHover = isHovered && activePoint?.data === p.data;
                   return (
                     <g key={`${s.id}-${idx}`}>
                       <circle
@@ -725,11 +725,11 @@ export function GraficoLinha({
         </g>
 
         {/* Linha vertical de referência no hover/focus */}
-        {hoveredPoint && (
+        {activePoint && (
           <line
-            x1={hoveredPoint.x}
+            x1={activePoint.x}
             y1={margens.topo}
-            x2={hoveredPoint.x}
+            x2={activePoint.x}
             y2={altura - margens.fundo}
             stroke="#25863c"
             strokeWidth={1}
@@ -742,19 +742,19 @@ export function GraficoLinha({
       </svg>
 
       {/* Tooltip flutuante - posicionado fora do SVG, no container pai */}
-      {hoveredPoint && pontosNoHover.length > 0 && (
+      {activePoint && pontosNoHover.length > 0 && (
         <div
           className="grafico-linha-tooltip"
           style={{
-            left: hoveredPoint.x + 16,
-            top: hoveredPoint.y - 40,
+            left: activePoint.x + 16,
+            top: activePoint.y - 40,
           }}
           role="tooltip"
           aria-live="polite"
         >
           <div className="grafico-linha-tooltip-conteudo">
             <div className="grafico-linha-tooltip-data">
-              {new Date(hoveredPoint.data).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+              {new Date(activePoint.data).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
             </div>
             {pontosNoHover.map((p) => (
               <div key={p.serie.id} className="grafico-linha-tooltip-serie" style={{ borderLeftColor: p.serie.cor }}>

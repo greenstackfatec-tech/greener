@@ -1,14 +1,16 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
-// Mock do módulo api.ts
 const mockRequisitar = vi.fn();
-vi.mock("../src/services/api.ts", () => ({ requisitar: mockRequisitar }));
+vi.mock("../src/services/api.ts", () => ({
+  get requisitar() {
+    return mockRequisitar;
+  },
+}));
 
 import { consultarHistorico, type HistoricoParams, type PontoHistorico } from "../src/services/analytics.ts";
 
 describe("consultarHistorico", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
   });
 
