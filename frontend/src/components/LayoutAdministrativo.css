@@ -176,7 +176,7 @@
   min-width: 0;
 }
 
-/* ---------- Desktop ---------- */
+/* ---------- Desktop (≥1024px) ---------- */
 
 @media (min-width: 1024px) {
   .adm {

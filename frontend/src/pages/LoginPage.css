@@ -98,8 +98,8 @@
   }
 }
 
-/* Alvos de toque de 44 px; margens reduzidas na mesma medida para manter o espaçamento do Figma. */
-@media (max-width: 1023px) {
+/* Celular (≤700px / DW10 / RNF01): alvos de toque de 44 px */
+@media (max-width: 700px) {
   .login-opcoes { gap: 8px; margin-top: 16px; }
   .login-lembrar, .login-esqueci { min-height: 44px; }
   .login-enviar { margin-top: 12px; }

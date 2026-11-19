@@ -578,61 +578,7 @@
   font-size: 0.78rem;
 }
 
-@media (max-width: 900px) {
-  .inicio-container {
-    width: min(1200px, calc(100% - 30px));
-  }
-
-  .inicio-header-conteudo,
-  .inicio-footer-conteudo {
-    min-height: 72px;
-    padding-block: 10px;
-  }
-
-  .inicio-apresentacao h1 {
-    max-width: 100%;
-    font-size: clamp(3rem, 12vw, 5rem);
-    margin-bottom: 24px;
-  }
-
-  .inicio-frase-header {
-    display: none;
-  }
-
-  .inicio-hero-grade {
-    grid-template-columns: 1fr;
-    min-height: auto;
-    gap: 32px;
-  }
-
-  .inicio-apresentacao {
-    max-width: 100%;
-    padding-top: 12px;
-  }
-
-  .inicio-descricao {
-    margin-bottom: 36px;
-  }
-
-  .inicio-acoes {
-    gap: 18px;
-  }
-
-  .inicio-preview {
-    width: min(100%, 540px);
-    min-height: 0;
-  }
-
-  .inicio-etapas-grade {
-    grid-template-columns: 1fr;
-  }
-
-  .inicio-cta {
-    padding-top: 42px;
-  }
-}
-
-@media (max-width: 640px) {
+@media (max-width: 700px) {
   .inicio-container {
     width: min(1200px, calc(100% - 24px));
   }
@@ -659,26 +605,31 @@
   }
 
   .inicio-apresentacao {
+    max-width: 100%;
     padding-top: 30px;
   }
 
   .inicio-apresentacao h1 {
+    max-width: 100%;
     font-size: clamp(3.1rem, 18vw, 4.2rem);
     line-height: 0.86;
     letter-spacing: -0.07em;
     margin-bottom: 30px;
   }
 
-  .inicio-eyebrow {
-    margin-bottom: 20px;
+  .inicio-frase-header {
+    display: none;
   }
 
-  .inicio-descricao,
-  .inicio-etapas-intro,
-  .inicio-cta p {
-    font-size: 0.98rem;
+  .inicio-hero-grade {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    gap: 32px;
   }
 
+  .inicio-descricao {
+    margin-bottom: 36px;
+  }
 
   .inicio-acoes {
     flex-direction: column;
@@ -691,6 +642,11 @@
     width: 100%;
     margin-top: 0;
     display: inline-flex;
+  }
+
+  .inicio-preview {
+    width: min(100%, 540px);
+    min-height: 0;
   }
 
   .preview-metricas {
@@ -715,6 +671,10 @@
     padding-top: 22px;
   }
 
+  .inicio-etapas-grade {
+    grid-template-columns: 1fr;
+  }
+
   .inicio-cta {
     padding: 42px 0 28px;
   }
@@ -727,7 +687,7 @@
 }
 
 /* ---------- Celular (DW10 / RNF01): medidas do Figma em 390 px ---------- */
-@media (max-width: 640px) {
+@media (max-width: 700px) {
   .inicio-criar-header { display: none; }          /* Figma: só "Entrar" no cabeçalho */
   .inicio-botao { min-height: 44px; }
 

@@ -637,31 +637,6 @@
   margin: 20px 4px 0;
 }
 
-/* Responsivo: Tablet (≤1100px) */
-@media (max-width: 1100px) {
-  .hist-sidebar {
-    width: 220px;
-  }
-  .hist-content {
-    padding: 32px 24px;
-  }
-  .hist-topbar {
-    padding: 0 24px;
-  }
-  .hist-heading {
-    gap: 16px;
-  }
-  .hist-heading h1 {
-    font-size: 26px;
-  }
-  .hist-corpo {
-    padding: 0 16px 18px;
-  }
-  .hist-estatisticas {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* Responsivo: Mobile (≤700px) */
 @media (max-width: 700px) {
   .hist-sidebar {
