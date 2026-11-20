@@ -77,7 +77,7 @@ test("nenhum serviço com coordenadas: a tela segue útil e informa que todos fi
   vi.mocked(servicos.listarServicos).mockResolvedValue([servico(1, "Reports Worker")]);
   render(<MapaPage />);
 
-  expect(await screen.findByRole("status")).toHaveTextContent("1 serviço ficou fora do mapa");
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("1 serviço ficou fora do mapa"));
   expect(screen.queryByRole("button", { name: /Reports Worker/ })).not.toBeInTheDocument();
   expect(screen.getByRole("combobox", { name: "Serviço" })).toBeDisabled();
 });
@@ -86,7 +86,7 @@ test("todos com coordenadas: aviso de mapa completo", async () => {
   vi.mocked(servicos.listarServicos).mockResolvedValue([servico(1, "Billing API", saoPaulo), servico(2, "Checkout Worker", ashburn)]);
   render(<MapaPage />);
 
-  expect(await screen.findByRole("status")).toHaveTextContent("Todos os 2 serviços têm latitude e longitude");
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Todos os 2 serviços têm latitude e longitude"));
 });
 
 test("falha na primeira carga mostra o erro e permite tentar de novo", async () => {

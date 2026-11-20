@@ -79,10 +79,10 @@ export function GloboServicos({ grupos, selecionadoId, aoSelecionar, centroInici
     }
     const inicio = performance.now();
     let quadro = 0;
-    const passo = (agora: number) => {
-      const t = Math.min(1, (agora - inicio) / DURACAO_ANIMACAO_MS);
+      const passo = () => {
+      const t = Math.max(0, Math.min(1, (performance.now() - inicio) / DURACAO_ANIMACAO_MS));
       const suave = 1 - Math.pow(1 - t, 3); // desacelera no fim
-      aplicarCentro(interpolarCentro(origem, destino, suave));
+      aplicarCentro(limitarCentro(interpolarCentro(origem, destino, suave)));
       if (t < 1) quadro = requestAnimationFrame(passo);
     };
     quadro = requestAnimationFrame(passo);
