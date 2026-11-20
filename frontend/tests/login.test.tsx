@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import "@testing-library/jest-dom";
 import { RouterProvider } from "react-router";
 import { router } from "../src/rotas.tsx";
-import { removerToken, obterToken } from "../src/services/token.ts";
+import { removerToken, obterToken, salvarToken } from "../src/services/token.ts";
 import { ROTAS } from "../src/caminhos.ts";
 
 beforeEach(() => {
@@ -21,6 +21,28 @@ async function navegarECaminhar(pathname: string) {
   await act(async () => { await router.navigate(pathname); });
   render(<RouterProvider router={router} />);
 }
+
+test.each([
+  ["/login", "sem sessão", "Bem-vindo de volta", null],
+  ["/login?expired=1", "sem sessão", "Bem-vindo de volta", null],
+  ["/cadastro", "sem sessão", "Crie sua conta", null],
+  ["/login", "com sessão salva", "Bem-vindo de volta", "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.assinatura"],
+  ["/cadastro", "com sessão salva", "Crie sua conta", "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.assinatura"],
+] as const)("tela pública %s %s não consulta indicadores protegidos", async (caminho, _sessao, titulo, token) => {
+  if (token) salvarToken(token, false);
+  const fetchMock = vi.fn(async () => Response.json(
+    { error: "unauthorized", message: "Token ausente ou inválido" },
+    { status: 401 },
+  ));
+  vi.stubGlobal("fetch", fetchMock);
+
+  await navegarECaminhar(caminho);
+  await act(async () => { await Promise.resolve(); });
+
+  expect(screen.getByRole("heading", { name: titulo })).toBeVisible();
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(router.state.location.pathname + router.state.location.search).toBe(caminho);
+});
 
 /** Helper para submeter o formulário de login */
 async function submeterLogin(email: string, senha: string) {
