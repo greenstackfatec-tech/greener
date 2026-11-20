@@ -4,6 +4,7 @@ import { CadastroPage } from "./pages/CadastroPage.tsx";
 import { InicioPage } from "./pages/InicioPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { DashboardPage } from "./pages/DashboardPage.tsx";
+import { MapaPage } from "./pages/MapaPage.tsx";
 import { HistoricoPage } from "./pages/HistoricoPage.tsx";
 import { ComparacaoPage } from "./pages/ComparacaoPage.tsx";
 import { AdministrativaPage } from "./pages/AdministrativaPage.tsx";
@@ -21,6 +22,8 @@ export const router = createBrowserRouter([
     { path: ROTAS.dashboard, element: <DashboardPage /> },
     { path: ROTAS.historico, element: <HistoricoPage /> },
     { path: ROTAS.comparacao, element: <ComparacaoPage /> },
+    { path: ROTAS.comparacao, element: <ComparacaoPage /> },
+    { path: ROTAS.mapa, element: <MapaPage /> },
     ...(import.meta.env.DEV ? [{ path: ROTAS.dashboardEstados, element: <EstadosPage /> }] : []),
   ] },
   // ← CATCH-ALL 404 DEVE SER A ÚLTIMA ROTA

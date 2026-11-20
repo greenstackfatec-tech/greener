@@ -1,0 +1,57 @@
+/* Globo 3D estilizado do mapa (DW15). Cores iguais às do dashboard e do DD07. */
+.globo {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  margin: 0 auto;
+  touch-action: none; /* arrastar gira o globo em vez de rolar a página */
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.globo:active { cursor: grabbing; }
+
+.globo-sombra { fill: #20352a; opacity: 0.1; filter: blur(6px); }
+.globo-halo { fill: #eaf5ec; }
+.globo-graticula { fill: none; stroke: #25863c; stroke-opacity: 0.18; stroke-width: 0.8; }
+.globo-terra { fill: #7fbf8f; stroke: #25863c; stroke-opacity: 0.55; stroke-width: 0.6; stroke-linejoin: round; }
+.globo-borda { fill: none; stroke: #25863c; stroke-width: 2.5; }
+
+.globo-pino { cursor: pointer; outline: none; }
+.globo-pino-area { fill: transparent; } /* área de toque de 32 px, mesmo com ponto pequeno */
+.globo-pino-onda { fill: var(--pino, #25863c); fill-opacity: 0.22; }
+.globo-pino-ponto { fill: var(--pino, #25863c); stroke: #fff; stroke-width: 2; }
+.globo-pino[data-aberto] .globo-pino-ponto { stroke-width: 3; }
+.globo-pino:hover .globo-pino-onda,
+.globo-pino:focus-visible .globo-pino-onda { fill-opacity: 0.4; }
+.globo-pino:focus-visible .globo-pino-area { stroke: #20352a; stroke-width: 2; stroke-dasharray: 4 3; }
+
+.globo-pino[data-situacao="ativo"] { --pino: var(--estado-ativo, #25863c); }
+.globo-pino[data-situacao="indisponivel"],
+.globo-pino[data-situacao="removido"] { --pino: var(--estado-indisponivel, #5e6b63); }
+.globo-pino[data-situacao="sem_metricas"] { --pino: var(--estado-sem-metricas, #2e63a8); }
+
+.globo-pino text {
+  font-family: "Inter Variable", Inter, system-ui, sans-serif;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.globo-pino-nome { font-size: 12px; font-weight: 700; fill: #20352a; }
+.globo-pino-regiao { font-size: 11px; font-weight: 500; fill: #4b5d50; }
+.globo-pino-contagem { font-size: 9px; font-weight: 700; fill: #fff; text-anchor: middle; stroke: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .globo-pino-onda { transition: fill-opacity 0.2s, r 0.2s; }
+}
+
+/* Celular: o globo ocupa a largura toda e o texto dos pinos não pode ficar menor que 12 px na tela. */
+@media (max-width: 700px) {
+  /* O SVG encolhe para ~65% no celular; 19 e 17 unidades viram cerca de 12 px na tela. */
+  .globo-pino-nome { font-size: 19px; }
+  .globo-pino-regiao { font-size: 17px; }
+}
