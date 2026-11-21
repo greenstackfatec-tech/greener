@@ -7,7 +7,7 @@ Tecnologias principais: **React 19.3.1**, **TypeScript 6.0.3** e **Vite 8.3.5**.
 | Pasta | Responsabilidade | Conteúdo atual |
 |---|---|---|
 | `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx`, `DashboardPage.tsx`, `EstadosPage.tsx` |
-| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `GraficoConsumo.tsx`, `CartaoEstado.tsx`, `CardsIndicadores.tsx` |
+| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `GraficoConsumo.tsx`, `CartaoEstado.tsx`, `CardsIndicadores.tsx`, `BotaoSair.tsx` |
 | `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `servicos.ts` |
 | `src/assets/` | Imagens usadas pelas telas | `greener-icon.png` |
 | `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts`, `useServicos.ts`, `useAgora.ts` |
@@ -90,6 +90,7 @@ A tela de login chama `POST /auth/login`. Quando recebe um JWT, o frontend armaz
 Quando há token salvo, o cliente HTTP envia `Authorization: Bearer <token>`. A ação de sair remove o token.
 
 Pendências que dependem de outras tarefas: recuperação de senha (sem endpoint), proteção das rotas privadas e logout (DW17/DW21) e redirecionamento de quem já está logado.
+Logout (DW17). O botão "Sair da conta" `(components/BotaoSair.tsx)` fica na barra lateral do Dashboard, do Histórico e da Comparação; na área administrativa o botão equivalente está em `LayoutAdministrativo`. Ele chama `sair()` (`services/auth.ts`), que remove o token do `localStorage` e do `sessionStorage`, e navega para `/login`. Como o JWT é stateless e não há endpoint de logout, o token continua válido no backend até expirar (1 h): o logout vale só para o navegador.
 O backend limita tentativas incorretas e pode responder HTTP `429` com `Retry-After`. A tela apresenta o tempo de espera e bloqueia novos envios enquanto a contagem regressiva não termina. A recuperação de senha ainda não possui endpoint implementado.
 
 ### 3.3 Cadastro
