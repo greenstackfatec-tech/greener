@@ -5,6 +5,7 @@ import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../src/config.ts";
 import * as servicos from "../src/services/servicos.ts";
 import * as indicadores from "../src/services/indicadores.ts";
 import * as collections from "../src/services/collections.ts";
+import { MemoryRouter } from "react-router";
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -35,7 +36,7 @@ afterEach(() => {
 });
 
 test("botão anuncia a atualização em andamento e volta ao nome inicial após a consulta", async () => {
-  render(<DashboardPage />);
+  render(<MemoryRouter><DashboardPage /></MemoryRouter>);
 
   const botao = screen.getByRole<HTMLButtonElement>("button", { name: "Atualizar dados" });
   await waitFor(() => expect(botao.disabled).toBe(false));
@@ -77,7 +78,7 @@ test("filtra por região e mantém filtros, ordem e visão na atualização auto
     servico(2, "Fila", "Nordeste", 0.9),
     servico(3, "Banco", "Sudeste", 0.5),
   ]);
-  render(<DashboardPage />);
+  render(<MemoryRouter><DashboardPage /></MemoryRouter>);
   await screen.findByRole("option", { name: "API" });
 
   fireEvent.click(screen.getByRole("button", { name: "Tabela" }));
@@ -104,7 +105,7 @@ test("filtra por região e mantém filtros, ordem e visão na atualização auto
 
 test("filtro por serviço mostra só o serviço escolhido e limpar volta a mostrar todos", async () => {
   vi.mocked(servicos.listarServicos).mockResolvedValue([servico(1, "API", "Sudeste", 0.2), servico(2, "Fila", null, 0.9)]);
-  render(<DashboardPage />);
+  render(<MemoryRouter><DashboardPage /></MemoryRouter>);
   await screen.findByRole("option", { name: "API" });
   fireEvent.click(screen.getByRole("button", { name: "Tabela" }));
 
@@ -124,7 +125,7 @@ test("mostra a hora da última coleta em São Paulo e os intervalos de coleta e 
     ultimaColetaEm: "2026-11-13T22:09:00.000Z",
     intervaloColetaSegundos: 60,
   });
-  render(<DashboardPage />);
+  render(<MemoryRouter><DashboardPage /></MemoryRouter>);
 
   expect(await screen.findByText(
     `Última coleta: 13/11/2026, 19:09 (horário de São Paulo) · Coleta a cada 1 min · Tela atualiza a cada ${INTERVALO_ATUALIZACAO_SEGUNDOS} s`,
@@ -132,7 +133,7 @@ test("mostra a hora da última coleta em São Paulo e os intervalos de coleta e 
 });
 
 test("sem nenhuma coleta, avisa em vez de mostrar uma hora", async () => {
-  render(<DashboardPage />);
+  render(<MemoryRouter><DashboardPage /></MemoryRouter>);
 
   expect(await screen.findByText(/^Nenhuma coleta registrada ainda · Tela atualiza a cada/)).toBeTruthy();
 });

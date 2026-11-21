@@ -15,6 +15,7 @@ import {
 } from "../services/comparacao.ts";
 import "./DashboardPage.css";
 import "./ComparacaoPage.css";
+import { BotaoSair } from "../components/BotaoSair.tsx";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -160,6 +161,7 @@ export function ComparacaoPage() {
         <a className="dash-nav-item" href={ROTAS.historico}><span>⎔</span> Histórico</a>
         <a className="dash-nav-item dash-nav-active" href={ROTAS.comparacao} aria-current="page"><span>⇄</span> Comparação</a>
         <div className="dash-sidebar-bottom"><span className="dash-avatar">GE</span><span><strong>GreenER</strong><small>Monitoramento ambiental</small></span></div>
+        <BotaoSair />
       </aside>
 
       <main className="dash-main">
