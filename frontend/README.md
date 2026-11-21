@@ -27,6 +27,7 @@ As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. A
 | `/dashboard` | Dashboard | DW05, DW06, DW07 | Implementada (cards de indicadores, tabela e estados visuais) |
 | `/comparacao` | Comparação | DW13 | Implementada (2 a 5 serviços no mesmo período, com aviso de serviço sem dados) |
 | `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
+| `/mapa` | Mapa | DW15 | Implementada (globo 3D com os serviços que têm latitude e longitude; aviso de quantos ficaram fora) |
 
 O cliente HTTP fica em `src/services/api.ts`. `requisitar<T>(caminho)` (GET) e `enviar<T>(caminho, corpo)` (POST com JSON) fazem as chamadas a partir de `/api`; as telas não usam `fetch` diretamente. Respostas fora de 2xx viram `ErroApi` (com `status`, `codigo` e, no HTTP 429, `tentarNovamenteEmSegundos`). Se houver token salvo, o cliente envia `Authorization: Bearer <token>` automaticamente.
 
@@ -355,6 +356,18 @@ npm test
 ---
 
 `npm run dev:mock` sobe o frontend com dados de exemplo para `/api/services` (arquivo `mock-servicos.ts`, só em desenvolvimento). Para trocar o cenário, abra `http://localhost:5173/api/__mock?cenario=ok|vazio|erro|lento|rede` e clique em "Atualizar dados" no dashboard. Para ver o erro com dados anteriores (RNF04), deixe em `ok`, mude para `erro` e atualize.
+
+## Mapa dos serviços (DW15, RF13)
+
+A rota `/mapa` mostra um globo 3D estilizado com um pino para cada serviço que tem latitude e longitude. O desenho é um SVG em projeção ortográfica (`d3-geo`), com o contorno dos continentes do pacote `world-atlas`. Não usa mapa real, tiles nem chave de API; o único dado externo ao navegador é `GET /api/services`, o mesmo do dashboard.
+
+- `src/mapa.ts`: regras sem React (coordenadas válidas, agrupamento, formatação, giro). Testado em `tests/mapa.test.ts`.
+- `src/components/GloboServicos.tsx`: o globo (arrastar gira; clicar ou Enter/Espaço no pino abre o serviço).
+- `src/pages/MapaPage.tsx`: a tela, com lista de serviços, detalhe com latitude e longitude, aviso de serviços fora do mapa e estados de carregando, erro e vazio. Testada em `tests/mapa.test.tsx`.
+
+Serviço sem latitude ou sem longitude (ou fora do intervalo válido) não aparece no globo, mas continua no dashboard; a tela informa quantos ficaram de fora e quais. Serviços com a mesma coordenada dividem um pino. A atualização automática troca só os dados: o serviço aberto continua aberto.
+
+Pendências que dependem de outras tarefas: o botão "Informar coordenadas" e a seleção País/Estado/Cidade do protótipo DD05 precisam de endpoint de escrita e de uma API geográfica. A posição aproximada só pela cidade também não foi feita: o RF13 manda não exibir no mapa o serviço sem coordenadas.
 
 ## Atualização automática (DW08)
 
