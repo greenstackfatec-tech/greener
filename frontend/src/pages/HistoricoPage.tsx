@@ -15,6 +15,7 @@ import { situacaoDoServico } from "../services/servicos.ts";
 import { localizacaoDoServico } from "../localizacao.ts";
 import { consultarHistorico, type HistoricoResposta, type PontoHistorico } from "../services/analytics.ts";
 import "./HistoricoPage.css";
+import { BotaoSair } from "../components/BotaoSair.tsx";
 
 /** Converte PontoHistorico do backend para PontoGrafico do gráfico. */
 function paraPontoGrafico(ph: PontoHistorico): PontoGrafico {
@@ -473,10 +474,11 @@ export function HistoricoPage() {
           <a className="hist-nav-item" href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
           <a className="hist-nav-item" href={ROTAS.mapa}><span aria-hidden="true">◍</span> Mapa</a>
         </nav>
-        <div className="hist-sidebar-bottom">
+          <div className="hist-sidebar-bottom">
           <span className="hist-avatar" aria-hidden="true">GE</span>
           <span><strong>GreenER</strong><small>Monitoramento ambiental</small></span>
         </div>
+        <BotaoSair />
       </aside>
 
       <main className="hist-main" role="main">
