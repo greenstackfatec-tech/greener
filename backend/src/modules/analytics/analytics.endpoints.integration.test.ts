@@ -14,6 +14,7 @@ import { tratarRequisicao } from "../../app.ts";
 import { consultar, encerrarConexao } from "../../db/connection.ts";
 import { salvarServico } from "../services/services.repository.ts";
 import { gravarColeta } from "../collections/collections.repository.ts";
+import type { RankingDetalhado } from "./ranking.repository.ts";
 
 interface HistoricoResponse {
   dados: Array<{
@@ -143,13 +144,12 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   const agora = new Date();
   const inicio = new Date(agora.getTime() - 48 * 60 * 60 * 1000).toISOString(); // 48h atrás
   const fim = new Date(agora.getTime() + 2 * 60 * 60 * 1000).toISOString(); // 2h no futuro
+  await gravarColeta({
+    servicoId: s1.id, cpuPercentual: 50, memoriaGb: 2, discoGb: 10, redeGb: 1,
+    intervaloSegundos: 60, statusColeta: "sucesso", potenciaEstimadaW: 43.375,
+    duracaoSegundos: 60, energiaKwh: 0.1, emissaoCo2eG: 8.5,
+  });
   await Promise.all([
-    // s1: 2 coletas de sucesso
-    gravarColeta({
-      servicoId: s1.id, cpuPercentual: 50, memoriaGb: 2, discoGb: 10, redeGb: 1,
-      intervaloSegundos: 60, statusColeta: "sucesso", potenciaEstimadaW: 43.375,
-      duracaoSegundos: 60, energiaKwh: 0.1, emissaoCo2eG: 8.5,
-    }),
     gravarColeta({
       servicoId: s1.id, cpuPercentual: 60, memoriaGb: 3, discoGb: 12, redeGb: 2,
       intervaloSegundos: 60, statusColeta: "sucesso", potenciaEstimadaW: 52.5,
@@ -388,6 +388,107 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
     assert.equal(resposta3.status, 400);
     const body3 = await resposta3.json() as ErrorResponse;
     assert.equal(body3.error, "invalid_metric");
+  });
+
+  await t.test("ranking com agregação, tendência e resumo antes da paginação", async (t) => {
+    const nomeProjeto = `${idExterno}-ranking`;
+    const projetos = (await consultar<{ id: number; nome: string }>(
+      "INSERT INTO aplicacoes (nome) VALUES ($1), ($2) RETURNING id::int, nome",
+      [nomeProjeto, `${nomeProjeto}-fora`],
+    )).rows;
+    const [projeto, fora] = projetos;
+    const idsProjetos = projetos.map(({ id }) => id);
+    t.after(async () => {
+      await consultar(
+        "DELETE FROM metricas_servico WHERE servico_id IN (SELECT id FROM servicos WHERE aplicacao_id = ANY($1::bigint[]))",
+        [idsProjetos],
+      );
+      await consultar("DELETE FROM servicos WHERE aplicacao_id = ANY($1::bigint[])", [idsProjetos]);
+      await consultar("DELETE FROM aplicacoes WHERE id = ANY($1::bigint[])", [idsProjetos]);
+    });
+
+    const servicos = (await consultar<{ id: number }>(`
+      INSERT INTO servicos (nome, aplicacao_id, regiao_id, status)
+      VALUES ('Volume', $1, $3, 'ativo'), ('Pico', $1, $3, 'ativo'), ('Empate', $1, $3, 'ativo'),
+        ('Zero', $1, $3, 'ativo'), ('Sem coletas', $1, $3, 'ativo'), ('Carbono', $1, $3, 'ativo'),
+        ('Inativo', $1, $3, 'indisponivel'), ('Outro projeto', $2, $4, 'ativo')
+      RETURNING id::int
+    `, [projeto.id, fora.id, seed.regiao, rVirginiaId])).rows;
+    const [volume, pico, empate, zero, semColeta, carbono, inativo] = servicos;
+    const inicio = "2026-02-04T00:00:00.000Z";
+    const fim = "2026-02-05T00:00:00.000Z";
+    await consultar(`
+      INSERT INTO metricas_servico (servico_id, coletado_em, status_coleta, energia_kwh, emissao_co2e_g)
+      VALUES
+        ($1, '2026-02-03T00:00:00Z', 'sucesso', 4, 40),
+        ($1, $8, 'sucesso', 3, 30),
+        ($1, $9, 'sucesso', 3, 30),
+        ($1, '2026-02-05T00:00:00.001Z', 'sucesso', 300, 300),
+        ($2, $8, 'sucesso', 5, 5),
+        ($3, $8, 'sucesso', 5, 5),
+        ($4, '2026-02-03T12:00:00Z', 'sucesso', 0, NULL),
+        ($4, $8, 'sucesso', 0, NULL),
+        ($5, $8, 'sem_metricas', 99, 99),
+        ($6, $8, 'sucesso', NULL, 100),
+        ($7, $8, 'sucesso', 100, 100)
+    `, [volume.id, pico.id, empate.id, zero.id, semColeta.id, carbono.id, inativo.id, inicio, fim]);
+
+    const query = new URLSearchParams({ inicio, fim, aplicacaoId: String(projeto.id), metrica: "energia", ordenacao: "DESC" });
+    async function obter(mudancas: Record<string, string>) {
+      const parametros = new URLSearchParams(query);
+      for (const [chave, valor] of Object.entries(mudancas)) parametros.set(chave, valor);
+      const resposta = await fetch(`${baseUrl}/analytics/ranking?${parametros}`, { headers: headersAutenticacao });
+      const resultado = await resposta.json();
+      assert.equal(resposta.status, 200, JSON.stringify(resultado));
+      return resultado as RankingDetalhado & { periodo: { inicio: string; fim: string }; agregacao: string };
+    }
+
+    const media = await obter({ agregacao: "media" });
+    assert.equal(media.agregacao, "media");
+    assert.deepEqual(media.periodo, { inicio, fim });
+    assert.deepEqual(media.dados.map(({ servicoId }) => servicoId), [pico.id, empate.id, volume.id, zero.id]);
+    assert.equal(media.dados[2].tendenciaPercentual, -25);
+    assert.equal(media.dados[3].totalEnergiaKwh, 0);
+    assert.equal(media.dados[3].totalEmissaoCo2eG, null);
+    assert.equal(media.dados[3].tendenciaPercentual, null);
+    assert.equal(media.dados[0].tendenciaPercentual, null);
+    assert.equal(media.resumo.semDados, 2);
+    assert.equal(media.resumo.mediaEnergiaKwh, 3.25);
+    assert.equal(media.resumo.menorEnergia?.mediaEnergiaKwh, 0);
+    assert.equal(media.resumo.primeiroColocado?.aplicacao, nomeProjeto);
+    assert.ok(media.aplicacoes.some(({ id }) => id === fora.id));
+
+    const total = await obter({ agregacao: "total" });
+    assert.deepEqual(total.dados.map(({ servicoId }) => servicoId), [volume.id, pico.id, empate.id, zero.id]);
+    assert.equal(total.dados[0].tendenciaPercentual, 50);
+
+    const pagina = await obter({ agregacao: "total", limite: "1", offset: "1" });
+    assert.deepEqual(pagina.dados, total.dados.slice(1, 2));
+    assert.deepEqual(pagina.resumo, total.resumo);
+
+    const emissao = await obter({ metrica: "co2e", agregacao: "media", ordenacao: "ASC" });
+    assert.deepEqual(emissao.dados.map(({ servicoId }) => servicoId), [pico.id, empate.id, volume.id, carbono.id]);
+    assert.equal(emissao.dados[3].mediaEnergiaKwh, null);
+
+    const vazio = await obter({ agregacao: "media", aplicacaoId: String(fora.id) });
+    assert.deepEqual(vazio.dados, []);
+    assert.equal(vazio.resumo.semDados, 1);
+    assert.equal(vazio.resumo.primeiroColocado, null);
+    assert.deepEqual(vazio.aplicacoes, media.aplicacoes);
+
+    const comInativos = await obter({ agregacao: "total", apenasAtivos: "false", regiaoId: String(seed.regiao) });
+    assert.equal(comInativos.resumo.primeiroColocado?.servicoId, inativo.id);
+    assert.ok(!comInativos.aplicacoes.some(({ id }) => id === fora.id));
+
+    const legado = await obter({});
+    assert.equal(Object.hasOwn(legado, "resumo"), false);
+    assert.deepEqual(legado.dados.map(({ servicoId }) => servicoId), [volume.id, pico.id, empate.id]);
+
+    const semToken = await fetch(`${baseUrl}/analytics/ranking?${query}&agregacao=media`);
+    assert.equal(semToken.status, 401);
+    const invalida = await fetch(`${baseUrl}/analytics/ranking?${query}&agregacao=invalida`, { headers: headersAutenticacao });
+    assert.equal(invalida.status, 400);
+    assert.equal((await invalida.json() as ErrorResponse).error, "invalid_aggregation");
   });
 
   // ------------------------------------------------------------------
