@@ -1,0 +1,33 @@
+.botao-sair {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 40px;
+  margin-top: 14px;
+  border: 1px solid #25863c;
+  border-radius: 8px;
+  background: #fff;
+  color: #25863c;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.botao-sair:hover {
+  background: #eaf5ec;
+}
+
+.botao-sair:focus-visible {
+  outline: 2px solid #25863c;
+  outline-offset: 2px;
+}
+
+/* Barra lateral estreita (mobile): só o ícone; o nome acessível vem do aria-label. */
+@media (max-width: 700px) {
+  .botao-sair-texto {
+    display: none;
+  }
+}
