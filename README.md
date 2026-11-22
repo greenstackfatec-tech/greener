@@ -108,8 +108,7 @@ greener/
 ├── .gitignore
 ├── compose.yaml
 ├── compose.persistence.yaml
-├── README.md
-└── teste.sql
+└── README.md
 ```
 
 <br>
