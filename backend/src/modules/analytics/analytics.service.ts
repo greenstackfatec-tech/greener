@@ -9,6 +9,7 @@ import {
   type RankingItem,
   type ComparacaoServico,
 } from "./analytics.repository.ts";
+import { buscarRankingDetalhado, type RankingDetalhado } from "./ranking.repository.ts";
 
 /**
  * Erro HTTP para respostas de erro padronizadas.
@@ -190,9 +191,12 @@ export async function getHistorico(
   };
 }
 
-/**
- * Busca ranking de serviços por energia ou CO₂e em um período.
- */
+interface RankingRespostaBase {
+  periodo: { inicio: string; fim: string };
+  metrica: RankingParams["metrica"];
+  ordenacao: NonNullable<RankingParams["ordenacao"]>;
+}
+
 export async function getRanking(
   inicioStr: string | undefined,
   fimStr: string | undefined,
@@ -203,7 +207,8 @@ export async function getRanking(
   aplicacaoId: string | undefined,
   regiaoId: string | undefined,
   apenasAtivos: string | undefined,
-): Promise<{ dados: RankingItem[]; periodo: { inicio: string; fim: string }; metrica: string; ordenacao: string }> {
+  agregacao?: string,
+): Promise<RankingRespostaBase & ({ dados: RankingItem[] } | (RankingDetalhado & { agregacao: "total" | "media" }))> {
   const { inicio, fim } = validarPeriodo(inicioStr, fimStr);
   const rankingParams = validarRankingParams(metrica, ordenacao, limite, offset, aplicacaoId, regiaoId, apenasAtivos);
 
@@ -213,17 +218,23 @@ export async function getRanking(
     ...rankingParams,
   };
 
-  const dados = await buscarRankingPorPeriodo(params);
-
-  return {
-    dados,
+  const base: RankingRespostaBase = {
     periodo: {
       inicio: inicio.toISOString(),
       fim: fim.toISOString(),
     },
-    metrica: String(rankingParams.metrica),
-    ordenacao: String(rankingParams.ordenacao),
+    metrica: rankingParams.metrica,
+    ordenacao: rankingParams.ordenacao ?? "DESC",
   };
+
+  if (agregacao === undefined) {
+    return { ...base, dados: await buscarRankingPorPeriodo(params) };
+  }
+  if (agregacao !== "total" && agregacao !== "media") {
+    throw new ErroHttp(400, "invalid_aggregation", "Agregação inválida. Use 'total' ou 'media'.");
+  }
+
+  return { ...base, agregacao, ...await buscarRankingDetalhado({ ...params, agregacao }) };
 }
 
 /**

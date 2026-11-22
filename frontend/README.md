@@ -25,6 +25,7 @@ As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. A
 | `/cadastro` | Cadastro | DW20 | Página provisória |
 | `/administrativa` | Administrativa | DW21, DW22 | Implementada (indicadores e serviços da API, intervalo de coleta; o card "Por recurso" foi removido por falta de dados reais) |
 | `/dashboard` | Dashboard | DW05, DW06, DW07 | Implementada (cards de indicadores, tabela e estados visuais) |
+| `/ranking` | Ranking | DW12 | Implementada |
 | `/comparacao` | Comparação | DW13 | Implementada (2 a 5 serviços no mesmo período, com aviso de serviço sem dados) |
 | `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
 | `/mapa` | Mapa | DW15 | Implementada (globo 3D com os serviços que têm latitude e longitude; aviso de quantos ficaram fora) |
@@ -70,6 +71,7 @@ As rotas estão declaradas em `src/rotas.tsx`, e seus caminhos ficam centralizad
 | `/login` | Login | Integrada a `POST /auth/login`, com validação, opção “Lembrar de mim” e tratamento de erros e limite de tentativas. |
 | `/cadastro` | Cadastro | Formulário de pessoa física ou jurídica com validação no frontend. O endpoint de cadastro ainda não existe no backend, portanto o envio não conclui o registro. |
 | `/dashboard` | Dashboard | Apresenta serviços, estados, busca e filtros. Os dados dependem dos campos enviados pelo backend. |
+| `/ranking` | Ranking | Classificação por energia ou CO₂e, com total no período ou média por coleta, filtros, tendência e paginação (`GET /analytics/ranking`). |
 | `/administrativa` | Área administrativa | Indicadores e lista de serviços vindos da API (`GET /dashboard/indicadores` e `GET /services`) e leitura da configuração de monitoramento. O card "Por recurso" foi removido por falta de dados reais, e a alteração do intervalo depende de endpoint ainda não disponível. |
 | `/comparacao` | Comparação | Seleção de 2 a 5 serviços e de um período; mostra energia e CO₂e totais lado a lado (`GET /analytics/comparacao`). Serviço sem coleta no período aparece como "Sem dados no período". |
 | `/dashboard/estados` | Galeria de estados | Disponível somente em desenvolvimento para conferência com os mocks. |
@@ -91,7 +93,7 @@ Quando há token salvo, o cliente HTTP envia `Authorization: Bearer <token>`. A 
 
 Pendências que dependem de outras tarefas: recuperação de senha (sem endpoint), proteção das rotas privadas e redirecionamento de quem já está logado.
 
-Logout (DW17). O botão "Sair da conta" `(components/BotaoSair.tsx)` fica na barra lateral do Dashboard, do Histórico e da Comparação; na área administrativa o botão equivalente está em `LayoutAdministrativo`. Ele chama `sair()` (`services/auth.ts`), que remove o token do `localStorage` e do `sessionStorage`, e navega para `/login`. Como o JWT é stateless e não há endpoint de logout, o token continua válido no backend até expirar (1 h): o logout vale só para o navegador.
+Logout (DW17). O botão "Sair da conta" `(components/BotaoSair.tsx)` fica na barra lateral do Dashboard, do Histórico, do Ranking, da Comparação e do Mapa; na área administrativa o botão equivalente está em `LayoutAdministrativo`. Ele chama `sair()` (`services/auth.ts`), que remove o token do `localStorage` e do `sessionStorage`, e navega para `/login`. Como o JWT é stateless e não há endpoint de logout, o token continua válido no backend até expirar (1 h): o logout vale só para o navegador.
 
 O backend limita tentativas incorretas e pode responder HTTP `429` com `Retry-After`. A tela apresenta o tempo de espera e bloqueia novos envios enquanto a contagem regressiva não termina. A recuperação de senha ainda não possui endpoint implementado.
 
@@ -129,6 +131,10 @@ Os três cards do topo (energia estimada, emissões estimadas e serviços ativos
 O card "Por recurso" (parcela de CPU, memória, disco e rede) foi removido da tela por falta de dados reais. O gráfico dos últimos 7 dias depende dos endpoints de histórico (TP17/DW11). Nenhum valor fixo é exibido no lugar dos dados indisponíveis.
 
 O card de intervalo consulta `GET /monitoring-settings`, rota protegida por JWT. O frontend possui uma chamada preparada para `PUT /monitoring-settings`, mas o backend atual disponibiliza somente o GET. A alteração do intervalo depende da implementação do endpoint correspondente.
+
+### 3.6 Ranking (DW12)
+
+A rota privada `/ranking` consulta `GET /analytics/ranking`, com autenticação JWT, para classificar serviços por consumo de energia (kWh) ou emissão de CO₂e (exibida em kg), usando o total no período ou a média por coleta. Os filtros de período (última 1 h, últimas 24 h, últimos 7 ou 30 dias, ou personalizado), escopo (todos os projetos ou uma aplicação), métrica e ordem crescente ou decrescente são enviados ao clicar em "Aplicar filtros"; datas personalizadas inválidas bloqueiam o envio. A consulta inicial usa os últimos 30 dias, CO₂e médio e ordem crescente. A tela apresenta resumo, primeiro colocado e classificação paginada de 20 serviços por página; a tendência mostra a variação percentual da métrica e agregação selecionadas em relação ao período anterior de mesma duração, ou "Sem base de comparação" quando não há valor anterior válido ou ele é zero. Há estados de carregamento, sucesso, erro com "Tentar novamente" e ausência de serviços com dados, além do aviso de serviços sem dados para a métrica selecionada; valores ausentes aparecem como traço, sem serem convertidos em zero.
 
 ## 4. Organização dos arquivos
 
@@ -170,6 +176,7 @@ A URL base do cliente é `/api`. O cliente adiciona o token JWT quando existe um
 | POST | `/auth/register` | Cadastro preparado no frontend, ainda sem implementação no backend. |
 | GET | `/services` | Lista de serviços para o dashboard. |
 | GET | `/dashboard/indicadores` | Indicadores consolidados consumidos pela interface. |
+| GET | `/analytics/ranking` | Classificação dos serviços por energia ou CO₂e, com total ou média, resumo e tendência; protegida por JWT. |
 | GET | `/collections/rotina/status` | Diagnóstico da rotina de coleta. |
 | GET | `/monitoring-settings` | Consulta do intervalo, protegida por JWT. |
 | PUT | `/monitoring-settings` | Alteração preparada no frontend, ainda sem implementação no backend. |

@@ -154,6 +154,7 @@ export function MapaPage() {
         <p className="dash-nav-label">MENU PRINCIPAL</p>
         <a className="dash-nav-item" href={ROTAS.dashboard}><span aria-hidden="true">▦</span> Visão geral</a>
         <a className="dash-nav-item" href={ROTAS.historico}><span aria-hidden="true">⎔</span> Histórico</a>
+        <a className="dash-nav-item" href={ROTAS.ranking}><span aria-hidden="true">▤</span> Ranking</a>
         <a className="dash-nav-item" href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
         <a className="dash-nav-item dash-nav-active" href={ROTAS.mapa} aria-current="page"><span aria-hidden="true">◍</span> Mapa</a>
         <div className="dash-sidebar-bottom"><span className="dash-avatar">GE</span><span><strong>GreenER</strong><small>Monitoramento ambiental</small></span></div>

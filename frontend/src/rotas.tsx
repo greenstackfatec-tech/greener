@@ -6,6 +6,7 @@ import { LoginPage } from "./pages/LoginPage.tsx";
 import { DashboardPage } from "./pages/DashboardPage.tsx";
 import { MapaPage } from "./pages/MapaPage.tsx";
 import { HistoricoPage } from "./pages/HistoricoPage.tsx";
+import { RankingPage } from "./pages/RankingPage.tsx";
 import { ComparacaoPage } from "./pages/ComparacaoPage.tsx";
 import { AdministrativaPage } from "./pages/AdministrativaPage.tsx";
 import { RotaPrivada } from "./components/RotaPrivada.tsx";
@@ -21,7 +22,7 @@ export const router = createBrowserRouter([
     { path: ROTAS.administrativa, element: <AdministrativaPage /> },
     { path: ROTAS.dashboard, element: <DashboardPage /> },
     { path: ROTAS.historico, element: <HistoricoPage /> },
-    { path: ROTAS.comparacao, element: <ComparacaoPage /> },
+    { path: ROTAS.ranking, element: <RankingPage /> },
     { path: ROTAS.comparacao, element: <ComparacaoPage /> },
     { path: ROTAS.mapa, element: <MapaPage /> },
     ...(import.meta.env.DEV ? [{ path: ROTAS.dashboardEstados, element: <EstadosPage /> }] : []),

@@ -159,6 +159,7 @@ export function ComparacaoPage() {
         <p className="dash-nav-label">MENU PRINCIPAL</p>
         <a className="dash-nav-item" href={ROTAS.dashboard}><span>▦</span> Visão geral</a>
         <a className="dash-nav-item" href={ROTAS.historico}><span>⎔</span> Histórico</a>
+        <a className="dash-nav-item" href={ROTAS.ranking}><span aria-hidden="true">▤</span> Ranking</a>
         <a className="dash-nav-item dash-nav-active" href={ROTAS.comparacao} aria-current="page"><span>⇄</span> Comparação</a>
         <a className="dash-nav-item" href={ROTAS.mapa}><span aria-hidden="true">◍</span> Mapa</a>
         <div className="dash-sidebar-bottom"><span className="dash-avatar">GE</span><span><strong>GreenER</strong><small>Monitoramento ambiental</small></span></div>

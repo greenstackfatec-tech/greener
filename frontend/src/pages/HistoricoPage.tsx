@@ -471,6 +471,7 @@ export function HistoricoPage() {
         <nav>
           <a className="hist-nav-item" href={ROTAS.dashboard}><span aria-hidden="true">▦</span> Visão geral</a>
           <a className="hist-nav-item hist-nav-active" href="#historico" aria-current="page"><span aria-hidden="true">⎔</span> Histórico</a>
+          <a className="hist-nav-item" href={ROTAS.ranking}><span aria-hidden="true">▤</span> Ranking</a>
           <a className="hist-nav-item" href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
           <a className="hist-nav-item" href={ROTAS.mapa}><span aria-hidden="true">◍</span> Mapa</a>
         </nav>

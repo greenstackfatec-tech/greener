@@ -41,7 +41,7 @@ export function paraCampoDataHora(data: Date): string {
 }
 
 /** Mensagem para a tela quando o período personalizado não pode ser usado; null se está ok. */
-export function erroDoPeriodo(filtros: FiltrosAnalise): string | null {
+export function erroDoPeriodo(filtros: Pick<FiltrosAnalise, "periodo" | "inicio" | "fim">): string | null {
   if (filtros.periodo !== "personalizado") return null;
   if (!filtros.inicio || !filtros.fim) return "Informe o início e o fim do período.";
   const inicio = new Date(filtros.inicio);
@@ -56,7 +56,7 @@ export function erroDoPeriodo(filtros: FiltrosAnalise): string | null {
  * então a janela acompanha a atualização automática. Período inválido devolve
  * a mensagem para a tela bloquear a consulta.
  */
-export function resolverPeriodo(filtros: FiltrosAnalise, agora: number): Periodo | { erro: string } {
+export function resolverPeriodo(filtros: Pick<FiltrosAnalise, "periodo" | "inicio" | "fim">, agora: number): Periodo | { erro: string } {
   const erro = erroDoPeriodo(filtros);
   if (erro) return { erro };
   const duracaoMs = ATALHOS_PERIODO.find((a) => a.valor === filtros.periodo)?.duracaoMs;
