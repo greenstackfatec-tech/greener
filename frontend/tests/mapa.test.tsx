@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import "@testing-library/jest-dom";
 import { MapaPage } from "../src/pages/MapaPage.tsx";
 import * as servicos from "../src/services/servicos.ts";
+import { MemoryRouter } from "react-router";
 
 function servico(id: number, nome: string, extra: Partial<servicos.Servico> = {}): servicos.Servico {
   return {
@@ -29,7 +30,7 @@ test("mostra um pino por serviço com coordenadas e avisa quantos ficaram fora d
     servico(3, "Reports Worker"),
     servico(4, "Notifications", { latitude: -23.5, longitude: null }),
   ]);
-  render(<MapaPage />);
+  render(<MemoryRouter><MapaPage /></MemoryRouter>);
 
   expect(await screen.findByRole("button", { name: /Billing API/ })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Checkout Worker/ })).toBeInTheDocument();
