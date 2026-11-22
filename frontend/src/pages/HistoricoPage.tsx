@@ -4,6 +4,7 @@ import logo from "../assets/greener-icon.png";
 import { CartaoEstado, type MetricasRecurso } from "../components/CartaoEstado.tsx";
 import { FiltrosAnalise } from "../components/FiltrosAnalise.tsx";
 import { GraficoLinha, type PontoGrafico } from "../components/GraficoLinha.tsx";
+import { BotaoSair } from "../components/BotaoSair.tsx";
 import { regioesDisponiveis, resolverPeriodo, filtrarPorServicoERegiao } from "../filtros.ts";
 import { TEXTOS_SITUACAO, rodapeDaSituacao } from "../estadosServico.ts";
 import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
@@ -470,12 +471,15 @@ export function HistoricoPage() {
         <nav>
           <a className="dash-nav-item" href={ROTAS.dashboard}><span aria-hidden="true">▦</span> Visão geral</a>
           <a className="dash-nav-item dash-nav-active" href={ROTAS.historico} aria-current="page"><span aria-hidden="true">⎔</span> Histórico</a>
+          <a className="dash-nav-item" href={ROTAS.ranking}><span aria-hidden="true">▤</span> Ranking</a>
           <a className="dash-nav-item" href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
+          <a className="dash-nav-item" href={ROTAS.mapa}><span aria-hidden="true">◍</span> Mapa</a>
         </nav>
         <div className="dash-sidebar-bottom">
           <span className="dash-avatar" aria-hidden="true">GE</span>
           <span><strong>GreenER</strong><small>Monitoramento ambiental</small></span>
         </div>
+        <BotaoSair />
       </aside>
 
       <main className="dash-main" role="main">

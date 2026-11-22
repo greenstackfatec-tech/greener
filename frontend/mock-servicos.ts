@@ -1,8 +1,9 @@
 import type { Plugin, Connect } from "vite";
+import type { RankingItem, RankingResposta } from "./src/services/analytics.ts";
 
 /**
  * Mock para desenvolvimento: responde GET /api/services, GET /api/dashboard/indicadores,
- * GET /api/analytics/historico/:servicoId, POST /api/auth/login e GET /api/__mock
+ * GET /api/analytics/historico/:servicoId, GET /api/analytics/ranking, POST /api/auth/login e GET /api/__mock
  * sem backend nem banco. Ligado por `npm run dev:mock`.
  */
 
@@ -12,12 +13,15 @@ let cenarioAtual: CenarioMock = "ok";
 
 function servicos() {
   const minutosAtras = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
-  const base = { cidade: "São Paulo", latitude: -23.55, longitude: -46.63, regiao: "sa-east-1", pais: "Brasil" };
+  const base = { cidade: "São Paulo", latitude: -23.5505, longitude: -46.6333, regiao: "sa-east-1", pais: "Brasil" };
+  // Pontos espalhados pelo globo para testar o mapa (DW15); Billing API e Legacy Cron compartilham São Paulo de propósito.
+  const ashburn = { cidade: "Ashburn", latitude: 39.0438, longitude: -77.4874, regiao: "Virginia", pais: "United States" };
+  const toquio = { cidade: "Tokyo", latitude: 35.6762, longitude: 139.6503, regiao: "Tokyo", pais: "Japan" };
   const vazio = { cpuPercentual: null, memoriaGb: null, discoGb: null, redeGb: null, energiaKwh: null, emissaoCo2eG: null };
   return [
     { id: 1, nome: "Billing API", status: "ativo", statusColeta: "sucesso", coletadoEm: minutosAtras(4), cpuPercentual: 42, memoriaGb: 1.2, discoGb: 20, redeGb: 3.1, energiaKwh: 2.486, emissaoCo2eG: 120.5, ...base },
-    { id: 2, nome: "Checkout Web", status: "ativo", statusColeta: "sucesso", coletadoEm: minutosAtras(2), cpuPercentual: 67.5, memoriaGb: 2.8, discoGb: 35, redeGb: 8.4, energiaKwh: 1.912, emissaoCo2eG: 92.7, ...base },
-    { id: 3, nome: "Auth Service", status: "indisponivel", statusColeta: "indisponivel", coletadoEm: minutosAtras(30), ...vazio, ...base },
+    { id: 2, nome: "Checkout Web", status: "ativo", statusColeta: "sucesso", coletadoEm: minutosAtras(2), cpuPercentual: 67.5, memoriaGb: 2.8, discoGb: 35, redeGb: 8.4, energiaKwh: 1.912, emissaoCo2eG: 92.7, ...ashburn },
+    { id: 3, nome: "Auth Service", status: "indisponivel", statusColeta: "indisponivel", coletadoEm: minutosAtras(30), ...vazio, ...toquio },
     { id: 4, nome: "Reports Worker", status: "ativo", statusColeta: "sem_metricas", coletadoEm: null, ...vazio, ...base, cidade: null, latitude: null, longitude: null },
     { id: 5, nome: "Notifications", status: "ativo", statusColeta: null, coletadoEm: null, ...vazio, ...base, cidade: null, latitude: null, longitude: null, regiao: null, pais: null },
     { id: 6, nome: "Legacy Cron", status: "removido", statusColeta: null, coletadoEm: null, ...vazio, ...base },
@@ -98,6 +102,73 @@ function historicoMock(servicoId: number, inicioStr: string, fimStr: string) {
   };
 }
 
+function rankingMock(query: URLSearchParams, vazio: boolean): RankingResposta {
+  const aplicacoes = [
+    { id: 1, nome: "Green Stack" },
+    { id: 2, nome: "Equipe Aurora" },
+    { id: 3, nome: "Equipe Raiz" },
+  ];
+  const servicos = [
+    { nome: "EcoCart API", aplicacaoId: 1, energia: 0.21, co2e: 80, coletas: 9, tendencia: -18 },
+    { nome: "GreenER Dashboard", aplicacaoId: 1, energia: 0.28, co2e: 110, coletas: 6, tendencia: -12 },
+    { nome: "Carbon Track", aplicacaoId: 2, energia: 0.34, co2e: 140, coletas: 6, tendencia: -8 },
+    { nome: "Smart Route", aplicacaoId: 2, energia: 0.39, co2e: 160, coletas: 4, tendencia: 2 },
+    { nome: "Data Garden", aplicacaoId: 3, energia: 0.42, co2e: 180, coletas: 8, tendencia: 5 },
+    { nome: "EcoPay Services", aplicacaoId: 3, energia: 0.47, co2e: 200, coletas: 4, tendencia: 7 },
+    { nome: "Green Market", aplicacaoId: 1, energia: 0.51, co2e: 230, coletas: 6, tendencia: 9 },
+    { nome: "Reports Worker", aplicacaoId: 1, energia: 0, co2e: 0, coletas: 0, tendencia: null },
+  ].map((item, indice) => ({ ...item, servicoId: indice + 1 }));
+  const agora = Date.now();
+  const inicio = query.get("inicio") ?? new Date(agora - 86_400_000).toISOString();
+  const fim = query.get("fim") ?? new Date(agora).toISOString();
+  const metrica = query.get("metrica") === "energia" ? "energia" : "co2e";
+  const agregacao = query.get("agregacao") === "total" ? "total" : "media";
+  const ordenacao = query.get("ordenacao") === "DESC" ? "DESC" : "ASC";
+  const aplicacaoId = query.get("aplicacaoId");
+  const offset = Number(query.get("offset") ?? 0);
+  const limite = Number(query.get("limite") ?? 20);
+  const escopo = servicos.filter((item) => aplicacaoId === null || String(item.aplicacaoId) === aplicacaoId);
+  const coletaEm = agora - 60_000;
+  const noPeriodo = Date.parse(inicio) <= coletaEm && coletaEm <= Date.parse(fim);
+  const classificados: RankingItem[] = (vazio || !noPeriodo ? [] : escopo.filter((item) => item.coletas > 0))
+    .map((item) => ({
+      servicoId: item.servicoId,
+      nome: item.nome,
+      aplicacao: aplicacoes.find((app) => app.id === item.aplicacaoId)!.nome,
+      totalEnergiaKwh: item.energia * item.coletas,
+      totalEmissaoCo2eG: item.co2e * item.coletas,
+      mediaEnergiaKwh: item.energia,
+      mediaEmissaoCo2eG: item.co2e,
+      tendenciaPercentual: item.tendencia,
+    }));
+  const campo = metrica === "energia"
+    ? (agregacao === "media" ? "mediaEnergiaKwh" : "totalEnergiaKwh")
+    : (agregacao === "media" ? "mediaEmissaoCo2eG" : "totalEmissaoCo2eG");
+  const direcao = ordenacao === "ASC" ? 1 : -1;
+  classificados.sort((a, b) => direcao * ((a[campo] ?? 0) - (b[campo] ?? 0)) || a.servicoId - b.servicoId);
+  const media = (chave: "mediaEnergiaKwh" | "mediaEmissaoCo2eG") => classificados.length
+    ? classificados.reduce((soma, item) => soma + (item[chave] ?? 0), 0) / classificados.length
+    : null;
+  const menor = classificados.reduce<RankingItem | null>((atual, item) =>
+    atual === null || (item.mediaEnergiaKwh ?? Infinity) < (atual.mediaEnergiaKwh ?? Infinity) ? item : atual, null);
+  return {
+    dados: classificados.slice(offset, offset + limite),
+    periodo: { inicio, fim },
+    metrica,
+    agregacao,
+    ordenacao,
+    aplicacoes,
+    resumo: {
+      classificados: classificados.length,
+      semDados: escopo.length - classificados.length,
+      mediaEnergiaKwh: media("mediaEnergiaKwh"),
+      mediaEmissaoCo2eG: media("mediaEmissaoCo2eG"),
+      menorEnergia: menor?.mediaEnergiaKwh != null ? { nome: menor.nome, mediaEnergiaKwh: menor.mediaEnergiaKwh } : null,
+      primeiroColocado: classificados[0] ?? null,
+    },
+  };
+}
+
 export function mockServicos(): Plugin {
   return {
     name: "greener-mock-servicos",
@@ -144,6 +215,17 @@ export function mockServicos(): Plugin {
               return false; // Comportamento normal
           }
         };
+
+        if (url.pathname === "/api/analytics/ranking") {
+          if (cenarioAtual === "lento") {
+            setTimeout(() => {
+              if (!res.destroyed) responder(200, rankingMock(url.searchParams, false));
+            }, 1200);
+          } else if (cenarioAtual === "vazio" || !aplicarCenario()) {
+            responder(200, rankingMock(url.searchParams, cenarioAtual === "vazio"));
+          }
+          return;
+        }
 
         // Comparação (DW13): usa a última coleta de cada serviço como se fossem 6 coletas no período.
         if (url.pathname === "/api/analytics/comparacao") {

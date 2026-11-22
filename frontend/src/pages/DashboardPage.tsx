@@ -15,6 +15,7 @@ import { useMonitoramentoColeta } from "../hooks/useMonitoramentoColeta.ts";
 import { useFiltrosAnalise } from "../hooks/useFiltrosAnalise.ts";
 import { situacaoDoServico, type Servico } from "../services/servicos.ts";
 import { localizacaoDoServico, NAO_INFORMADO } from "../localizacao.ts";
+import { BotaoSair } from "../components/BotaoSair.tsx";
 import "./DashboardPage.css";
 
 /** Ícone de informação com tooltip explicando a diferença energia vs CO₂e. */
@@ -199,8 +200,11 @@ export function DashboardPage() {
         <p className="dash-nav-label">MENU PRINCIPAL</p>
         <a className="dash-nav-item dash-nav-active" href={ROTAS.dashboard}><span>▦</span> Visão geral</a>
         <a className="dash-nav-item" href={ROTAS.historico}><span>⎔</span> Histórico</a>
+        <a className="dash-nav-item" href={ROTAS.ranking}><span aria-hidden="true">▤</span> Ranking</a>
         <a className="dash-nav-item" href={ROTAS.comparacao}><span>⇄</span> Comparação</a>
+        <a className="dash-nav-item" href={ROTAS.mapa}><span aria-hidden="true">◍</span> Mapa</a>
         <div className="dash-sidebar-bottom"><span className="dash-avatar">GE</span><span><strong>GreenER</strong><small>Monitoramento ambiental</small></span></div>
+        <BotaoSair />
       </aside>
 
       <main className="dash-main">

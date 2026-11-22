@@ -1,4 +1,4 @@
-import { useIndicadores, type EstadoIndicadores } from "../hooks/useIndicadores.ts";
+import type { EstadoIndicadores } from "../hooks/useIndicadores.ts";
 
 function formatar(valor: number, casas: number): string {
   return valor.toLocaleString("pt-BR", { maximumFractionDigits: casas });
@@ -76,11 +76,12 @@ export function ResumoConsumoVisao({ estado }: { estado: EstadoIndicadores }) {
   );
 }
 
-/**
- * Painel de consumo da tela de login. Mostra os indicadores consolidados reais
- * (GET /dashboard/indicadores). Não há nenhum valor fixo neste arquivo.
- */
+/** As telas públicas não consultam os indicadores, que exigem autenticação. */
 export function ResumoConsumo() {
-  const estado = useIndicadores();
-  return <ResumoConsumoVisao estado={estado} />;
+  return (
+    <section className="resumo" aria-labelledby="resumo-titulo">
+      <h2 id="resumo-titulo">Consumo de energia</h2>
+      <p className="resumo-aviso">Entre na sua conta para acompanhar o consumo de energia e as emissões dos seus softwares.</p>
+    </section>
+  );
 }

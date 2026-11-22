@@ -1277,3 +1277,12 @@
     min-height: 44px;
   }
 }
+
+/* Barra lateral fixa na altura da janela (como no Histórico): o botão Sair fica sempre visível. */
+.dash-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+}

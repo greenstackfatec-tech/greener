@@ -48,7 +48,7 @@ export async function historico(
 
 /**
  * GET /analytics/ranking
- * Query params: inicio, fim, metrica, ordenacao, limite, offset, aplicacaoId, regiaoId, apenasAtivos
+ * Query params: inicio, fim, metrica, ordenacao, limite, offset, aplicacaoId, regiaoId, apenasAtivos, agregacao
  */
 export async function ranking(
   request: IncomingMessage,
@@ -65,9 +65,10 @@ export async function ranking(
   const aplicacaoId = query.get("aplicacaoId") || undefined;
   const regiaoId = query.get("regiaoId") || undefined;
   const apenasAtivos = query.get("apenasAtivos") || undefined;
+  const agregacao = query.get("agregacao") ?? undefined;
 
   try {
-    const resultado = await getRanking(inicio, fim, metrica, ordenacao, limite, offset, aplicacaoId, regiaoId, apenasAtivos);
+    const resultado = await getRanking(inicio, fim, metrica, ordenacao, limite, offset, aplicacaoId, regiaoId, apenasAtivos, agregacao);
     responder(response, 200, resultado);
   } catch (erro) {
     if (erro instanceof ErroHttp) {

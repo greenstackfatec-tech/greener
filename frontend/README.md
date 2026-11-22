@@ -7,7 +7,7 @@ Tecnologias principais: **React 19.3.1**, **TypeScript 6.0.3** e **Vite 8.3.5**.
 | Pasta | Responsabilidade | Conteúdo atual |
 |---|---|---|
 | `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx`, `DashboardPage.tsx`, `EstadosPage.tsx` |
-| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `GraficoConsumo.tsx`, `CartaoEstado.tsx`, `CardsIndicadores.tsx` |
+| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `CartaoEstado.tsx`, `CardsIndicadores.tsx`, `BotaoSair.tsx` |
 | `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `servicos.ts` |
 | `src/assets/` | Imagens usadas pelas telas | `greener-icon.png` |
 | `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts`, `useServicos.ts`, `useAgora.ts` |
@@ -23,10 +23,12 @@ As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. A
 | `/` | Início | DW18 | Implementada (mostra o status do backend) |
 | `/login` | Login | DW19 | Implementada (JWT, "lembrar de mim", erros e bloqueio por tentativas) |
 | `/cadastro` | Cadastro | DW20 | Página provisória |
-| `/administrativa` | Administrativa | DW21, DW22 | Implementada (indicadores e serviços da API, intervalo de coleta; o card "Por recurso" aguarda endpoint) |
+| `/administrativa` | Administrativa | DW21, DW22 | Implementada (indicadores e serviços da API, intervalo de coleta; o card "Por recurso" foi removido por falta de dados reais) |
 | `/dashboard` | Dashboard | DW05, DW06, DW07 | Implementada (cards de indicadores, tabela e estados visuais) |
+| `/ranking` | Ranking | DW12 | Implementada |
 | `/comparacao` | Comparação | DW13 | Implementada (2 a 5 serviços no mesmo período, com aviso de serviço sem dados) |
 | `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
+| `/mapa` | Mapa | DW15 | Implementada (globo 3D com os serviços que têm latitude e longitude; aviso de quantos ficaram fora) |
 
 O cliente HTTP fica em `src/services/api.ts`. `requisitar<T>(caminho)` (GET) e `enviar<T>(caminho, corpo)` (POST com JSON) fazem as chamadas a partir de `/api`; as telas não usam `fetch` diretamente. Respostas fora de 2xx viram `ErroApi` (com `status`, `codigo` e, no HTTP 429, `tentarNovamenteEmSegundos`). Se houver token salvo, o cliente envia `Authorization: Bearer <token>` automaticamente.
 
@@ -69,7 +71,8 @@ As rotas estão declaradas em `src/rotas.tsx`, e seus caminhos ficam centralizad
 | `/login` | Login | Integrada a `POST /auth/login`, com validação, opção “Lembrar de mim” e tratamento de erros e limite de tentativas. |
 | `/cadastro` | Cadastro | Formulário de pessoa física ou jurídica com validação no frontend. O endpoint de cadastro ainda não existe no backend, portanto o envio não conclui o registro. |
 | `/dashboard` | Dashboard | Apresenta serviços, estados, busca e filtros. Os dados dependem dos campos enviados pelo backend. |
-| `/administrativa` | Área administrativa | Indicadores e lista de serviços vindos da API (`GET /dashboard/indicadores` e `GET /services`) e leitura da configuração de monitoramento. O card "Por recurso" aguarda endpoint, e a alteração do intervalo depende de endpoint ainda não disponível. |
+| `/ranking` | Ranking | Classificação por energia ou CO₂e, com total no período ou média por coleta, filtros, tendência e paginação (`GET /analytics/ranking`). |
+| `/administrativa` | Área administrativa | Indicadores e lista de serviços vindos da API (`GET /dashboard/indicadores` e `GET /services`) e leitura da configuração de monitoramento. O card "Por recurso" foi removido por falta de dados reais, e a alteração do intervalo depende de endpoint ainda não disponível. |
 | `/comparacao` | Comparação | Seleção de 2 a 5 serviços e de um período; mostra energia e CO₂e totais lado a lado (`GET /analytics/comparacao`). Serviço sem coleta no período aparece como "Sem dados no período". |
 | `/dashboard/estados` | Galeria de estados | Disponível somente em desenvolvimento para conferência com os mocks. |
 
@@ -88,7 +91,10 @@ A tela de login chama `POST /auth/login`. Quando recebe um JWT, o frontend armaz
 
 Quando há token salvo, o cliente HTTP envia `Authorization: Bearer <token>`. A ação de sair remove o token.
 
-Pendências que dependem de outras tarefas: recuperação de senha (sem endpoint), proteção das rotas privadas e logout (DW17/DW21) e redirecionamento de quem já está logado.
+Pendências que dependem de outras tarefas: recuperação de senha (sem endpoint), proteção das rotas privadas e redirecionamento de quem já está logado.
+
+Logout (DW17). O botão "Sair da conta" `(components/BotaoSair.tsx)` fica na barra lateral do Dashboard, do Histórico, do Ranking, da Comparação e do Mapa; na área administrativa o botão equivalente está em `LayoutAdministrativo`. Ele chama `sair()` (`services/auth.ts`), que remove o token do `localStorage` e do `sessionStorage`, e navega para `/login`. Como o JWT é stateless e não há endpoint de logout, o token continua válido no backend até expirar (1 h): o logout vale só para o navegador.
+
 O backend limita tentativas incorretas e pode responder HTTP `429` com `Retry-After`. A tela apresenta o tempo de espera e bloqueia novos envios enquanto a contagem regressiva não termina. A recuperação de senha ainda não possui endpoint implementado.
 
 ### 3.3 Cadastro
@@ -122,9 +128,13 @@ A consulta do diagnóstico é repetida a cada trinta segundos. Quando uma atuali
 
 Os três cards do topo (energia estimada, emissões estimadas e serviços ativos) usam `GET /dashboard/indicadores`, e a lista "Serviços monitorados" usa `GET /services` (energia e emissão da última coleta de cada serviço; serviços removidos ficam de fora). Ambas as consultas passam por `useIndicadores` e `useServicos`, são repetidas a cada `INTERVALO_ATUALIZACAO_SEGUNDOS` e mostram estados de carregamento, erro (com "Tentar de novo") e vazio. O painel "Consumo de energia" reaproveita o estado dos indicadores (`ResumoConsumoVisao`), sem uma segunda consulta.
 
-Duas partes continuam sem dado real, porque o backend ainda não tem endpoint para elas: o card "Por recurso" (parcela de CPU, memória, disco e rede) mostra um aviso de "ainda não disponível", e o gráfico dos últimos 7 dias depende dos endpoints de histórico (TP17/DW11). Nenhum valor fixo é exibido no lugar delas.
+O card "Por recurso" (parcela de CPU, memória, disco e rede) foi removido da tela por falta de dados reais. O gráfico dos últimos 7 dias depende dos endpoints de histórico (TP17/DW11). Nenhum valor fixo é exibido no lugar dos dados indisponíveis.
 
 O card de intervalo consulta `GET /monitoring-settings`, rota protegida por JWT. O frontend possui uma chamada preparada para `PUT /monitoring-settings`, mas o backend atual disponibiliza somente o GET. A alteração do intervalo depende da implementação do endpoint correspondente.
+
+### 3.6 Ranking (DW12)
+
+A rota privada `/ranking` consulta `GET /analytics/ranking`, com autenticação JWT, para classificar serviços por consumo de energia (kWh) ou emissão de CO₂e (exibida em kg), usando o total no período ou a média por coleta. Os filtros de período (última 1 h, últimas 24 h, últimos 7 ou 30 dias, ou personalizado), escopo (todos os projetos ou uma aplicação), métrica e ordem crescente ou decrescente são enviados ao clicar em "Aplicar filtros"; datas personalizadas inválidas bloqueiam o envio. A consulta inicial usa os últimos 30 dias, CO₂e médio e ordem crescente. A tela apresenta resumo, primeiro colocado e classificação paginada de 20 serviços por página; a tendência mostra a variação percentual da métrica e agregação selecionadas em relação ao período anterior de mesma duração, ou "Sem base de comparação" quando não há valor anterior válido ou ele é zero. Há estados de carregamento, sucesso, erro com "Tentar novamente" e ausência de serviços com dados, além do aviso de serviços sem dados para a métrica selecionada; valores ausentes aparecem como traço, sem serem convertidos em zero.
 
 ## 4. Organização dos arquivos
 
@@ -166,6 +176,7 @@ A URL base do cliente é `/api`. O cliente adiciona o token JWT quando existe um
 | POST | `/auth/register` | Cadastro preparado no frontend, ainda sem implementação no backend. |
 | GET | `/services` | Lista de serviços para o dashboard. |
 | GET | `/dashboard/indicadores` | Indicadores consolidados consumidos pela interface. |
+| GET | `/analytics/ranking` | Classificação dos serviços por energia ou CO₂e, com total ou média, resumo e tendência; protegida por JWT. |
 | GET | `/collections/rotina/status` | Diagnóstico da rotina de coleta. |
 | GET | `/monitoring-settings` | Consulta do intervalo, protegida por JWT. |
 | PUT | `/monitoring-settings` | Alteração preparada no frontend, ainda sem implementação no backend. |
@@ -355,6 +366,18 @@ npm test
 ---
 
 `npm run dev:mock` sobe o frontend com dados de exemplo para `/api/services` (arquivo `mock-servicos.ts`, só em desenvolvimento). Para trocar o cenário, abra `http://localhost:5173/api/__mock?cenario=ok|vazio|erro|lento|rede` e clique em "Atualizar dados" no dashboard. Para ver o erro com dados anteriores (RNF04), deixe em `ok`, mude para `erro` e atualize.
+
+## Mapa dos serviços (DW15, RF13)
+
+A rota `/mapa` mostra um globo 3D estilizado com um pino para cada serviço que tem latitude e longitude. O desenho é um SVG em projeção ortográfica (`d3-geo`), com o contorno dos continentes do pacote `world-atlas`. Não usa mapa real, tiles nem chave de API; o único dado externo ao navegador é `GET /api/services`, o mesmo do dashboard.
+
+- `src/mapa.ts`: regras sem React (coordenadas válidas, agrupamento, formatação, giro). Testado em `tests/mapa.test.ts`.
+- `src/components/GloboServicos.tsx`: o globo (arrastar gira; clicar ou Enter/Espaço no pino abre o serviço).
+- `src/pages/MapaPage.tsx`: a tela, com lista de serviços, detalhe com latitude e longitude, aviso de serviços fora do mapa e estados de carregando, erro e vazio. Testada em `tests/mapa.test.tsx`.
+
+Serviço sem latitude ou sem longitude (ou fora do intervalo válido) não aparece no globo, mas continua no dashboard; a tela informa quantos ficaram de fora e quais. Serviços com a mesma coordenada dividem um pino. A atualização automática troca só os dados: o serviço aberto continua aberto.
+
+Pendências que dependem de outras tarefas: o botão "Informar coordenadas" e a seleção País/Estado/Cidade do protótipo DD05 precisam de endpoint de escrita e de uma API geográfica. A posição aproximada só pela cidade também não foi feita: o RF13 manda não exibir no mapa o serviço sem coordenadas.
 
 ## Atualização automática (DW08)
 

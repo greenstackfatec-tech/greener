@@ -1,0 +1,527 @@
+.ranking {
+  --ranking-verde: #21843a;
+  --ranking-verde-escuro: #1a6f31;
+  --ranking-verde-claro: #e7f3e9;
+  --ranking-borda: #d1dbd3;
+  --ranking-texto: #202421;
+  --ranking-suave: #56645a;
+  color: var(--ranking-texto);
+}
+
+.ranking :where(button, select, input) {
+  font: inherit;
+}
+
+.ranking :is(a, button, select, input):focus-visible {
+  outline: 2px solid var(--ranking-verde-escuro);
+  outline-offset: 3px;
+}
+
+.ranking-cabecalho > span,
+.ranking-filtros label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.ranking-demo,
+.ranking-top-selo {
+  background: var(--ranking-verde-claro);
+  color: var(--ranking-verde-escuro);
+}
+
+.ranking-demo,
+.ranking-top-selo,
+.ranking-variacao[data-reducao] {
+  padding: 7px 11px;
+  border-radius: 99px;
+  font-size: 12px;
+}
+
+.ranking-conteudo {
+  padding: 30px clamp(24px, 3vw, 44px) 48px;
+  overflow-wrap: anywhere;
+}
+
+.ranking-cabecalho > span {
+  color: var(--ranking-verde-escuro);
+}
+
+.ranking-cabecalho h1 {
+  margin: 8px 0 6px;
+  color: var(--ranking-texto);
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.ranking-cabecalho p,
+.ranking-top p,
+.ranking-classificacao p {
+  margin: 0;
+  color: var(--ranking-suave);
+  line-height: 1.5;
+}
+
+.ranking-filtros {
+  display: grid;
+  grid-template-areas: "periodo escopo metrica ordem aplicar";
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, .8fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin: 16px 0 18px;
+}
+
+.ranking-filtro-periodo { grid-area: periodo; }
+.ranking-filtro-metrica { grid-area: metrica; }
+.ranking-filtro-ordem { grid-area: ordem; }
+.ranking-filtro-escopo { grid-area: escopo; }
+.ranking-aplicar { grid-area: aplicar; }
+
+.ranking-filtros > div {
+  min-width: 0;
+}
+
+.ranking-filtros label {
+  color: var(--ranking-suave);
+}
+
+.ranking-filtros select,
+.ranking-filtros input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin-top: 5px;
+  padding: 0 9px;
+  border: 1px solid var(--ranking-borda);
+  border-radius: 8px;
+  background: #fafbfa;
+  color: var(--ranking-texto);
+  font-size: 14px;
+}
+
+.ranking-filtro-datas {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 235px));
+  gap: 10px 12px;
+}
+
+.ranking-filtro-datas p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #a12e2e;
+  font-size: 13px;
+}
+
+.ranking-filtro-datas input[aria-invalid="true"] {
+  border-color: #a12e2e;
+}
+
+.ranking-aplicar,
+.ranking-paginacao button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--ranking-verde-escuro);
+  border-radius: 8px;
+  background: var(--ranking-verde-escuro);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ranking-aplicar:hover:not(:disabled),
+.ranking-paginacao button:hover:not(:disabled) {
+  background: #165e2a;
+  color: #fff;
+}
+
+.ranking button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.ranking-periodo {
+  margin: 0 0 16px;
+  color: var(--ranking-suave);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ranking-periodo strong {
+  color: var(--ranking-texto);
+  margin-right: 5px;
+}
+
+.ranking-resultado > .cartao-estado {
+  max-width: 540px;
+}
+
+.ranking-resumo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.ranking-cartao,
+.ranking-top,
+.ranking-classificacao {
+  border: 1px solid var(--ranking-borda);
+  border-radius: 8px;
+}
+
+.ranking-cartao {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-height: 102px;
+  padding: 16px;
+}
+
+.ranking-cartao span,
+.ranking-cartao small,
+.ranking-top p,
+.ranking-top dt,
+.ranking-classificacao p {
+  color: var(--ranking-suave);
+  font-size: 12px;
+}
+
+.ranking-cartao span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ranking-cartao span::before {
+  flex: 0 0 4px;
+  height: 24px;
+  border-radius: 3px;
+  background: var(--ranking-verde);
+  content: "";
+}
+
+.ranking-cartao strong {
+  font-size: clamp(19px, 2vw, 25px);
+  font-weight: 700;
+}
+
+.ranking-resumo-menor,
+.ranking-lista {
+  display: none;
+}
+
+.ranking-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  gap: 20px;
+  align-items: center;
+  margin: 20px 0 24px;
+  padding: 18px 20px;
+}
+
+.ranking-top-selo {
+  display: inline-block;
+}
+
+.ranking-top h2 {
+  margin: 10px 0 4px;
+  font-size: 23px;
+}
+
+.ranking-top dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 24px;
+  margin: 0;
+}
+
+.ranking-top dl > div {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.ranking-top dd {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.ranking-top [data-selecionada] dd {
+  color: var(--ranking-verde-escuro);
+}
+
+.ranking-top .ranking-top-tendencia {
+  margin-top: 12px;
+}
+
+.ranking-classificacao {
+  padding: 20px;
+}
+
+.ranking-classificacao h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.ranking-classificacao .ranking-aviso {
+  margin-top: 8px;
+}
+
+.ranking-tabela {
+  width: 100%;
+  margin-top: 16px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: left;
+  font-size: 13px;
+}
+
+.ranking-tabela thead th {
+  padding: 12px;
+  color: var(--ranking-suave);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.ranking-tabela thead th:first-child { width: 7%; }
+.ranking-tabela thead th:nth-child(2) { width: 30%; }
+.ranking-tabela thead th:last-child { width: 20%; }
+
+.ranking-tabela tbody :is(th, td) {
+  padding: 15px 12px;
+  border-bottom: 1px solid var(--ranking-borda);
+}
+
+.ranking-tabela tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.ranking-tabela tbody th,
+.ranking-servico {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ranking-tabela small,
+.ranking-servico small {
+  display: block;
+  margin-top: 5px;
+  color: var(--ranking-suave);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.ranking-posicao {
+  color: var(--ranking-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-posicao[data-podio],
+.ranking-variacao[data-reducao] {
+  color: var(--ranking-verde-escuro);
+}
+
+.ranking-variacao[data-reducao] {
+  display: inline-block;
+  background: var(--ranking-verde-claro);
+}
+
+.ranking-sem-base {
+  color: var(--ranking-suave);
+  font-size: 12px;
+}
+
+.ranking-paginacao {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  color: var(--ranking-suave);
+  font-size: 13px;
+}
+
+.ranking-paginacao button {
+  padding: 0 12px;
+  background: transparent;
+  color: var(--ranking-verde-escuro);
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  .ranking-filtros {
+    grid-template-areas: "periodo escopo metrica" "ordem ordem aplicar";
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ranking-filtro-datas {
+    grid-row: 3;
+  }
+}
+
+@media (max-width: 900px) {
+  .ranking-resumo-energia,
+  .ranking-resumo-emissoes,
+  .ranking-top dl > div:not([data-selecionada]),
+  .ranking-top .ranking-top-tendencia,
+  .ranking-tabela {
+    display: none;
+  }
+
+  .ranking-conteudo {
+    padding: 25px 20px 40px;
+  }
+
+  .ranking-cabecalho h1 {
+    font-size: 25px;
+  }
+
+  .ranking-filtros {
+    grid-template-areas: "periodo escopo" "metrica ordem" "aplicar aplicar";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 12px;
+    border: 1px solid var(--ranking-borda);
+    border-radius: 8px;
+  }
+
+  .ranking-filtros select,
+  .ranking-filtros input {
+    padding-inline: 6px;
+    font-size: 16px;
+  }
+
+  .ranking-filtro-datas {
+    grid-row: 3;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ranking-filtros:has(.ranking-filtro-datas) .ranking-aplicar {
+    grid-row: 4;
+  }
+
+  .ranking-resumo,
+  .ranking-resumo-menor {
+    display: grid;
+  }
+
+  .ranking-resumo {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .ranking-cartao strong {
+    font-size: 24px;
+  }
+
+  .ranking-top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+    margin: 12px 0 16px;
+    padding: 14px;
+  }
+
+  .ranking-top h2 {
+    font-size: 19px;
+  }
+
+  .ranking-top dl {
+    display: block;
+  }
+
+  .ranking-top dl > div {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .ranking-top dd {
+    font-size: 14px;
+  }
+
+  .ranking-classificacao {
+    padding: 14px;
+  }
+
+  .ranking-classificacao h2 {
+    font-size: 17px;
+  }
+
+  .ranking-lista {
+    display: grid;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ranking-lista li {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) minmax(0, 90px);
+    grid-template-areas: "pos servico tendencia" ". medidas medidas";
+    align-items: start;
+    gap: 5px 9px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--ranking-borda);
+  }
+
+  .ranking-lista li:last-child {
+    border-bottom: 0;
+  }
+
+  .ranking-lista .ranking-posicao {
+    grid-area: pos;
+    display: grid;
+    place-items: center;
+    min-height: 30px;
+    border-radius: 99px;
+    background: #e5ebe6;
+    font-size: 12px;
+  }
+
+  .ranking-lista .ranking-posicao[data-podio] {
+    background: var(--ranking-verde-claro);
+    font-weight: 700;
+  }
+
+  .ranking-servico { grid-area: servico; }
+
+  .ranking-lista-tendencia {
+    grid-area: tendencia;
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .ranking-lista-medidas {
+    grid-area: medidas;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 14px;
+    font-size: 12px;
+  }
+
+  .ranking-paginacao {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 359px) {
+  .ranking-filtros {
+    grid-template-areas: "periodo" "escopo" "metrica" "ordem" "aplicar";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ranking-filtro-datas {
+    grid-row: 5;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ranking-filtros:has(.ranking-filtro-datas) .ranking-aplicar {
+    grid-row: 6;
+  }
+}

@@ -771,7 +771,7 @@ Os campos numéricos da coleta podem ser `null` quando não foram recebidos ou c
 
 #### `GET /analytics/ranking`
 
-Retorna o ranking de serviços por consumo energético ou emissão de CO₂e no período solicitado. A consulta agrega apenas coletas com status `sucesso` e com valores de energia e emissão disponíveis.
+Retorna o ranking de serviços por consumo energético ou emissão de CO₂e no período solicitado. A consulta considera coletas com status `sucesso`.
 
 **Parâmetros de consulta:**
 
@@ -780,6 +780,7 @@ Retorna o ranking de serviços por consumo energético ou emissão de CO₂e no 
 | `inicio` | Data ISO 8601 | Sim | — | Início inclusivo do período. |
 | `fim` | Data ISO 8601 | Sim | — | Fim inclusivo do período. |
 | `metrica` | `energia` ou `co2e` | Sim | — | Métrica usada para ordenar o ranking. |
+| `agregacao` | `total` ou `media` | Não | — | Seleciona a soma ou a média por coleta e inclui os dados de resumo usados na tela de ranking. |
 | `ordenacao` | `ASC` ou `DESC` | Não | `DESC` | Ordem crescente ou decrescente. |
 | `limite` | Inteiro não negativo | Não | `20` | Quantidade máxima de resultados. |
 | `offset` | Inteiro não negativo | Não | `0` | Quantidade de resultados a pular. |
@@ -822,7 +823,21 @@ Authorization: Bearer <token>
 }
 ```
 
-`totalEnergiaKwh` e `totalEmissaoCo2eG` são retornados em todos os casos; `metrica` define qual total determina a ordem do ranking. `qtdColetas` corresponde ao número de coletas bem-sucedidas utilizadas no agregado.
+Sem `agregacao`, a resposta segue o exemplo. A ordem usa o total da métrica escolhida e a consulta agrega coletas com os dois valores disponíveis.
+
+Com `agregacao`, a ordem usa o total ou a média da métrica escolhida e cada indicador é agregado a partir dos seus valores disponíveis. `qtdColetas` conta as coletas com valor para a métrica escolhida. Cada item também inclui `aplicacao` e `tendenciaPercentual`, calculada sobre o intervalo anterior de mesma duração. Uma métrica ausente ou uma tendência sem base é representada por `null`.
+
+O campo `posicao` é usado apenas internamente para ordenar os resultados e não é retornado em `dados` nem em `resumo.primeiroColocado`. Para numerar os itens de uma página, use `offset + índice do item + 1`, com índice iniciado em zero.
+
+A resposta inclui a `agregacao` aplicada, as `aplicacoes` disponíveis (`id` e `nome`) e `resumo`. O resumo vale para todo o conjunto filtrado e contém `classificados`, `semDados`, `mediaEnergiaKwh`, `mediaEmissaoCo2eG`, `menorEnergia` e `primeiroColocado`.
+
+Os campos abaixo consideram os serviços classificados (com valor para a métrica selecionada), respeitando os filtros e antes de aplicar `limite` e `offset`. Mesmo com `agregacao=total`, os três usam as médias por coleta no período atual:
+
+| Campo do resumo | Cálculo |
+|---|---|
+| `mediaEnergiaKwh` | Média aritmética das médias de energia por coleta de cada serviço classificado, em kWh. Cada serviço tem o mesmo peso, independentemente da quantidade de coletas; valores `null` são ignorados. Sem médias disponíveis, retorna `null`. |
+| `mediaEmissaoCo2eG` | Média aritmética das médias de emissão por coleta de cada serviço classificado, em g CO₂e, também sem ponderação pela quantidade de coletas e ignorando `null`. Sem médias disponíveis, retorna `null`. |
+| `menorEnergia` | Objeto com `nome` e `mediaEnergiaKwh` do serviço classificado com a menor média de energia por coleta, independentemente da métrica e da ordem escolhidas para o ranking. Desconsidera médias `null` e, em caso de empate, escolhe o menor `servicoId`. Sem média de energia disponível, retorna `null`. |
 
 **Erros possíveis — HTTP 400:**
 
@@ -830,6 +845,7 @@ Authorization: Bearer <token>
 |---|---|
 | `invalid_period` | Período ausente ou inválido. |
 | `invalid_metric` | `metrica` ausente ou diferente de `energia` e `co2e`. |
+| `invalid_aggregation` | `agregacao` diferente de `total` e `media`. |
 | `invalid_order` | `ordenacao` diferente de `ASC` ou `DESC`. |
 | `invalid_limit` | `limite` não é inteiro não negativo. |
 | `invalid_offset` | `offset` não é inteiro não negativo. |

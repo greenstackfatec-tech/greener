@@ -40,3 +40,12 @@ test("/administrativa sem token redireciona para /login", async () => {
   expect(screen.getByRole("button", { name: "Entrar" })).toBeTruthy();
   expect(router.state.location.pathname).toBe("/login");
 });
+
+test("/ranking sem token redireciona para /login", async () => {
+  await act(async () => { await router.navigate("/ranking"); });
+  render(<RouterProvider router={router} />);
+
+  expect(await screen.findByRole("heading", { name: "Bem-vindo de volta" })).toBeInTheDocument();
+  expect(router.state.location.pathname).toBe("/login");
+  expect(router.state.location.state).toMatchObject({ from: { pathname: "/ranking" } });
+});

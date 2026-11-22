@@ -17,7 +17,7 @@ function dadosDe(estado: EstadoIndicadores): Indicadores | null {
 /**
  * Consulta os indicadores consolidados (GET /dashboard/indicadores).
  *
- * Sem argumento, consulta uma vez (é assim que o painel da tela de login usa).
+ * Sem argumento, consulta uma vez.
  * Com `intervaloMs`, repete a consulta sozinho nesse intervalo, como o `useServicos`.
  * Se uma consulta falha depois de já ter dados, o estado vira "erro" mas
  * `dadosAnteriores` preserva os últimos valores, para a tela poder avisar que
