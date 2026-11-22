@@ -93,12 +93,10 @@ function NavegacaoRanking() {
           onClick={() => setAberto(!aberto)}
         ><span aria-hidden="true">☰</span></button>
       </div>
-      <div className="ranking-workspace"><span>Workspace</span><strong>Green Stack</strong></div>
+      <p className="ranking-nav-label">MENU PRINCIPAL</p>
       <nav id="ranking-menu" aria-label="Menu principal" data-aberto={aberto || undefined}>
         <a href={ROTAS.dashboard}><span aria-hidden="true">▦</span> Visão geral</a>
-        <a href={ROTAS.historico}><span aria-hidden="true">◷</span> Histórico</a>
-        <a href={ROTAS.dashboard + "#servicos"}><span aria-hidden="true">▦</span> Serviços</a>
-        <a href={ROTAS.administrativa}><span aria-hidden="true">⚙</span> Configurações</a>
+        <a href={ROTAS.historico}><span aria-hidden="true">⎔</span> Histórico</a>
         <a href={ROTAS.ranking} aria-current="page"><span aria-hidden="true">▤</span> Ranking</a>
         <a href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
       </nav>

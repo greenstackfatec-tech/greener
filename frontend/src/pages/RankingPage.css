@@ -58,30 +58,19 @@
   display: none;
 }
 
-.ranking-workspace {
-  margin: 28px 8px 20px;
+.ranking-nav-label {
+  margin: 28px 8px 14px;
+  color: var(--ranking-suave);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
-.ranking-workspace span,
 .ranking-cabecalho > span,
 .ranking-filtros label {
   display: block;
   font-size: 12px;
   text-transform: uppercase;
-}
-
-.ranking-workspace span {
-  margin-bottom: 6px;
-  color: var(--ranking-suave);
-}
-
-.ranking-workspace strong {
-  display: block;
-  padding: 16px 14px;
-  border: 1px solid var(--ranking-borda);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 650;
 }
 
 .ranking-lateral nav {
@@ -485,7 +474,7 @@
   }
 
   .ranking-marca img,
-  .ranking-workspace,
+  .ranking-nav-label,
   .ranking-lateral nav:not([data-aberto]),
   .ranking-barra,
   .ranking-resumo-energia,
