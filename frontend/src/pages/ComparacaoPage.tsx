@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado } from "../components/CartaoEstado.tsx";
+import { BotaoSair } from "../components/BotaoSair.tsx";
 import { ATALHOS_PERIODO, erroDoPeriodo, paraCampoDataHora, resolverPeriodo, type AtalhoPeriodo } from "../filtros.ts";
 import { numero } from "../formatacao.ts";
 import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
@@ -15,7 +16,6 @@ import {
 } from "../services/comparacao.ts";
 import "./DashboardPage.css";
 import "./ComparacaoPage.css";
-import { BotaoSair } from "../components/BotaoSair.tsx";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
