@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { HistoricoPage } from "../src/pages/HistoricoPage.tsx";
 import * as servicos from "../src/services/servicos.ts";
 import * as analytics from "../src/services/analytics.ts";
+import { MemoryRouter } from "react-router";
 
 describe("HistoricoPage", () => {
   const mockServicos = [
@@ -106,27 +107,27 @@ describe("HistoricoPage", () => {
 
   it("renderiza loading enquanto carrega serviços", async () => {
     vi.mocked(servicos.listarServicos).mockReturnValueOnce(new Promise(() => {}));
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     expect(screen.getByText(/carregando serviços/i)).toBeInTheDocument();
   });
 
   it("renderiza estado vazio quando não há serviços", async () => {
     vi.mocked(servicos.listarServicos).mockResolvedValueOnce([]);
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByText(/nenhum serviço cadastrado/i)).toBeInTheDocument());
   });
 
   it("renderiza o gráfico quando há dados", async () => {
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole("region", { name: /gráfico de linha/i })).toBeInTheDocument());
     expect(screen.getByText(/evolução no período/i)).toBeInTheDocument();
   });
 
   it("mostra cards de estatísticas do período", async () => {
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByText(/energia no período/i)).toBeInTheDocument());
     await waitFor(() => expect(screen.getByText(/emissões co₂e no período/i)).toBeInTheDocument());
@@ -137,7 +138,7 @@ describe("HistoricoPage", () => {
   });
 
   it("filtra por serviço selecionado", async () => {
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole("combobox", { name: /filtrar por serviço/i })).toBeInTheDocument());
     fireEvent.change(screen.getByRole("combobox", { name: /filtrar por serviço/i }), { target: { value: "2" } });
@@ -149,7 +150,7 @@ describe("HistoricoPage", () => {
   });
 
   it("filtra por região", async () => {
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole("combobox", { name: /filtrar por região/i })).toBeInTheDocument());
     fireEvent.change(screen.getByRole("combobox", { name: /filtrar por região/i }), { target: { value: "sa-east-1" } });
@@ -159,7 +160,7 @@ describe("HistoricoPage", () => {
   });
 
   it("altera período e busca histórico", async () => {
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole("combobox", { name: /período/i })).toBeInTheDocument());
     fireEvent.change(screen.getByRole("combobox", { name: /período/i }), { target: { value: "1h" } });
@@ -171,7 +172,7 @@ describe("HistoricoPage", () => {
   });
 
   it("preenche datas automaticamente ao selecionar período personalizado", async () => {
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole("combobox", { name: /período/i })).toBeInTheDocument());
     fireEvent.change(screen.getByRole("combobox", { name: /período/i }), { target: { value: "personalizado" } });
@@ -186,7 +187,7 @@ describe("HistoricoPage", () => {
   });
 
   it("mostra erro quando início é posterior ao fim no período personalizado", async () => {
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole("combobox", { name: /período/i })).toBeInTheDocument());
     fireEvent.change(screen.getByRole("combobox", { name: /período/i }), { target: { value: "personalizado" } });
@@ -203,7 +204,7 @@ describe("HistoricoPage", () => {
 
   it("mostra erro ao buscar histórico e mantém dados anteriores", async () => {
     vi.mocked(analytics.consultarHistorico).mockRejectedValueOnce(new Error("Erro de rede"));
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByText(/erro ao carregar histórico/i)).toBeInTheDocument());
     expect(screen.getByRole("button", { name: /tentar de novo/i })).toBeInTheDocument();
@@ -216,7 +217,7 @@ describe("HistoricoPage", () => {
   });
 
   it("botão atualizar gráfico funciona", async () => {
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole("region", { name: /gráfico de linha/i })).toBeInTheDocument());
 
@@ -227,7 +228,7 @@ describe("HistoricoPage", () => {
   });
 
   it("usa ordenação DESC para buscar os pontos mais recentes", async () => {
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => {
       expect(vi.mocked(analytics.consultarHistorico)).toHaveBeenCalledWith(
@@ -244,7 +245,7 @@ describe("HistoricoPage", () => {
     ];
     vi.mocked(servicos.listarServicos).mockResolvedValueOnce(servicosComRemovido);
 
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     // O serviço ativo (Checkout Web) deve aparecer no card de resumo
     await waitFor(() => expect(screen.getAllByText(/checkout web/i).length).toBeGreaterThanOrEqual(1));
@@ -255,7 +256,7 @@ describe("HistoricoPage", () => {
       dados: [],
       periodo: { inicio: "2026-11-18T00:00:00.000Z", fim: "2026-11-18T23:59:59.999Z" },
     });
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByText(/sem dados no período/i)).toBeInTheDocument());
   });
@@ -271,7 +272,7 @@ describe("HistoricoPage", () => {
     };
     vi.mocked(analytics.consultarHistorico).mockResolvedValueOnce(historicoComFalhas);
 
-    render(<HistoricoPage />);
+    render(<MemoryRouter><HistoricoPage /></MemoryRouter>);
 
     // Deve mostrar apenas o ponto de sucesso (1 ponto, não 3)
     await waitFor(() => expect(screen.queryByText(/3 pontos? de coleta/i)).not.toBeInTheDocument());

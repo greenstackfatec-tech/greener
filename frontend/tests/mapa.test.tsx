@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import "@testing-library/jest-dom";
 import { MapaPage } from "../src/pages/MapaPage.tsx";
 import * as servicos from "../src/services/servicos.ts";
+import { MemoryRouter } from "react-router";
 
 function servico(id: number, nome: string, extra: Partial<servicos.Servico> = {}): servicos.Servico {
   return {
@@ -29,7 +30,7 @@ test("mostra um pino por serviço com coordenadas e avisa quantos ficaram fora d
     servico(3, "Reports Worker"),
     servico(4, "Notifications", { latitude: -23.5, longitude: null }),
   ]);
-  render(<MapaPage />);
+  render(<MemoryRouter><MapaPage /></MemoryRouter>);
 
   expect(await screen.findByRole("button", { name: /Billing API/ })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Checkout Worker/ })).toBeInTheDocument();
@@ -40,7 +41,7 @@ test("mostra um pino por serviço com coordenadas e avisa quantos ficaram fora d
 
 test("abrir um serviço no globo mostra a latitude e a longitude que vieram da API", async () => {
   vi.mocked(servicos.listarServicos).mockResolvedValue([servico(1, "Billing API", saoPaulo)]);
-  render(<MapaPage />);
+  render(<MemoryRouter><MapaPage /></MemoryRouter>);
 
   fireEvent.click(await screen.findByRole("button", { name: /Billing API/ }));
 
@@ -54,7 +55,7 @@ test("abrir um serviço no globo mostra a latitude e a longitude que vieram da A
 
 test("a lista de serviços é uma alternativa ao clique no globo", async () => {
   vi.mocked(servicos.listarServicos).mockResolvedValue([servico(1, "Billing API", saoPaulo), servico(2, "Checkout Worker", ashburn)]);
-  render(<MapaPage />);
+  render(<MemoryRouter><MapaPage /></MemoryRouter>);
 
   const lista = await screen.findByRole("combobox", { name: "Serviço" });
   fireEvent.change(lista, { target: { value: "2" } });
@@ -65,7 +66,7 @@ test("a lista de serviços é uma alternativa ao clique no globo", async () => {
 
 test("serviços no mesmo ponto compartilham um pino e dá para escolher o outro", async () => {
   vi.mocked(servicos.listarServicos).mockResolvedValue([servico(1, "Billing API", saoPaulo), servico(6, "Email Dispatcher", saoPaulo)]);
-  render(<MapaPage />);
+  render(<MemoryRouter><MapaPage /></MemoryRouter>);
 
   fireEvent.click(await screen.findByRole("button", { name: /2 serviços/ }));
   fireEvent.click(await screen.findByRole("button", { name: "Email Dispatcher" }));
@@ -75,7 +76,7 @@ test("serviços no mesmo ponto compartilham um pino e dá para escolher o outro"
 
 test("nenhum serviço com coordenadas: a tela segue útil e informa que todos ficaram fora", async () => {
   vi.mocked(servicos.listarServicos).mockResolvedValue([servico(1, "Reports Worker")]);
-  render(<MapaPage />);
+  render(<MemoryRouter><MapaPage /></MemoryRouter>);
 
   await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("1 serviço ficou fora do mapa"));
   expect(screen.queryByRole("button", { name: /Reports Worker/ })).not.toBeInTheDocument();
@@ -84,14 +85,14 @@ test("nenhum serviço com coordenadas: a tela segue útil e informa que todos fi
 
 test("todos com coordenadas: aviso de mapa completo", async () => {
   vi.mocked(servicos.listarServicos).mockResolvedValue([servico(1, "Billing API", saoPaulo), servico(2, "Checkout Worker", ashburn)]);
-  render(<MapaPage />);
+  render(<MemoryRouter><MapaPage /></MemoryRouter>);
 
   await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Todos os 2 serviços têm latitude e longitude"));
 });
 
 test("falha na primeira carga mostra o erro e permite tentar de novo", async () => {
   vi.mocked(servicos.listarServicos).mockRejectedValueOnce(new TypeError("Failed to fetch"));
-  render(<MapaPage />);
+  render(<MemoryRouter><MapaPage /></MemoryRouter>);
 
   const alerta = await screen.findByRole("alert");
   expect(alerta).toHaveTextContent("Sem conexão com o servidor.");
@@ -104,7 +105,7 @@ test("falha na primeira carga mostra o erro e permite tentar de novo", async () 
 });
 
 test("sem serviços cadastrados mostra o estado vazio", async () => {
-  render(<MapaPage />);
+  render(<MemoryRouter><MapaPage /></MemoryRouter>);
 
   expect(await screen.findByText("Nenhum serviço cadastrado")).toBeInTheDocument();
 });

@@ -4,6 +4,7 @@ import logo from "../assets/greener-icon.png";
 import { CartaoEstado, type MetricasRecurso } from "../components/CartaoEstado.tsx";
 import { FiltrosAnalise } from "../components/FiltrosAnalise.tsx";
 import { GraficoLinha, type PontoGrafico } from "../components/GraficoLinha.tsx";
+import { BotaoSair } from "../components/BotaoSair.tsx";
 import { regioesDisponiveis, resolverPeriodo, filtrarPorServicoERegiao } from "../filtros.ts";
 import { TEXTOS_SITUACAO, rodapeDaSituacao } from "../estadosServico.ts";
 import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
@@ -477,6 +478,7 @@ export function HistoricoPage() {
           <span className="hist-avatar" aria-hidden="true">GE</span>
           <span><strong>GreenER</strong><small>Monitoramento ambiental</small></span>
         </div>
+        <BotaoSair />
       </aside>
 
       <main className="hist-main" role="main">
