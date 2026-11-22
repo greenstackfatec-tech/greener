@@ -82,14 +82,9 @@
 .mapa-globo-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .mapa-rodape-globo { margin: 12px 0 0; font-size: 12px; color: #6b786f; text-align: center; }
 
-/* Tablet e celular (< 1024 px): uma coluna, seleção acima do globo (handoff do DD05). */
-@media (max-width: 1023px) {
-  .mapa-grade { grid-template-columns: minmax(0, 1fr); }
-}
-
-/* Celular: cards em largura total, espaço de pelo menos 16 px entre blocos e texto de pelo menos 12 px. */
+/* Celular (<= 700 px): uma coluna, seleção acima do globo; cards em largura total, espaço de pelo menos 16 px entre blocos e texto de pelo menos 12 px. */
 @media (max-width: 700px) {
-  .mapa-grade { gap: 16px; }
+  .mapa-grade { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .mapa-painel, .mapa-globo { padding: 16px; }
   .mapa-mesmo-local button { flex: 1 1 100%; min-height: 44px; }
   .mapa-campo select { height: 44px; }

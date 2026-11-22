@@ -353,18 +353,7 @@
   color: var(--ranking-verde-escuro);
 }
 
-@media (min-width: 901px) and (max-width: 1100px) {
-  .ranking-filtros {
-    grid-template-areas: "periodo escopo metrica" "ordem ordem aplicar";
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .ranking-filtro-datas {
-    grid-row: 3;
-  }
-}
-
-@media (max-width: 900px) {
+@media (max-width: 700px) {
   .ranking-resumo-energia,
   .ranking-resumo-emissoes,
   .ranking-top dl > div:not([data-selecionada]),
