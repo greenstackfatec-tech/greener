@@ -112,9 +112,6 @@
   .ind-esqueleto { height: 21px; width: 64px; }
   .ind-aviso { font-size: 12px; }
   .ind-aviso button { min-height: 44px; }
-}
-
-@media (max-width: 359px) {
   .ind .dash-summary { grid-template-columns: minmax(0, 1fr); }
 }
 

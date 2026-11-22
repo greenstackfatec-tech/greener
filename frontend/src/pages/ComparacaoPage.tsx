@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado } from "../components/CartaoEstado.tsx";
@@ -8,6 +8,7 @@ import { numero } from "../formatacao.ts";
 import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
 import { useServicos } from "../hooks/useServicos.ts";
 import { useFiltrosAnalise } from "../hooks/useFiltrosAnalise.ts";
+import { duracao, dataHora } from "../formatacao.ts";
 import {
   consultarComparacao,
   MAX_SERVICOS_COMPARACAO,
@@ -36,13 +37,17 @@ function percentual(valor: number, maior: number): number {
 }
 
 export function ComparacaoPage() {
-  const { servicos } = useServicos(INTERVALO_ATUALIZACAO_SEGUNDOS * 1000);
+  const { servicos, carregando: servicosCarregando, atualizando, atualizadoEm, recarregar } = useServicos(INTERVALO_ATUALIZACAO_SEGUNDOS * 1000);
   // O período é o mesmo do dashboard e do histórico (guardado na sessão pelo DW14).
   const { filtros, alterar } = useFiltrosAnalise();
   const [selecionados, setSelecionados] = useState<number[]>([]);
   const [resultado, setResultado] = useState<Comparacao | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  const recarregarComparacao = useCallback(() => {
+    recarregar();
+  }, [recarregar]);
 
   // Serviços removidos não têm coletas novas, então ficam fora da lista.
   const opcoes = useMemo(
@@ -167,13 +172,31 @@ export function ComparacaoPage() {
       </aside>
 
       <main className="dash-main">
-        <header className="dash-topbar"><div><span className="dash-breadcrumb">GreenER / </span><strong>Comparação</strong></div></header>
+        <header className="dash-topbar"><div><span className="dash-breadcrumb">GreenER / </span><strong>Comparação</strong></div><div className="dash-live" aria-live="polite" aria-atomic="true"><i aria-hidden="true" /> Dados do monitoramento</div></header>
         <section className="dash-content">
           <div className="dash-heading">
             <div>
               <p className="dash-eyebrow">MONITORAMENTO AMBIENTAL</p>
               <h1>Comparação de serviços</h1>
               <p>Compare energia e CO₂e de {MIN_SERVICOS_COMPARACAO} a {MAX_SERVICOS_COMPARACAO} serviços no mesmo período.</p>
+            </div>
+            <div className="dash-heading-acoes">
+              <button
+                className="dash-refresh"
+                aria-label={atualizando ? "Atualizando dados" : "Atualizar dados"}
+                aria-busy={atualizando}
+                onClick={recarregarComparacao}
+                disabled={atualizando || servicosCarregando}
+              >
+                ↻ <span>{atualizando ? "Atualizando..." : "Atualizar dados"}</span>
+              </button>
+              <p className="dash-atualizacao">
+                {atualizadoEm === null
+                  ? "Aguardando a primeira atualização"
+                  : `Última atualização: ${dataHora(atualizadoEm)}`}
+                {" · "}
+                Atualiza a cada {duracao(INTERVALO_ATUALIZACAO_SEGUNDOS)}
+              </p>
             </div>
           </div>
 

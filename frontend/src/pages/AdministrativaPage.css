@@ -279,9 +279,8 @@
   font-size: 11px;
   line-height: 1.4;
   white-space: normal;
-  opacity: 0;
+  display: none;
   pointer-events: none;
-  transition: opacity 0.15s ease;
   z-index: 100;
 }
 .adm-info::before {
@@ -292,16 +291,15 @@
   transform: translateX(-50%);
   border: 5px solid transparent;
   border-top-color: var(--texto);
-  opacity: 0;
+  display: none;
   pointer-events: none;
-  transition: opacity 0.15s ease;
   z-index: 100;
 }
 .adm-info:hover::after,
 .adm-info:hover::before,
 .adm-info:focus::after,
 .adm-info:focus::before {
-  opacity: 1;
+  display: block;
 }
 @media (max-width: 700px) {
   .adm-info::after { max-width: 220px; font-size: 12px; }
@@ -339,16 +337,11 @@
   }
 }
 
-@media (min-width: 1024px) and (max-width: 1100px) {
-  .adm-indicador-valor { font-size: 28px; line-height: 36px; }
-}
-
-@media (max-width: 1023px) {
+/* ---------- Mobile (≤700px / DW10 / RNF01) ---------- */
+@media (max-width: 700px) {
   .adm-campo input { font-size: 16px; }
   .adm-link { min-height: 44px; }
   /* O cartão já tem recuo; o ResumoConsumo trazia o próprio (24 + 24 px). */
   .adm-card-grafico .resumo { padding: 0; border-radius: 0; background: none; }
-}
-@media (max-width: 359px) {
   .adm-indicador-valor { font-size: 28px; line-height: 36px; }
 }

@@ -310,8 +310,8 @@
   font-size: 14px;
 }
 
-/* Responsivo */
-@media (max-width: 900px) {
+/* Responsivo: Mobile (≤700px) */
+@media (max-width: 700px) {
   .grafico-linha {
     padding: 12px 12px 8px;
   }
@@ -329,9 +329,7 @@
   .grafico-linha-stat-item strong {
     font-size: 13px;
   }
-}
 
-@media (max-width: 600px) {
   .grafico-linha-legenda {
     justify-content: center;
   }
