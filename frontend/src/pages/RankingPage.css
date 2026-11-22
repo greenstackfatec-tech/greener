@@ -5,12 +5,7 @@
   --ranking-borda: #d1dbd3;
   --ranking-texto: #202421;
   --ranking-suave: #56645a;
-  display: grid;
-  grid-template-columns: 256px minmax(0, 1fr);
-  min-height: 100dvh;
-  background: #f5f6f5;
   color: var(--ranking-texto);
-  font-family: "Inter Variable", system-ui, sans-serif;
 }
 
 .ranking :where(button, select, input) {
@@ -22,50 +17,6 @@
   outline-offset: 3px;
 }
 
-.ranking-lateral {
-  position: sticky;
-  top: 0;
-  align-self: start;
-  max-height: 100dvh;
-  overflow: auto;
-  padding: 16px;
-}
-
-.ranking-marca {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px;
-}
-
-.ranking-marca a {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: inherit;
-  font-size: 21px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.ranking-marca img {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-.ranking-marca button {
-  display: none;
-}
-
-.ranking-nav-label {
-  margin: 28px 8px 14px;
-  color: var(--ranking-suave);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
 .ranking-cabecalho > span,
 .ranking-filtros label {
   display: block;
@@ -73,48 +24,10 @@
   text-transform: uppercase;
 }
 
-.ranking-lateral nav {
-  display: grid;
-  gap: 7px;
-}
-
-.ranking-lateral nav a {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 44px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: var(--ranking-suave);
-  font-size: 13px;
-  text-decoration: none;
-}
-
-.ranking-lateral nav a span {
-  width: 18px;
-  color: var(--ranking-verde-escuro);
-  font-size: 16px;
-  text-align: center;
-}
-
-.ranking-lateral nav a:hover,
-.ranking-lateral nav a[aria-current="page"],
 .ranking-demo,
 .ranking-top-selo {
   background: var(--ranking-verde-claro);
   color: var(--ranking-verde-escuro);
-}
-
-.ranking-barra {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  min-height: 80px;
-  padding: 12px clamp(24px, 3vw, 44px);
-  border: 1px solid var(--ranking-borda);
-  color: var(--ranking-suave);
-  font-size: 13px;
 }
 
 .ranking-demo,
@@ -441,10 +354,6 @@
 }
 
 @media (min-width: 901px) and (max-width: 1100px) {
-  .ranking {
-    grid-template-columns: 200px minmax(0, 1fr);
-  }
-
   .ranking-filtros {
     grid-template-areas: "periodo escopo metrica" "ordem ordem aplicar";
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -456,49 +365,12 @@
 }
 
 @media (max-width: 900px) {
-  .ranking {
-    display: block;
-  }
-
-  .ranking-lateral {
-    position: static;
-    max-height: none;
-    padding: 0;
-    overflow: visible;
-    border-bottom: 1px solid var(--ranking-borda);
-  }
-
-  .ranking-marca {
-    min-height: 72px;
-    padding: 12px 20px;
-  }
-
-  .ranking-marca img,
-  .ranking-nav-label,
-  .ranking-lateral nav:not([data-aberto]),
-  .ranking-barra,
   .ranking-resumo-energia,
   .ranking-resumo-emissoes,
   .ranking-top dl > div:not([data-selecionada]),
   .ranking-top .ranking-top-tendencia,
   .ranking-tabela {
     display: none;
-  }
-
-  .ranking-marca button {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    min-height: 44px;
-    border: 1px solid var(--ranking-borda);
-    border-radius: 8px;
-    background: transparent;
-    color: var(--ranking-verde-escuro);
-    cursor: pointer;
-  }
-
-  .ranking-lateral nav {
-    padding: 0 16px 12px;
   }
 
   .ranking-conteudo {

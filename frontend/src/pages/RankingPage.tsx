@@ -2,10 +2,12 @@ import "@fontsource-variable/inter";
 import { useEffect, useState, type FormEvent } from "react";
 import logo from "../assets/greener-icon.png";
 import { ROTAS } from "../caminhos.ts";
+import { BotaoSair } from "../components/BotaoSair.tsx";
 import { CartaoEstado } from "../components/CartaoEstado.tsx";
 import { ATALHOS_PERIODO, erroDoPeriodo, paraCampoDataHora, resolverPeriodo, type AtalhoPeriodo } from "../filtros.ts";
 import { dataHora, numero } from "../formatacao.ts";
 import { consultarRanking, type RankingItem, type RankingParams, type RankingResposta } from "../services/analytics.ts";
+import "./DashboardPage.css";
 import "./RankingPage.css";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -74,33 +76,17 @@ function Tendencia({ valor }: { valor: number | null }) {
 }
 
 function NavegacaoRanking() {
-  const [aberto, setAberto] = useState(false);
-
   return (
-    <aside className="ranking-lateral" onKeyDown={(e) => {
-      if (e.key === "Escape" && aberto) {
-        setAberto(false);
-        e.currentTarget.querySelector("button")?.focus();
-      }
-    }}>
-      <div className="ranking-marca">
-        <a href={ROTAS.inicio}><img src={logo} alt="" /> GreenER</a>
-        <button
-          type="button"
-          aria-label={aberto ? "Fechar menu" : "Abrir menu"}
-          aria-expanded={aberto}
-          aria-controls="ranking-menu"
-          onClick={() => setAberto(!aberto)}
-        ><span aria-hidden="true">☰</span></button>
-      </div>
-      <p className="ranking-nav-label">MENU PRINCIPAL</p>
-      <nav id="ranking-menu" aria-label="Menu principal" data-aberto={aberto || undefined}>
-        <a href={ROTAS.dashboard}><span aria-hidden="true">▦</span> Visão geral</a>
-        <a href={ROTAS.historico}><span aria-hidden="true">⎔</span> Histórico</a>
-        <a href={ROTAS.ranking} aria-current="page"><span aria-hidden="true">▤</span> Ranking</a>
-        <a href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
-        <a href={ROTAS.mapa}><span aria-hidden="true">◍</span> Mapa</a>
-      </nav>
+    <aside className="dash-sidebar">
+      <a className="dash-brand" href={ROTAS.inicio}><img src={logo} alt="" /><span>GreenER</span></a>
+      <p className="dash-nav-label">MENU PRINCIPAL</p>
+      <a className="dash-nav-item" href={ROTAS.dashboard}><span aria-hidden="true">▦</span> Visão geral</a>
+      <a className="dash-nav-item" href={ROTAS.historico}><span aria-hidden="true">⎔</span> Histórico</a>
+      <a className="dash-nav-item dash-nav-active" href={ROTAS.ranking} aria-current="page"><span aria-hidden="true">▤</span> Ranking</a>
+      <a className="dash-nav-item" href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
+      <a className="dash-nav-item" href={ROTAS.mapa}><span aria-hidden="true">◍</span> Mapa</a>
+      <div className="dash-sidebar-bottom"><span className="dash-avatar">GE</span><span><strong>GreenER</strong><small>Monitoramento ambiental</small></span></div>
+      <BotaoSair />
     </aside>
   );
 }
@@ -303,11 +289,11 @@ export function RankingPage() {
   }
 
   return (
-    <div className="ranking">
+    <div className="dash-shell ranking">
       <NavegacaoRanking />
-      <main className="ranking-principal">
-        <header className="ranking-barra">
-          <span>Workspace / Ranking</span>
+      <main className="dash-main">
+        <header className="dash-topbar">
+          <div><span className="dash-breadcrumb">GreenER / </span><strong>Ranking</strong></div>
           {import.meta.env.MODE === "mock" && <span className="ranking-demo">Ambiente de demonstração</span>}
         </header>
         <div className="ranking-conteudo">

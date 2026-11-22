@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { dataHora } from "../src/formatacao.ts";
 import { RankingPage } from "../src/pages/RankingPage.tsx";
 import type { RankingItem, RankingResposta } from "../src/services/analytics.ts";
@@ -49,7 +50,7 @@ afterEach(() => {
 });
 
 test("consulta os últimos 30 dias na abertura e aplica métrica, ordem e escopo somente após enviar", async () => {
-  render(<RankingPage />);
+  render(<MemoryRouter><RankingPage /></MemoryRouter>);
   const tabela = await screen.findByRole("table", { name: "Classificação de serviços" });
   const [urlInicial, config] = fetchMock.mock.calls[0];
   expect(String(urlInicial)).toContain("/api/analytics/ranking?");
@@ -80,7 +81,7 @@ test("consulta os últimos 30 dias na abertura e aplica métrica, ordem e escopo
 });
 
 test("valida datas personalizadas e repete o mesmo intervalo se a consulta falhar", async () => {
-  render(<RankingPage />);
+  render(<MemoryRouter><RankingPage /></MemoryRouter>);
   await screen.findByRole("table");
   fireEvent.change(screen.getByLabelText("Período"), { target: { value: "personalizado" } });
   fireEvent.change(screen.getByLabelText("Início"), { target: { value: "2026-10-10T10:00" } });
@@ -109,7 +110,7 @@ test("valida datas personalizadas e repete o mesmo intervalo se a consulta falha
 
 test("mantém período, resumo e líder entre páginas e reinicia a paginação ao aplicar filtros", async () => {
   fetchMock.mockImplementation(async (url) => resposta(url, parametros(url).get("offset") === "20" ? [segundo] : [lider], 21));
-  render(<RankingPage />);
+  render(<MemoryRouter><RankingPage /></MemoryRouter>);
   expect(await screen.findByText("Página 1 de 2")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Próxima" }));
   expect(await screen.findByText("Página 2 de 2")).toBeInTheDocument();
@@ -127,7 +128,7 @@ test("volta à última página disponível se o número de serviços mudar duran
   fetchMock
     .mockImplementationOnce(async (url) => resposta(url, [lider], 21))
     .mockImplementationOnce(async (url) => resposta(url, [], 1));
-  render(<RankingPage />);
+  render(<MemoryRouter><RankingPage /></MemoryRouter>);
   fireEvent.click(await screen.findByRole("button", { name: "Próxima" }));
 
   const tabela = await screen.findByRole("table");
@@ -138,7 +139,7 @@ test("volta à última página disponível se o número de serviços mudar duran
 test("cancela buscas antigas e mantém apenas o resultado da última aplicação", async () => {
   let resolver: (valor: Response) => void = () => undefined;
   fetchMock.mockImplementationOnce(() => new Promise((resolve) => { resolver = resolve; }));
-  render(<RankingPage />);
+  render(<MemoryRouter><RankingPage /></MemoryRouter>);
   expect(screen.getByRole("heading", { name: "Carregando ranking" })).toBeInTheDocument();
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 

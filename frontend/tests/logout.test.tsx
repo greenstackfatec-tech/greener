@@ -4,6 +4,7 @@ import { MemoryRouter, Route, RouterProvider, Routes } from "react-router";
 import { BotaoSair } from "../src/components/BotaoSair.tsx";
 import { ROTAS } from "../src/caminhos.ts";
 import { router } from "../src/rotas.tsx";
+import * as analytics from "../src/services/analytics.ts";
 import * as collections from "../src/services/collections.ts";
 import * as indicadores from "../src/services/indicadores.ts";
 import * as servicos from "../src/services/servicos.ts";
@@ -14,6 +15,15 @@ const TOKEN_DE_TESTE = "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.assinatura
 
 beforeEach(() => {
   removerToken();
+  vi.spyOn(analytics, "consultarRanking").mockResolvedValue({
+    dados: [],
+    aplicacoes: [],
+    periodo: { inicio: "2026-10-01T18:00:00.000Z", fim: "2026-10-31T18:00:00.000Z" },
+    metrica: "co2e",
+    agregacao: "media",
+    ordenacao: "ASC",
+    resumo: { classificados: 0, semDados: 0, mediaEnergiaKwh: null, mediaEmissaoCo2eG: null, menorEnergia: null, primeiroColocado: null },
+  });
   vi.spyOn(servicos, "listarServicos").mockResolvedValue([]);
   vi.spyOn(indicadores, "consultarIndicadores").mockResolvedValue({
     consumoTotalKwh: 0,
@@ -85,4 +95,16 @@ test("depois de sair, abrir o dashboard leva de novo ao login", async () => {
 
   await waitFor(() => expect(router.state.location.pathname).toBe(ROTAS.login));
   expect(screen.queryByRole("heading", { name: "Visão geral" })).toBeNull();
+});
+
+test("sair no ranking limpa o token e volta ao login", async () => {
+  salvarToken(TOKEN_DE_TESTE, true);
+  await act(async () => { await router.navigate(ROTAS.ranking); });
+  render(<RouterProvider router={router} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "Sair da conta" }));
+
+  expect(await screen.findByRole("heading", { name: "Bem-vindo de volta" })).toBeTruthy();
+  expect(router.state.location.pathname).toBe(ROTAS.login);
+  expect(obterToken()).toBeNull();
 });
