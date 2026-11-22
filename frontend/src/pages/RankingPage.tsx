@@ -56,7 +56,7 @@ function medida(valor: number | null, unidade: "kWh" | "kg CO₂e") {
   if (valor === null) return "—";
   const convertido = unidade === "kWh" ? valor : valor / 1000;
   const casas = convertido > 0 ? Math.min(20, Math.max(2, 1 - Math.floor(Math.log10(convertido)))) : 2;
-  return `${numero(convertido, casas)} ${unidade}`;
+  return `${convertido.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: casas })} ${unidade}`;
 }
 
 function valores(item: RankingItem, agregacao: RankingParams["agregacao"]) {

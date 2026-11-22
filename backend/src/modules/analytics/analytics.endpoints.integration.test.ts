@@ -144,6 +144,7 @@ test("GET /analytics/* — rotas de histórico, ranking e comparação", async (
   const agora = new Date();
   const inicio = new Date(agora.getTime() - 48 * 60 * 60 * 1000).toISOString(); // 48h atrás
   const fim = new Date(agora.getTime() + 2 * 60 * 60 * 1000).toISOString(); // 2h no futuro
+  // Grava a primeira coleta de s1 antes da segunda para evitar ordem não determinística no histórico com Promise.all.
   await gravarColeta({
     servicoId: s1.id, cpuPercentual: 50, memoriaGb: 2, discoGb: 10, redeGb: 1,
     intervaloSegundos: 60, statusColeta: "sucesso", potenciaEstimadaW: 43.375,
