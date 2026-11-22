@@ -10,6 +10,7 @@ import { useServicos } from "../hooks/useServicos.ts";
 import { localizacaoDoServico, NAO_INFORMADO } from "../localizacao.ts";
 import { agruparPorLocal, centroDosPontos, formatarCoordenada, separarPorCoordenadas } from "../mapa.ts";
 import { situacaoDoServico } from "../services/servicos.ts";
+import { BotaoSair } from "../components/BotaoSair.tsx";
 import "./DashboardPage.css";
 import "./MapaPage.css";
 
@@ -157,6 +158,7 @@ export function MapaPage() {
         <a className="dash-nav-item" href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
         <a className="dash-nav-item dash-nav-active" href={ROTAS.mapa} aria-current="page"><span aria-hidden="true">◍</span> Mapa</a>
         <div className="dash-sidebar-bottom"><span className="dash-avatar">GE</span><span><strong>GreenER</strong><small>Monitoramento ambiental</small></span></div>
+        <BotaoSair />
       </aside>
 
       <main className="dash-main">
