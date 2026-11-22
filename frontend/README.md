@@ -7,7 +7,7 @@ Tecnologias principais: **React 19.3.1**, **TypeScript 6.0.3** e **Vite 8.3.5**.
 | Pasta | Responsabilidade | Conteúdo atual |
 |---|---|---|
 | `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx`, `DashboardPage.tsx`, `EstadosPage.tsx` |
-| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `GraficoConsumo.tsx`, `CartaoEstado.tsx`, `CardsIndicadores.tsx`, `BotaoSair.tsx` |
+| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `CartaoEstado.tsx`, `CardsIndicadores.tsx`, `BotaoSair.tsx` |
 | `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `servicos.ts` |
 | `src/assets/` | Imagens usadas pelas telas | `greener-icon.png` |
 | `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts`, `useServicos.ts`, `useAgora.ts` |
@@ -23,7 +23,7 @@ As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. A
 | `/` | Início | DW18 | Implementada (mostra o status do backend) |
 | `/login` | Login | DW19 | Implementada (JWT, "lembrar de mim", erros e bloqueio por tentativas) |
 | `/cadastro` | Cadastro | DW20 | Página provisória |
-| `/administrativa` | Administrativa | DW21, DW22 | Implementada (indicadores e serviços da API, intervalo de coleta; o card "Por recurso" aguarda endpoint) |
+| `/administrativa` | Administrativa | DW21, DW22 | Implementada (indicadores e serviços da API, intervalo de coleta; o card "Por recurso" foi removido por falta de dados reais) |
 | `/dashboard` | Dashboard | DW05, DW06, DW07 | Implementada (cards de indicadores, tabela e estados visuais) |
 | `/ranking` | Ranking | DW12 | Implementada |
 | `/comparacao` | Comparação | DW13 | Implementada (2 a 5 serviços no mesmo período, com aviso de serviço sem dados) |
@@ -72,7 +72,7 @@ As rotas estão declaradas em `src/rotas.tsx`, e seus caminhos ficam centralizad
 | `/cadastro` | Cadastro | Formulário de pessoa física ou jurídica com validação no frontend. O endpoint de cadastro ainda não existe no backend, portanto o envio não conclui o registro. |
 | `/dashboard` | Dashboard | Apresenta serviços, estados, busca e filtros. Os dados dependem dos campos enviados pelo backend. |
 | `/ranking` | Ranking | Classificação por energia ou CO₂e, com total no período ou média por coleta, filtros, tendência e paginação (`GET /analytics/ranking`). |
-| `/administrativa` | Área administrativa | Indicadores e lista de serviços vindos da API (`GET /dashboard/indicadores` e `GET /services`) e leitura da configuração de monitoramento. O card "Por recurso" aguarda endpoint, e a alteração do intervalo depende de endpoint ainda não disponível. |
+| `/administrativa` | Área administrativa | Indicadores e lista de serviços vindos da API (`GET /dashboard/indicadores` e `GET /services`) e leitura da configuração de monitoramento. O card "Por recurso" foi removido por falta de dados reais, e a alteração do intervalo depende de endpoint ainda não disponível. |
 | `/comparacao` | Comparação | Seleção de 2 a 5 serviços e de um período; mostra energia e CO₂e totais lado a lado (`GET /analytics/comparacao`). Serviço sem coleta no período aparece como "Sem dados no período". |
 | `/dashboard/estados` | Galeria de estados | Disponível somente em desenvolvimento para conferência com os mocks. |
 
@@ -128,7 +128,7 @@ A consulta do diagnóstico é repetida a cada trinta segundos. Quando uma atuali
 
 Os três cards do topo (energia estimada, emissões estimadas e serviços ativos) usam `GET /dashboard/indicadores`, e a lista "Serviços monitorados" usa `GET /services` (energia e emissão da última coleta de cada serviço; serviços removidos ficam de fora). Ambas as consultas passam por `useIndicadores` e `useServicos`, são repetidas a cada `INTERVALO_ATUALIZACAO_SEGUNDOS` e mostram estados de carregamento, erro (com "Tentar de novo") e vazio. O painel "Consumo de energia" reaproveita o estado dos indicadores (`ResumoConsumoVisao`), sem uma segunda consulta.
 
-Duas partes continuam sem dado real, porque o backend ainda não tem endpoint para elas: o card "Por recurso" (parcela de CPU, memória, disco e rede) mostra um aviso de "ainda não disponível", e o gráfico dos últimos 7 dias depende dos endpoints de histórico (TP17/DW11). Nenhum valor fixo é exibido no lugar delas.
+O card "Por recurso" (parcela de CPU, memória, disco e rede) foi removido da tela por falta de dados reais. O gráfico dos últimos 7 dias depende dos endpoints de histórico (TP17/DW11). Nenhum valor fixo é exibido no lugar dos dados indisponíveis.
 
 O card de intervalo consulta `GET /monitoring-settings`, rota protegida por JWT. O frontend possui uma chamada preparada para `PUT /monitoring-settings`, mas o backend atual disponibiliza somente o GET. A alteração do intervalo depende da implementação do endpoint correspondente.
 
