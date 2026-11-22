@@ -85,59 +85,8 @@
   color: var(--verde);
 }
 
-/* O GraficoConsumo já é um "cartão"; aqui o cartão é o wrapper (borda do Figma). */
 .adm-card-grafico {
   min-width: 0;
-}
-
-.adm-card-grafico .grafico {
-  padding: 0;
-  border-radius: 0;
-  background: none;
-}
-
-/* Mobile: barras de 32 px com espaço entre elas (no desktop, 42 px com o recuo do GraficoConsumo). */
-.adm-card-grafico .grafico-barras {
-  padding: 0;
-}
-
-.adm-card-grafico .grafico-barras li {
-  flex-basis: 32px;
-}
-
-/* Linha fina entre as barras e a nota do gráfico, como no Figma. */
-.adm-card-grafico .grafico-barras + .grafico-legenda {
-  padding-top: 16px;
-  border-top: 1px solid var(--borda);
-}
-
-/* ---------- Por recurso ---------- */
-
-.adm-recursos {
-  display: grid;
-  gap: 14px;
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.adm-recurso-linha {
-  display: flex;
-  justify-content: space-between;
-}
-
-.adm-recurso-trilho {
-  height: 8px;
-  margin-top: 8px;
-  overflow: hidden;
-  border-radius: 4px;
-  background: var(--verde-suave);
-}
-
-.adm-recurso-barra {
-  height: 100%;
-  border-radius: 4px;
-  background: var(--verde);
 }
 
 /* ---------- Aplicações monitoradas ---------- */
@@ -377,20 +326,6 @@
 
   .adm-indicadores {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .adm-card-grafico .grafico-barras {
-    padding: 0 22px;
-  }
-
-  .adm-card-grafico .grafico-barras li {
-    flex-basis: 42px;
-  }
-
-  /* align-items: start -> "Por recurso" tem a altura do próprio conteúdo, como no Figma. */
-  .adm-linha {
-    grid-template-columns: minmax(0, 65fr) minmax(0, 35fr);
-    align-items: start;
   }
 
   .adm-aplicacoes li {

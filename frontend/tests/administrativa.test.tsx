@@ -179,10 +179,13 @@ test("falha ao carregar os serviços não derruba a tela nem os indicadores", as
   expect(screen.queryByText("Billing API")).toBeNull();
 });
 
-test("o card \"Por recurso\" avisa que o dado ainda não existe, sem barras inventadas", async () => {
+test("não exibe o card \"Por recurso\" enquanto não há dados reais", async () => {
   abrirPagina();
 
-  expect(await screen.findByText(/Ainda não disponível: a divisão do consumo/)).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Por recurso" })).toBeNull();
+  await screen.findByText("Billing API");
+  expect(screen.queryByRole("heading", { name: "Por recurso" })).toBeNull();
+  expect(screen.queryByText(/Ainda não disponível: a divisão do consumo/)).toBeNull();
   expect(screen.queryByRole("progressbar")).toBeNull();
   expect(screen.queryByText("62%")).toBeNull();
 });
