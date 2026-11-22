@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ROTAS } from "../caminhos.ts";
 import logo from "../assets/greener-icon.png";
 import { CartaoEstado } from "../components/CartaoEstado.tsx";
+import { BotaoSair } from "../components/BotaoSair.tsx";
 import { ATALHOS_PERIODO, erroDoPeriodo, paraCampoDataHora, resolverPeriodo, type AtalhoPeriodo } from "../filtros.ts";
 import { numero } from "../formatacao.ts";
 import { INTERVALO_ATUALIZACAO_SEGUNDOS } from "../config.ts";
@@ -159,7 +160,9 @@ export function ComparacaoPage() {
         <a className="dash-nav-item" href={ROTAS.dashboard}><span>▦</span> Visão geral</a>
         <a className="dash-nav-item" href={ROTAS.historico}><span>⎔</span> Histórico</a>
         <a className="dash-nav-item dash-nav-active" href={ROTAS.comparacao} aria-current="page"><span>⇄</span> Comparação</a>
+        <a className="dash-nav-item" href={ROTAS.mapa}><span aria-hidden="true">◍</span> Mapa</a>
         <div className="dash-sidebar-bottom"><span className="dash-avatar">GE</span><span><strong>GreenER</strong><small>Monitoramento ambiental</small></span></div>
+        <BotaoSair />
       </aside>
 
       <main className="dash-main">

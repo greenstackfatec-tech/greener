@@ -3,6 +3,7 @@ import "@testing-library/jest-dom";
 import { ComparacaoPage } from "../src/pages/ComparacaoPage.tsx";
 import * as servicos from "../src/services/servicos.ts";
 import * as comparacao from "../src/services/comparacao.ts";
+import { MemoryRouter } from "react-router";
 
 function servico(id: number, nome: string): servicos.Servico {
   return {
@@ -26,7 +27,7 @@ async function marcar(...nomes: string[]) {
 }
 
 test("botão fica desabilitado com menos de 2 serviços e explica o motivo", async () => {
-  render(<ComparacaoPage />);
+  render(<MemoryRouter><ComparacaoPage /></MemoryRouter>);
   await marcar("Auth");
   const botao = screen.getByRole("button", { name: "Comparar" });
   expect(botao).toBeDisabled();
@@ -37,7 +38,7 @@ test("botão fica desabilitado com menos de 2 serviços e explica o motivo", asy
 });
 
 test("com 5 serviços marcados, os demais ficam bloqueados", async () => {
-  render(<ComparacaoPage />);
+  render(<MemoryRouter><ComparacaoPage /></MemoryRouter>);
   await marcar("Auth", "Billing", "Checkout", "Notifications", "Reports");
   expect(screen.getByRole("checkbox", { name: "Search" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Comparar" })).toBeEnabled();
@@ -51,7 +52,7 @@ test("mostra os totais lado a lado e o aviso de serviço sem dados", async () =>
     ],
     avisos: ['Serviço "Billing" (ID 2) não possui dados de coleta no período informado. Retornando zeros.'],
   });
-  render(<ComparacaoPage />);
+  render(<MemoryRouter><ComparacaoPage /></MemoryRouter>);
   await marcar("Auth", "Billing");
   fireEvent.click(screen.getByRole("button", { name: "Comparar" }));
 
@@ -63,7 +64,7 @@ test("mostra os totais lado a lado e o aviso de serviço sem dados", async () =>
 
 test("erro da API mostra o estado de erro com tentar de novo", async () => {
   vi.spyOn(comparacao, "consultarComparacao").mockRejectedValue(new Error("Backend fora do ar"));
-  render(<ComparacaoPage />);
+  render(<MemoryRouter><ComparacaoPage /></MemoryRouter>);
   await marcar("Auth", "Billing");
   fireEvent.click(screen.getByRole("button", { name: "Comparar" }));
 
