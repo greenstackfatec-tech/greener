@@ -99,6 +99,7 @@ function NavegacaoRanking() {
         <a href={ROTAS.historico}><span aria-hidden="true">⎔</span> Histórico</a>
         <a href={ROTAS.ranking} aria-current="page"><span aria-hidden="true">▤</span> Ranking</a>
         <a href={ROTAS.comparacao}><span aria-hidden="true">⇄</span> Comparação</a>
+        <a href={ROTAS.mapa}><span aria-hidden="true">◍</span> Mapa</a>
       </nav>
     </aside>
   );

@@ -24,7 +24,6 @@ export const router = createBrowserRouter([
     { path: ROTAS.historico, element: <HistoricoPage /> },
     { path: ROTAS.ranking, element: <RankingPage /> },
     { path: ROTAS.comparacao, element: <ComparacaoPage /> },
-    { path: ROTAS.comparacao, element: <ComparacaoPage /> },
     { path: ROTAS.mapa, element: <MapaPage /> },
     ...(import.meta.env.DEV ? [{ path: ROTAS.dashboardEstados, element: <EstadosPage /> }] : []),
   ] },
