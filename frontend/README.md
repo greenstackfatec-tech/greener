@@ -89,8 +89,10 @@ A tela de login chama `POST /auth/login`. Quando recebe um JWT, o frontend armaz
 
 Quando há token salvo, o cliente HTTP envia `Authorization: Bearer <token>`. A ação de sair remove o token.
 
-Pendências que dependem de outras tarefas: recuperação de senha (sem endpoint), proteção das rotas privadas e logout (DW17/DW21) e redirecionamento de quem já está logado.
+Pendências que dependem de outras tarefas: recuperação de senha (sem endpoint), proteção das rotas privadas e redirecionamento de quem já está logado.
+
 Logout (DW17). O botão "Sair da conta" `(components/BotaoSair.tsx)` fica na barra lateral do Dashboard, do Histórico e da Comparação; na área administrativa o botão equivalente está em `LayoutAdministrativo`. Ele chama `sair()` (`services/auth.ts`), que remove o token do `localStorage` e do `sessionStorage`, e navega para `/login`. Como o JWT é stateless e não há endpoint de logout, o token continua válido no backend até expirar (1 h): o logout vale só para o navegador.
+
 O backend limita tentativas incorretas e pode responder HTTP `429` com `Retry-After`. A tela apresenta o tempo de espera e bloqueia novos envios enquanto a contagem regressiva não termina. A recuperação de senha ainda não possui endpoint implementado.
 
 ### 3.3 Cadastro
