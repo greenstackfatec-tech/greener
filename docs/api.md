@@ -3,22 +3,23 @@
 ← [Voltar à documentação](README.md)
 
 **Projeto:** GreenER · **Equipe:** Green Stack · **Curso:** DSM — FATEC Jacareí  
+**Atualização:** 23/11/2026
 
 ---
 
 ## 1. Introdução
 
-A API do **GreenER** disponibiliza os serviços monitorados, o histórico das coletas, os indicadores ambientais, as consultas de análise, a autenticação de usuários e as configurações do monitoramento. O backend também integra duas APIs externas: uma para obter métricas de infraestrutura e outra para consultar a intensidade de carbono da região do serviço.
+A API do **GreenER** disponibiliza os serviços monitorados, o histórico das coletas, os indicadores ambientais, as consultas de análise, a autenticação de usuários e a leitura das configurações do monitoramento. O backend também integra duas APIs externas: uma para obter métricas de infraestrutura e outra para consultar a intensidade de carbono da região do serviço.
 
 Este documento diferencia três situações:
 
 - **Implementada:** a rota está registrada no backend e pode ser chamada.
-- **Implementada parcialmente:** a rota existe, mas ainda não atende a todos os dados ou comportamentos esperados pelo frontend.
+- **Implementada parcialmente:** a rota existe, mas ainda não atende todos os dados ou comportamentos esperados pelo frontend.
 - **Contrato planejado:** o formato está documentado para orientar o frontend e permitir mocks, mas a rota ainda não está registrada no backend.
 
 ## 2. Configuração e acesso
 
-### URL base
+### 2.1 URL base
 
 Durante a execução local com Docker Compose, o backend fica disponível em:
 
@@ -32,7 +33,7 @@ O frontend utiliza o prefixo `/api`, encaminhado pelo proxy do Vite em desenvolv
 GET http://localhost:8080/api/services
 ```
 
-### Formato das requisições
+### 2.2 Formato das requisições
 
 - As respostas são fornecidas em JSON.
 - Requisições com corpo JSON devem utilizar `Content-Type: application/json`.
@@ -40,7 +41,7 @@ GET http://localhost:8080/api/services
 - Os identificadores internos dos serviços são números inteiros positivos.
 - A resposta genérica para uma rota inexistente é HTTP `404` com `{ "error": "not_found" }`.
 
-### Situação das rotas da Sprint 3
+### 2.3 Situação das rotas da Sprint 3
 
 | Grupo | Rota | Situação no backend |
 |---|---|---|
@@ -48,10 +49,10 @@ GET http://localhost:8080/api/services
 | Ranking | `GET /analytics/ranking` | Implementada |
 | Comparação | `GET /analytics/comparacao` | Implementada |
 | Consulta de configuração | `GET /monitoring-settings` | Implementada |
-| Alteração de configuração | `PUT /monitoring-settings` | Implementada |
-| Cadastro | `POST /auth/register` | Implementada |
+| Alteração de configuração | `PUT /monitoring-settings` | **Não implementada** |
+| Cadastro | `POST /auth/register` | Implementada parcialmente quanto aos campos enviados pelo formulário |
 
-### Autenticação JWT
+### 2.4 Autenticação JWT
 
 O login é realizado por `POST /auth/login`. Em caso de sucesso, a API retorna um token JWT com validade de uma hora.
 
@@ -76,15 +77,17 @@ As rotas de serviços, coletas, indicadores, configurações e análises exigem 
 
 A resposta inclui `WWW-Authenticate: Bearer` quando o token está ausente ou `Bearer error="invalid_token"` quando o cabeçalho foi rejeitado. O middleware verifica a autenticação antes da validação dos parâmetros de negócio.
 
+O token é stateless e não há endpoint de logout/revogação. O logout existente no frontend remove o token do armazenamento do navegador; o token emitido continua válido no backend até completar sua validade de uma hora.
+
 ---
 
 ## 3. Endpoints do backend
 
-### 3.1. Saúde e disponibilidade
+### 3.1 Saúde e disponibilidade
 
 #### `GET /health/live`
 
-Verifica se o processo HTTP do backend está em execução. Não depende de uma consulta ao banco de dados.
+Verifica se o processo HTTP do backend está em execução. Não depende de consulta ao banco de dados.
 
 **Parâmetros:** nenhum.  
 **Autenticação:** não exige.
@@ -122,11 +125,11 @@ Verifica se o backend consegue executar uma consulta no PostgreSQL.
 }
 ```
 
-### 3.2. Serviços monitorados
+### 3.2 Serviços monitorados
 
 #### `GET /services`
 
-Retorna os serviços cadastrados no GreenER, com sua identificação, estado, localização disponível e os dados da última coleta. Quando ainda não existe coleta, os campos referentes à coleta e às métricas vêm como `null`.
+Retorna os serviços cadastrados no GreenER, com identificação, estado, localização disponível e dados da última coleta. Quando ainda não existe coleta, os campos referentes à coleta e às métricas vêm como `null`.
 
 **Parâmetros:** nenhum.  
 **Autenticação:** obrigatória.
@@ -161,7 +164,7 @@ Retorna os serviços cadastrados no GreenER, com sua identificação, estado, lo
 ]
 ```
 
-Os estados persistidos do serviço são `ativo`, `indisponivel` e `removido`. Os estados da coleta são `sucesso`, `sem_metricas` e `indisponivel`. A ausência de dados de localização não impede a listagem: os campos estruturados permanecem `null` e os textos de apresentação em `localizacao` usam `"Não informado"`.
+Os estados persistidos do serviço são `ativo`, `indisponivel` e `removido`. Os estados da coleta são `sucesso`, `sem_metricas` e `indisponivel`. A ausência de localização não impede a listagem: os campos estruturados permanecem `null` e os textos de apresentação em `localizacao` usam `"Não informado"`.
 
 #### `GET /services/{id}`
 
@@ -213,7 +216,7 @@ Authorization: Bearer <token>
 }
 ```
 
-### 3.3. Histórico de coletas
+### 3.3 Histórico de coletas
 
 #### `GET /collections`
 
@@ -287,7 +290,7 @@ Quando não existem coletas para o serviço, a resposta é um array vazio (`[]`)
 }
 ```
 
-### 3.4. Execução de coleta
+### 3.4 Execução de coleta
 
 #### `POST /collections/executar`
 
@@ -301,8 +304,8 @@ Executa manualmente uma rodada de coleta. O backend consulta a lista de serviço
 
 A propriedade `resultado` informa o resultado geral da rodada:
 
-- `completo`: todos os serviços foram processados com cálculo completo, ou a API não retornou serviços.
-- `parcial`: a rodada terminou, mas houve serviços sem métricas, indisponíveis ou sem cálculo completo.
+- `completo`: todos os serviços foram processados com cálculo completo, ou a API não retornou serviços;
+- `parcial`: a rodada terminou, mas houve serviços sem métricas, indisponíveis ou sem cálculo completo;
 - `falha`: todos os serviços retornaram indisponíveis.
 
 ```json
@@ -365,9 +368,9 @@ Exemplo:
 }
 ```
 
-### 3.5. Controle da rotina de coleta periódica
+### 3.5 Controle da rotina de coleta periódica
 
-A rotina pode ser iniciada automaticamente quando o servidor HTTP sobe, exceto quando `COLLECTIONS_AUTO_START=false`. O intervalo utilizado pela rotina é consultado na configuração persistida `intervalo_coleta_segundos`. O campo `collection_interval_seconds` recebido da API de métricas representa a duração da amostra e é utilizado nos cálculos e no histórico; não substitui o intervalo de agendamento.
+A rotina inicia automaticamente quando o servidor sobe, exceto quando `COLLECTIONS_AUTO_START=false`. O intervalo de agendamento é lido da configuração persistida `intervalo_coleta_segundos`. O campo `collection_interval_seconds` recebido da API de métricas representa a duração da amostra usada nos cálculos e no histórico; não substitui o intervalo de agendamento.
 
 #### `POST /collections/rotina/iniciar`
 
@@ -466,16 +469,16 @@ Retorna o estado atual da rotina e o diagnóstico das coletas. A resposta é um 
 
 Os estados de `monitoramento.situacao` são `aguardando`, `ok` e `degradado`. Em `degradado`, `falhasAtivas` lista falhas ainda não resolvidas, com etapa, tipo, código, mensagem e horário. O diagnóstico é reiniciado quando o processo do backend é reiniciado.
 
-### 3.6. Autenticação e cadastro
+### 3.6 Autenticação e cadastro
 
 #### `POST /auth/register`
 
-Cria uma conta sem exigir token. **A rota está implementada**, mas ainda não persiste todos os dados que o formulário de cadastro do frontend coleta.
+Cria uma conta sem exigir token.
 
 **Autenticação:** não exige.  
 **Cabeçalho obrigatório:** `Content-Type: application/json`.
 
-**Corpo aceito pelo backend atual:**
+**Corpo aceito e persistido pelo backend atual:**
 
 | Campo | Tipo | Obrigatório | Regra |
 |---|---|---|---|
@@ -508,7 +511,7 @@ Content-Type: application/json
 
 A resposta utiliza `Cache-Control: no-store`. A senha é armazenada somente como hash bcrypt. O cadastro não emite token; após criar a conta, o usuário deve realizar o login.
 
-**Campos do formulário ainda não persistidos:** o frontend também envia `tipoPessoa` (`fisica` ou `juridica`) e `documento` (CPF ou CNPJ). A implementação atual aceita esses campos adicionais no JSON, mas os ignora: não valida CPF/CNPJ, não os armazena e não garante unicidade do documento. A tabela `usuarios` usada pelo cadastro atual persiste apenas nome, e-mail e hash da senha. Portanto, a tela não deve tratar tipo de pessoa e documento como dados já salvos pelo backend.
+**Campos do formulário ainda não persistidos:** o frontend também envia `tipoPessoa` (`fisica` ou `juridica`) e `documento` (CPF ou CNPJ). A implementação atual aceita esses campos adicionais no JSON, mas os ignora: não valida CPF/CNPJ, não os armazena e não garante unicidade do documento. A tabela `usuarios` persiste apenas nome, e-mail e hash da senha.
 
 **Erros possíveis:**
 
@@ -518,10 +521,10 @@ A resposta utiliza `Cache-Control: no-store`. A senha é armazenada somente como
 | `400` | `invalid_json` | Corpo JSON malformado. |
 | `409` | `email_already_exists` | E-mail já cadastrado. |
 | `413` | `payload_too_large` | Corpo acima de 8 KiB. |
-| `415` | `unsupported_media_type` | O Content-Type não é `application/json`. |
+| `415` | `unsupported_media_type` | Content-Type diferente de `application/json`. |
 | `500` | `internal_server_error` | Falha inesperada no backend ou no banco. |
 
-As respostas de validação e conflito seguem o formato:
+Exemplo de resposta de validação:
 
 ```json
 {
@@ -585,7 +588,7 @@ O token expira em uma hora. A resposta utiliza `Cache-Control: no-store`.
 
 O limitador permite até cinco tentativas incorretas por e-mail em uma janela de cinco minutos. Quando retorna `429`, a resposta inclui `Retry-After`, em segundos. O limitador é mantido em memória pelo processo.
 
-### 3.7. Configurações de monitoramento
+### 3.7 Configurações de monitoramento
 
 #### `GET /monitoring-settings`
 
@@ -602,24 +605,22 @@ Retorna o intervalo de coleta salvo em `configuracoes`, na chave `intervalo_cole
 }
 ```
 
-O valor é numérico. O padrão usado quando a chave não existe é 60 segundos. Um valor fora do intervalo agendável ou uma falha na consulta resulta em HTTP `500`.
+O valor é numérico. O padrão usado quando a chave não existe é 60 segundos. Uma falha na consulta resulta em HTTP `500`.
 
-#### `PUT /monitoring-settings` — contrato planejado
+#### `PUT /monitoring-settings` — contrato planejado, não implementado
 
-**Situação:** ainda não implementada no backend.
+O frontend possui a função `salvarIntervaloColeta`, que envia esse método e corpo. Entretanto, `backend/src/modules/monitoring-settings/monitoring-settings.routes.ts` registra somente `GET /monitoring-settings`. No backend atual, uma chamada `PUT` retorna HTTP `404` (`not_found`).
 
-O frontend já possui a função `salvarIntervaloColeta`, que envia este método e corpo. Entretanto, `monitoring-settings.routes.ts` registra somente `GET /monitoring-settings`. No estado atual do backend, uma chamada `PUT` retorna HTTP `404` (`not_found`).
-
-O contrato abaixo serve para criação de mocks e alinhamento entre frontend e backend. **Não representa uma rota funcional ainda.**
+O contrato abaixo serve para orientar a implementação e os mocks. **Não representa uma rota funcional.**
 
 **Autenticação prevista:** JWT obrigatório.  
 **Cabeçalho previsto:** `Content-Type: application/json`.
 
 **Corpo proposto:**
 
-| Campo | Tipo | Obrigatório | Regra para o mock |
+| Campo | Tipo | Obrigatório | Regra |
 |---|---|---|---|
-| `intervaloColetaSegundos` | Inteiro | Sim | A interface atual trabalha com mínimo de 10 e máximo de 86.400 segundos (24 horas). O limite máximo está marcado no frontend como provisório e precisa ser confirmado na implementação do backend. |
+| `intervaloColetaSegundos` | Inteiro | Sim | A interface trabalha com mínimo de 10 e máximo de 86.400 segundos. O limite máximo está identificado no frontend como provisório e precisa ser confirmado. |
 
 **Exemplo de requisição planejada:**
 
@@ -643,7 +644,7 @@ Authorization: Bearer <token>
 }
 ```
 
-**Respostas previstas para a implementação:**
+**Respostas previstas para uma implementação futura:**
 
 | HTTP | Código proposto | Situação |
 |---|---|---|
@@ -651,13 +652,13 @@ Authorization: Bearer <token>
 | `401` | `unauthorized` | Token ausente, inválido ou expirado. |
 | `500` | `internal_server_error` | Falha ao persistir a configuração ou atualizar a rotina. |
 
-O nome do campo e o método seguem o cliente atual do frontend. O limite definitivo e a sincronização da rotina ativa devem ser confirmados quando o endpoint for implementado.
+O método, o limite definitivo e a sincronização de uma rotina já ativa devem ser confirmados quando o endpoint for implementado.
 
-### 3.8. Indicadores do dashboard
+### 3.8 Indicadores do dashboard
 
 #### `GET /dashboard/indicadores`
 
-Retorna os indicadores consolidados utilizados no dashboard. Os totais consideram os resultados calculados disponíveis; as contagens separam serviços ativos e indisponíveis. A resposta também informa o horário da última coleta e o intervalo de coleta configurado.
+Retorna os indicadores consolidados do dashboard. Os totais consideram os resultados calculados disponíveis da última coleta válida de cada serviço. As contagens separam serviços ativos e indisponíveis. A resposta informa também o horário da última coleta e o intervalo configurado para a rotina.
 
 **Parâmetros:** nenhum.  
 **Autenticação:** obrigatória.
@@ -685,13 +686,13 @@ Quando ainda não há coletas calculadas, os totais são `0`. Sem nenhuma coleta
 }
 ```
 
-### 3.9. Análises: histórico, ranking e comparação
+### 3.9 Análises: histórico, ranking e comparação
 
 As três rotas de análise estão implementadas em `backend/src/modules/analytics/analytics.routes.ts`. Todas exigem JWT e recebem parâmetros de período em ISO 8601.
 
 #### Padrão de período
 
-As rotas de análise que consultam um período exigem os parâmetros `inicio` e `fim`. Ambos são inclusivos e devem ser datas válidas em ISO 8601. `inicio` precisa ser anterior ou igual a `fim`.
+As rotas que consultam um período exigem `inicio` e `fim`. Ambos são inclusivos e devem ser datas válidas em ISO 8601. `inicio` precisa ser anterior ou igual a `fim`.
 
 Exemplo:
 
@@ -715,10 +716,10 @@ Retorna as coletas de um serviço dentro do período solicitado.
 |---|---|---|---|---|
 | `inicio` | Data ISO 8601 | Sim | — | Início inclusivo do período. |
 | `fim` | Data ISO 8601 | Sim | — | Fim inclusivo do período. |
-| `apenasSucesso` | Booleano textual | Não | `true` | `true` mantém apenas coletas com status `sucesso`; `false` inclui também `sem_metricas` e `indisponivel`. |
+| `apenasSucesso` | Booleano textual | Não | `true` | `false` inclui também coletas `sem_metricas` e `indisponivel`; qualquer outro valor mantém apenas `sucesso`. |
 | `limite` | Inteiro não negativo | Não | `1000` | Quantidade máxima de registros. |
 | `offset` | Inteiro não negativo | Não | `0` | Quantidade de registros a pular. |
-| `ordenacao` | `ASC` ou `DESC` | Não | `DESC` | Ordena pela data da coleta; `DESC` traz as mais recentes primeiro. |
+| `ordenacao` | `ASC` ou `DESC` | Não | `DESC` | Ordena pela data da coleta. |
 
 **Autenticação:** obrigatória.
 
@@ -755,7 +756,7 @@ Authorization: Bearer <token>
 }
 ```
 
-Os campos numéricos da coleta podem ser `null` quando não foram recebidos ou calculados.
+Os campos numéricos podem ser `null` quando não foram recebidos ou calculados.
 
 **Erros possíveis — HTTP 400:**
 
@@ -767,11 +768,11 @@ Os campos numéricos da coleta podem ser `null` quando não foram recebidos ou c
 | `invalid_offset` | `offset` não é inteiro não negativo. |
 | `invalid_order` | `ordenacao` diferente de `ASC` ou `DESC`. |
 
-**Serviço sem registros no período:** HTTP `200` com `dados: []`.
+Um serviço sem registros no período retorna HTTP `200` com `dados: []`.
 
 #### `GET /analytics/ranking`
 
-Retorna o ranking de serviços por consumo energético ou emissão de CO₂e no período solicitado. A consulta considera coletas com status `sucesso`.
+Retorna um ranking de serviços por consumo energético ou emissão de CO₂e no período solicitado. O endpoint aceita uma resposta simples ou uma agregação detalhada utilizada pela tela de ranking.
 
 **Parâmetros de consulta:**
 
@@ -780,24 +781,91 @@ Retorna o ranking de serviços por consumo energético ou emissão de CO₂e no 
 | `inicio` | Data ISO 8601 | Sim | — | Início inclusivo do período. |
 | `fim` | Data ISO 8601 | Sim | — | Fim inclusivo do período. |
 | `metrica` | `energia` ou `co2e` | Sim | — | Métrica usada para ordenar o ranking. |
-| `agregacao` | `total` ou `media` | Não | — | Seleciona a soma ou a média por coleta e inclui os dados de resumo usados na tela de ranking. |
+| `agregacao` | `total` ou `media` | Não | Ausente | Quando presente, ativa a resposta detalhada, ordenando por soma ou média por coleta. |
 | `ordenacao` | `ASC` ou `DESC` | Não | `DESC` | Ordem crescente ou decrescente. |
 | `limite` | Inteiro não negativo | Não | `20` | Quantidade máxima de resultados. |
 | `offset` | Inteiro não negativo | Não | `0` | Quantidade de resultados a pular. |
 | `aplicacaoId` | Inteiro positivo | Não | — | Filtra por aplicação. |
 | `regiaoId` | Inteiro positivo | Não | — | Filtra por região. |
-| `apenasAtivos` | Booleano textual | Não | `true` | `false` inclui também serviços que não estão ativos. |
+| `apenasAtivos` | Booleano textual | Não | `true` | Somente o valor textual `false` inclui também serviços não ativos. |
 
 **Autenticação:** obrigatória.
 
-**Exemplo de requisição:**
+**Exemplo de requisição para a tela de ranking:**
 
 ```http
-GET /analytics/ranking?inicio=2026-11-01T00:00:00Z&fim=2026-11-17T23:59:59Z&metrica=energia&ordenacao=DESC&limite=20&offset=0&apenasAtivos=true
+GET /analytics/ranking?inicio=2026-11-01T00:00:00Z&fim=2026-11-17T23:59:59Z&metrica=energia&agregacao=media&ordenacao=ASC&limite=20&offset=0
 Authorization: Bearer <token>
 ```
 
-**Resposta de sucesso — HTTP 200:**
+**Resposta de sucesso — HTTP 200, com `agregacao`:**
+
+```json
+{
+  "periodo": {
+    "inicio": "2026-11-01T00:00:00.000Z",
+    "fim": "2026-11-17T23:59:59.000Z"
+  },
+  "metrica": "energia",
+  "ordenacao": "ASC",
+  "agregacao": "media",
+  "dados": [
+    {
+      "servicoId": 1,
+      "nome": "Billing API",
+      "aplicacao": "GreenER Demo",
+      "regiao": "Sudeste",
+      "pais": "Brasil",
+      "totalEnergiaKwh": 0.0042,
+      "totalEmissaoCo2eG": 0.256,
+      "mediaEnergiaKwh": 0.0007,
+      "mediaEmissaoCo2eG": 0.0427,
+      "qtdColetas": 6,
+      "tendenciaPercentual": -8.5
+    }
+  ],
+  "aplicacoes": [
+    {
+      "id": 1,
+      "nome": "GreenER Demo"
+    }
+  ],
+  "resumo": {
+    "classificados": 1,
+    "semDados": 0,
+    "mediaEnergiaKwh": 0.0007,
+    "mediaEmissaoCo2eG": 0.0427,
+    "menorEnergia": {
+      "nome": "Billing API",
+      "mediaEnergiaKwh": 0.0007
+    },
+    "primeiroColocado": {
+      "servicoId": 1,
+      "nome": "Billing API",
+      "aplicacao": "GreenER Demo",
+      "regiao": "Sudeste",
+      "pais": "Brasil",
+      "totalEnergiaKwh": 0.0042,
+      "totalEmissaoCo2eG": 0.256,
+      "mediaEnergiaKwh": 0.0007,
+      "mediaEmissaoCo2eG": 0.0427,
+      "qtdColetas": 6,
+      "tendenciaPercentual": -8.5
+    }
+  }
+}
+```
+
+Os valores do exemplo são ilustrativos. Na resposta detalhada:
+
+- `totalEnergiaKwh` e `totalEmissaoCo2eG` representam a soma no período;
+- `mediaEnergiaKwh` e `mediaEmissaoCo2eG` representam a média por coleta;
+- `qtdColetas` é a quantidade de valores registrados para a métrica selecionada;
+- `tendenciaPercentual` compara a métrica agregada atual com o período anterior de mesma duração. Quando não existe base anterior válida ou seu valor é zero, a tendência é `null`;
+- `resumo` é calculado sobre o conjunto filtrado antes de aplicar paginação;
+- `aplicacoes` contém as aplicações disponíveis no catálogo considerado pela consulta.
+
+Sem o parâmetro `agregacao`, o endpoint retorna uma resposta simples no formato abaixo:
 
 ```json
 {
@@ -823,29 +891,13 @@ Authorization: Bearer <token>
 }
 ```
 
-Sem `agregacao`, a resposta segue o exemplo. A ordem usa o total da métrica escolhida e a consulta agrega coletas com os dois valores disponíveis.
-
-Com `agregacao`, a ordem usa o total ou a média da métrica escolhida e cada indicador é agregado a partir dos seus valores disponíveis. `qtdColetas` conta as coletas com valor para a métrica escolhida. Cada item também inclui `aplicacao` e `tendenciaPercentual`, calculada sobre o intervalo anterior de mesma duração. Uma métrica ausente ou uma tendência sem base é representada por `null`.
-
-O campo `posicao` é usado apenas internamente para ordenar os resultados e não é retornado em `dados` nem em `resumo.primeiroColocado`. Para numerar os itens de uma página, use `offset + índice do item + 1`, com índice iniciado em zero.
-
-A resposta inclui a `agregacao` aplicada, as `aplicacoes` disponíveis (`id` e `nome`) e `resumo`. O resumo vale para todo o conjunto filtrado e contém `classificados`, `semDados`, `mediaEnergiaKwh`, `mediaEmissaoCo2eG`, `menorEnergia` e `primeiroColocado`.
-
-Os campos abaixo consideram os serviços classificados (com valor para a métrica selecionada), respeitando os filtros e antes de aplicar `limite` e `offset`. Mesmo com `agregacao=total`, os três usam as médias por coleta no período atual:
-
-| Campo do resumo | Cálculo |
-|---|---|
-| `mediaEnergiaKwh` | Média aritmética das médias de energia por coleta de cada serviço classificado, em kWh. Cada serviço tem o mesmo peso, independentemente da quantidade de coletas; valores `null` são ignorados. Sem médias disponíveis, retorna `null`. |
-| `mediaEmissaoCo2eG` | Média aritmética das médias de emissão por coleta de cada serviço classificado, em g CO₂e, também sem ponderação pela quantidade de coletas e ignorando `null`. Sem médias disponíveis, retorna `null`. |
-| `menorEnergia` | Objeto com `nome` e `mediaEnergiaKwh` do serviço classificado com a menor média de energia por coleta, independentemente da métrica e da ordem escolhidas para o ranking. Desconsidera médias `null` e, em caso de empate, escolhe o menor `servicoId`. Sem média de energia disponível, retorna `null`. |
-
 **Erros possíveis — HTTP 400:**
 
 | Código | Motivo |
 |---|---|
 | `invalid_period` | Período ausente ou inválido. |
 | `invalid_metric` | `metrica` ausente ou diferente de `energia` e `co2e`. |
-| `invalid_aggregation` | `agregacao` diferente de `total` e `media`. |
+| `invalid_aggregation` | `agregacao` diferente de `total` ou `media`. |
 | `invalid_order` | `ordenacao` diferente de `ASC` ou `DESC`. |
 | `invalid_limit` | `limite` não é inteiro não negativo. |
 | `invalid_offset` | `offset` não é inteiro não negativo. |
@@ -899,15 +951,15 @@ Authorization: Bearer <token>
       "nome": "Search API",
       "regiao": "Sudeste",
       "pais": "Brasil",
-      "totalEnergiaKwh": 0.0,
-      "totalEmissaoCo2eG": 0.0,
+      "totalEnergiaKwh": 0,
+      "totalEmissaoCo2eG": 0,
       "qtdColetas": 0,
-      "mediaEnergiaKwh": 0.0,
-      "mediaEmissaoCo2eG": 0.0,
-      "minEnergiaKwh": 0.0,
-      "maxEnergiaKwh": 0.0,
-      "minEmissaoCo2eG": 0.0,
-      "maxEmissaoCo2eG": 0.0
+      "mediaEnergiaKwh": 0,
+      "mediaEmissaoCo2eG": 0,
+      "minEnergiaKwh": 0,
+      "maxEnergiaKwh": 0,
+      "minEmissaoCo2eG": 0,
+      "maxEmissaoCo2eG": 0
     }
   ],
   "periodo": {
@@ -920,7 +972,7 @@ Authorization: Bearer <token>
 }
 ```
 
-Serviços sem coletas no período continuam no array `dados`, com valores numéricos zerados; a API também inclui uma mensagem em `avisos`. A ordem de `dados` segue a lista de IDs informada, ou sua ordem inversa quando `ordenacao=DESC`.
+Serviços existentes sem coletas no período continuam no array `dados`, com valores numéricos zerados; a API também inclui uma mensagem em `avisos`. A ordem segue a lista de IDs informada, ou sua ordem inversa quando `ordenacao=DESC`.
 
 **Erros possíveis — HTTP 400:**
 
@@ -930,17 +982,17 @@ Serviços sem coletas no período continuam no array `dados`, com valores numér
 | `invalid_services` | Lista ausente, IDs inválidos, menos de dois ou mais de cinco IDs distintos. |
 | `invalid_order` | `ordenacao` diferente de `ASC` ou `DESC`. |
 
-### 3.10. Rotas de análise ainda não expostas
+### 3.10 Agregações internas não expostas como rota
 
-O repositório de análise também contém uma função genérica de agregação por serviço, região, aplicação, dia ou hora. No estado atual, essa função **não está ligada a uma rota HTTP** em `analytics.routes.ts`. Portanto, não existe contrato de endpoint público para agregações genéricas nesta versão; o frontend não deve chamar uma rota presumida para esse recurso.
+O repositório de análise também contém uma função genérica de agregação por serviço, região, aplicação, dia ou hora. Essa função não está ligada a uma rota HTTP em `analytics.routes.ts`. Portanto, não existe endpoint público de agregação genérica nesta versão.
 
 ---
 
 ## 4. Integrações com APIs externas
 
-As integrações são realizadas pelo backend. Elas não são endpoints próprios do GreenER e não são expostas como rotas do backend. As chamadas utilizam `GET` e `Accept: application/json`.
+As integrações são realizadas pelo backend. Elas não são endpoints próprios do GreenER e não são expostas como rotas do backend. As chamadas utilizam GET e `Accept: application/json`.
 
-### 4.1. API de métricas
+### 4.1 API de métricas
 
 Implementação: `backend/src/integrations/metrics-api.ts`.
 
@@ -952,7 +1004,7 @@ Implementação: `backend/src/integrations/metrics-api.ts`.
 |---|---|---|
 | `GET /services` | `listarServicos()` | Lista os serviços disponíveis para monitoramento. |
 | `GET /services/{id}` | `buscarServico(id)` | Consulta um serviço pelo identificador externo. |
-| `GET /metrics/{id}` | `buscarMetricas(id)` | Consulta métricas e intervalo de coleta de um serviço. |
+| `GET /metrics/{id}` | `buscarMetricas(id)` | Consulta métricas e intervalo da amostra de um serviço. |
 
 **Exemplo de serviço recebido:**
 
@@ -961,10 +1013,10 @@ Implementação: `backend/src/integrations/metrics-api.ts`.
   "id": "servico-1",
   "name": "Billing API",
   "location": {
-    "region_code": "BR-SE",
-    "country": "Brasil",
-    "region": "Sudeste",
-    "city": "São Paulo",
+    "region_code": "BR-SP",
+    "country": "Brazil",
+    "region": "Sao Paulo",
+    "city": "Sao Paulo",
     "latitude": -23.5505,
     "longitude": -46.6333
   },
@@ -988,7 +1040,7 @@ Implementação: `backend/src/integrations/metrics-api.ts`.
 
 CPU deve estar entre 0 e 100; memória, disco e rede devem ser números finitos não negativos. Campos de localização podem estar ausentes ou nulos.
 
-### 4.2. API de intensidade de carbono
+### 4.2 API de intensidade de carbono
 
 Implementação: `backend/src/integrations/carbon-api.ts`.
 
@@ -998,7 +1050,7 @@ Implementação: `backend/src/integrations/carbon-api.ts`.
 
 | Endpoint externo | Função utilizada | Descrição |
 |---|---|---|
-| `GET /regions` | `listarRegioes()` | Lista regiões e seus fatores de intensidade de carbono. |
+| `GET /regions` | `listarRegioes()` | Lista regiões e fatores de intensidade de carbono. |
 | `GET /regions/{codigo}` | `buscarRegiao(codigo)` | Consulta uma região. |
 | `GET /regions/{codigo}/carbon-intensity` | `buscarIntensidadeCarbono(codigo)` | Consulta a intensidade de carbono de uma região. |
 
@@ -1008,12 +1060,12 @@ O backend utiliza `location.region_code` da API de métricas para consultar a in
 
 ```json
 {
-  "region_code": "BR-SE",
-  "country": "Brasil",
-  "region": "Sudeste",
-  "city": "São Paulo",
-  "carbon_intensity_gco2e_per_kwh": 61.2,
-  "renewable_share_percent": 82.5
+  "region_code": "BR-SP",
+  "country": "Brazil",
+  "region": "Sao Paulo",
+  "city": "Sao Paulo",
+  "carbon_intensity_gco2e_per_kwh": 100,
+  "renewable_share_percent": 80
 }
 ```
 
@@ -1021,16 +1073,16 @@ A intensidade é expressa em `gCO₂e/kWh` e a participação renovável em perc
 
 ## 5. Tratamento de erros das integrações
 
-As integrações compartilham o cliente `backend/src/integrations/api-client.ts`. O cliente valida as respostas recebidas e não converte respostas inválidas ou ausentes em métricas iguais a zero.
+As integrações compartilham `backend/src/integrations/api-client.ts`. O cliente valida as respostas e não converte respostas inválidas ou ausentes em métricas iguais a zero.
 
 | Tipo de erro | Significado |
 |---|---|
 | `http` | A API externa retornou um status HTTP fora da faixa de sucesso. |
-| `timeout` | A chamada excedeu o tempo limite, incluindo a leitura do corpo da resposta. |
-| `rede` | Não foi possível concluir a conexão com a API externa. |
+| `timeout` | A chamada excedeu o limite de tempo, incluindo a leitura do corpo. |
+| `rede` | Não foi possível concluir a conexão. |
 | `resposta_invalida` | A resposta não contém JSON válido ou não corresponde ao formato esperado. |
 
-Falhas no backend que não sejam tratadas por um controller retornam HTTP `500` com `{ "error": "internal_server_error" }`. O backend registra o detalhe no log e não o expõe na resposta pública.
+As chamadas externas são feitas uma vez por tentativa. Falhas na rotina periódica são registradas e podem ser novamente tentadas em um ciclo posterior. Falhas não tratadas por um controller retornam HTTP `500`; o detalhe é registrado no log e não é exposto na resposta pública.
 
 ## 6. Variáveis de ambiente relacionadas à API
 
@@ -1041,9 +1093,9 @@ As variáveis são configuradas no `.env` da raiz e repassadas ao backend pelo D
 | `PORT` | Porta HTTP interna do backend. | `3000` |
 | `METRICS_API_URL` | URL base da API de métricas. | `https://metrics.unilaunch.org` |
 | `CARBON_API_URL` | URL base da API de intensidade de carbono. | `https://carbon.unilaunch.org` |
-| `API_TIMEOUT_MS` | Tempo limite de cada chamada externa, em milissegundos. | `10000` |
+| `API_TIMEOUT_MS` | Timeout das chamadas externas, em milissegundos. | `10000` |
 | `COLLECTIONS_AUTO_START` | Inicia a coleta periódica junto com o servidor. | `true` |
-| `JWT_SECRET` | Segredo de assinatura e validação dos tokens JWT. | Sem valor padrão; obrigatório para autenticação. |
+| `JWT_SECRET` | Segredo de assinatura e validação dos tokens. | Obrigatório; pelo menos 32 bytes. |
 | `PGHOST` | Endereço do PostgreSQL. | `database` no Compose. |
 | `PGPORT` | Porta do PostgreSQL. | `5432` |
 | `PGDATABASE` | Nome do banco. | `greener` |
@@ -1051,16 +1103,6 @@ As variáveis são configuradas no `.env` da raiz e repassadas ao backend pelo D
 | `PGPASSWORD` | Senha do banco. | Definida no `.env`. |
 | `PGCONNECT_TIMEOUT` | Tempo limite de conexão, em segundos. | `5` |
 | `PGQUERY_TIMEOUT_MS` | Tempo limite de consulta, em milissegundos. | `10000` |
-
-## 7. Fluxo resumido de integração
-
-1. O backend consulta `GET /services` na API de métricas para descobrir os serviços monitorados.
-2. Para cada serviço, consulta `GET /metrics/{id}` e recebe CPU, memória, disco, rede e intervalo da amostra.
-3. Quando há localização regional disponível, consulta `GET /regions/{codigo}/carbon-intensity` na API de intensidade de carbono.
-4. O backend calcula potência estimada, energia e emissões de CO₂e e registra os dados disponíveis no PostgreSQL.
-5. O frontend autenticado consulta `GET /services` e `GET /dashboard/indicadores` para apresentar os serviços e os indicadores.
-6. As telas de análise consultam `GET /analytics/historico/{servicoId}`, `GET /analytics/ranking` e `GET /analytics/comparacao`.
-7. A tela de configuração lê o intervalo por `GET /monitoring-settings`. A alteração por `PUT /monitoring-settings` depende da implementação futura dessa rota.
 
 ---
 
