@@ -1,0 +1,47 @@
+# Blueprint do Render (plano gratuito): um serviço web (frontend + backend) e um PostgreSQL.
+# Deploy: dashboard.render.com > New > Blueprint > selecionar este repositório.
+services:
+  - type: web
+    name: greener
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health/ready
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: COLLECTIONS_AUTO_START
+        value: "true"
+      - key: METRICS_API_URL
+        value: https://metrics.unilaunch.org
+      - key: CARBON_API_URL
+        value: https://carbon.unilaunch.org
+      - key: API_TIMEOUT_MS
+        value: "10000"
+      - key: PGHOST
+        fromDatabase:
+          name: greener-db
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: greener-db
+          property: port
+      - key: PGDATABASE
+        fromDatabase:
+          name: greener-db
+          property: database
+      - key: PGUSER
+        fromDatabase:
+          name: greener-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: greener-db
+          property: password
+
+databases:
+  - name: greener-db
+    plan: free
+    databaseName: greener
+    user: greener
