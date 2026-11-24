@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import test from "node:test";
 import pg from "pg";
@@ -6,8 +7,16 @@ import { tratarRequisicao } from "../../app.ts";
 import { tratarRequisicaoMock } from "../../mocks/app.ts";
 import { consultarMonitoramentoColeta } from "./collections.service.ts";
 import { ErroApi } from "../../integrations/api-client.ts";
+import { gerarToken } from "../auth/jwt.ts";
 
 test("contratos HTTP de coleta, diagnóstico e recuperação", async (t) => {
+  const segredoAnterior = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = randomBytes(48).toString("base64url");
+  t.after(() => {
+    if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = segredoAnterior;
+  });
+  const headers = { authorization: `Bearer ${await gerarToken("1")}` };
   const estado = { modo: "normal", falharBanco: false, gravacoes: 0, externas: 0 };
   const consulta = t.mock.method(pg.Pool.prototype, "query", async (sql: string, parametros: unknown[] = []) => {
     if (estado.falharBanco) throw new Error("SQL interno senha=segredo");
@@ -57,11 +66,11 @@ test("contratos HTTP de coleta, diagnóstico e recuperação", async (t) => {
     });
   });
   const base = `http://127.0.0.1:${endereco.port}`;
-  const executar = () => fetch(`${base}/collections/executar`, { method: "POST" });
+  const executar = () => fetch(`${base}/collections/executar`, { method: "POST", headers });
 
   await t.test("status inicial não consulta APIs ou banco nem inicia coletas", async () => {
     const antes = consultarMonitoramentoColeta();
-    const resposta = await fetch(`${base}/collections/rotina/status`);
+    const resposta = await fetch(`${base}/collections/rotina/status`, { headers });
     assert.equal(resposta.headers.get("cache-control"), "no-store");
     const corpo = await resposta.json() as { dados: { executando: boolean; monitoramento: unknown } };
     assert.equal(corpo.dados.executando, false);

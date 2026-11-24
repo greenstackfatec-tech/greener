@@ -20,7 +20,7 @@ function preparar() {
     falharListagem: false,
     falharConfiguracao: false,
     falharColeta: new Set<string>(),
-    falharDepoisDoIntervalo: false,
+    falharPersistencia: false,
     aguardar: new Map<string, Promise<void>>(),
     listagens: 0,
     aguardarListagem: undefined as Promise<void> | undefined,
@@ -49,16 +49,16 @@ function preparar() {
       if (estado.falharListagem) throw new Error("API indisponível");
       return estado.lista;
     },
-    async coletarServico(servico, intervaloAlternativo, informarIntervalo) {
+    async coletarServico(servico, intervaloAlternativo) {
       chamadas.push({ id: servico.id, quando: agora, intervaloAlternativo });
       await estado.aguardar.get(servico.id);
       if (estado.falharColeta.has(servico.id)) throw new Error("Falha nas métricas");
-      informarIntervalo(estado.intervalos.get(servico.id)!);
-      if (estado.falharDepoisDoIntervalo) throw new Error("Falha na persistência");
+      if (estado.falharPersistencia) throw new Error("Falha na persistência");
       const intensidadeCarbono = { ...regioes[0], region_code: regioes[0].code };
+      const amostra = { ...metricas, collection_interval_seconds: estado.intervalos.get(servico.id)! };
       return {
         servicoId: 1, servicoNome: servico.name, status: "sucesso", resultado: "completo",
-        calculo: { ...calcularColeta(metricas, intensidadeCarbono), intensidadeCarbono },
+        calculo: { ...calcularColeta(amostra, intensidadeCarbono), intensidadeCarbono },
       };
     },
   });
@@ -81,39 +81,41 @@ function preparar() {
   return { rotina, estado, chamadas, logs, timers, avancar, horarios };
 }
 
-test("TP06 inicia imediatamente, usa 30s da API e passa a usar 90s sem reiniciar", async () => {
+test("inicia imediatamente e mantém 60s da aplicação quando a duração da amostra muda", async () => {
   const { rotina, estado, avancar, horarios } = preparar();
   assert.equal(rotina.status().executando, false);
   assert.equal(rotina.iniciar(), true);
   assert.equal(rotina.iniciar(), false);
   await avancar(0);
   assert.deepEqual(horarios(), [0]);
-  await avancar(29_999);
+  await avancar(59_999);
   assert.deepEqual(horarios(), [0]);
-  estado.intervalos.set(servicos[0].id, 90);
+  estado.intervalos.set(servicos[0].id, 5);
   await avancar(1);
-  assert.deepEqual(horarios(), [0, 30_000]);
-  await avancar(89_999);
-  assert.deepEqual(horarios(), [0, 30_000]);
+  assert.deepEqual(horarios(), [0, 60_000]);
+  estado.intervalos.set(servicos[0].id, 60);
+  await avancar(59_999);
+  assert.deepEqual(horarios(), [0, 60_000]);
   await avancar(1);
-  assert.deepEqual(horarios(), [0, 30_000, 120_000]);
+  assert.deepEqual(horarios(), [0, 60_000, 120_000]);
   await rotina.parar();
 });
 
-test("intervalos de 1s e 120s são independentes e não sofrem a restrição antiga de 10s", async () => {
-  const { rotina, estado, avancar, horarios } = preparar();
-  estado.intervalos.set(servicos[0].id, 1);
-  estado.intervalos.set(servicos[1].id, 120);
+test("serviços com amostras diferentes usam o mesmo intervalo da aplicação", async () => {
+  const { rotina, estado, avancar, horarios, chamadas } = preparar();
+  estado.intervalos.set(servicos[0].id, 5);
+  estado.intervalos.set(servicos[1].id, 30);
   rotina.iniciar();
   await avancar(120_000);
-  assert.equal(horarios().length, 121);
-  assert.deepEqual(horarios(servicos[1].id), [0, 120_000]);
+  assert.deepEqual(horarios(), [0, 60_000, 120_000]);
+  assert.deepEqual(horarios(servicos[1].id), [0, 60_000, 120_000]);
+  assert.ok(chamadas.every((chamada) => chamada.intervaloAlternativo === 60));
   await rotina.parar();
 });
 
-test("zero e estouro usam intervalo local validado, sem consultas contínuas", async () => {
+test("duração zero ou superior ao limite do timer não muda os 45s da configuração", async () => {
   for (const intervalo of [0, INTERVALO_MAXIMO_SEGUNDOS + 1]) {
-    const { rotina, estado, avancar, horarios, logs } = preparar();
+    const { rotina, estado, avancar, horarios, chamadas } = preparar();
     estado.intervaloLocal = 45;
     estado.intervalos.set(servicos[0].id, intervalo);
     rotina.iniciar();
@@ -121,23 +123,25 @@ test("zero e estouro usam intervalo local validado, sem consultas contínuas", a
     assert.deepEqual(horarios(), [0]);
     await avancar(1);
     assert.deepEqual(horarios(), [0, 45_000]);
-    assert.ok(logs.some((l) => String(l[0]).includes("não agendável")));
+    assert.equal(rotina.status().intervaloAlternativoSegundos, 45);
+    assert.ok(chamadas.every((chamada) => chamada.intervaloAlternativo === 45));
     await rotina.parar();
   }
 });
 
-test("zero e falhas posteriores mantêm o último intervalo válido do serviço", async () => {
+test("amostra zero e falhas posteriores preservam o intervalo da aplicação", async () => {
   const { rotina, estado, avancar, horarios, chamadas } = preparar();
-  rotina.iniciar(10);
+  estado.intervaloLocal = 45;
+  rotina.iniciar();
   await avancar(0);
   estado.intervalos.set(servicos[0].id, 0);
-  await avancar(30_000);
+  await avancar(45_000);
   estado.falharColeta.add(servicos[0].id);
-  await avancar(30_000);
+  await avancar(45_000);
   estado.falharColeta.clear();
-  await avancar(30_000);
-  assert.deepEqual(horarios(), [0, 30_000, 60_000, 90_000]);
-  assert.deepEqual(chamadas.filter((c) => c.id === servicos[0].id).map((c) => c.intervaloAlternativo), [10, 30, 30, 30]);
+  await avancar(45_000);
+  assert.deepEqual(horarios(), [0, 45_000, 90_000, 135_000]);
+  assert.deepEqual(chamadas.filter((c) => c.id === servicos[0].id).map((c) => c.intervaloAlternativo), [45, 45, 45, 45]);
   await rotina.parar();
 });
 
@@ -176,13 +180,13 @@ test("falha de um serviço e de persistência não impede outros nem futuras ten
   rotina.iniciar();
   await avancar(60_000);
   assert.deepEqual(horarios(), [0, 60_000]);
-  assert.deepEqual(horarios(servicos[1].id), [0, 30_000, 60_000]);
+  assert.deepEqual(horarios(servicos[1].id), [0, 60_000]);
   estado.falharColeta.clear();
-  estado.falharDepoisDoIntervalo = true;
+  estado.falharPersistencia = true;
   await avancar(60_000);
-  estado.falharDepoisDoIntervalo = false;
-  await avancar(30_000);
-  assert.deepEqual(horarios(), [0, 60_000, 120_000, 150_000]);
+  estado.falharPersistencia = false;
+  await avancar(60_000);
+  assert.deepEqual(horarios(), [0, 60_000, 120_000, 180_000]);
   assert.equal(rotina.status().coletasEmAndamento, 0);
   await rotina.parar();
 });
@@ -194,12 +198,12 @@ test("serviço lento não se sobrepõe nem bloqueia os demais; intervalo começa
   rotina.iniciar();
   await avancar(90_000);
   assert.deepEqual(horarios(), [0]);
-  assert.deepEqual(horarios(servicos[1].id), [0, 30_000, 60_000, 90_000]);
+  assert.deepEqual(horarios(servicos[1].id), [0, 60_000]);
   liberar();
-  await avancar(29_999);
+  await avancar(59_999);
   assert.deepEqual(horarios(), [0]);
   await avancar(1);
-  assert.deepEqual(horarios(), [0, 120_000]);
+  assert.deepEqual(horarios(), [0, 150_000]);
   await rotina.parar();
 });
 
@@ -249,12 +253,12 @@ test("cada lote vencido consulta a lista antes de coletar e reconhece remoção 
   await avancar(0);
   assert.equal(estado.listagens, 1);
   estado.lista = [servicos[1]];
-  await avancar(1000);
+  await avancar(60_000);
   assert.equal(estado.listagens, 2);
   assert.deepEqual(horarios(), [0]);
   estado.lista = servicos;
   await avancar(60_000);
-  assert.deepEqual(horarios(), [0, 61_000]);
+  assert.deepEqual(horarios(), [0, 120_000]);
   assert.equal(rotina.status().executando, true);
   await rotina.parar();
 });
@@ -264,7 +268,7 @@ test("serviços vencidos juntos compartilham a descoberta e falhas não geram la
   rotina.iniciar();
   await avancar(0);
   estado.falharListagem = true;
-  await avancar(30_000);
+  await avancar(60_000);
   assert.equal(estado.listagens, 2);
   assert.deepEqual(horarios(), [0]);
   assert.deepEqual(horarios(servicos[1].id), [0]);
@@ -272,8 +276,8 @@ test("serviços vencidos juntos compartilham a descoberta e falhas não geram la
   estado.falharListagem = false;
   await avancar(60_000);
   assert.equal(estado.listagens, 3);
-  assert.deepEqual(horarios(), [0, 90_000]);
-  assert.deepEqual(horarios(servicos[1].id), [0, 90_000]);
+  assert.deepEqual(horarios(), [0, 120_000]);
+  assert.deepEqual(horarios(servicos[1].id), [0, 120_000]);
   await rotina.parar();
 });
 
@@ -283,7 +287,7 @@ test("descoberta pendente impede despacho com lista antiga e a parada aguarda su
   await avancar(0);
   let liberar!: () => void;
   estado.aguardarListagem = new Promise<void>((resolve) => { liberar = resolve; });
-  await avancar(30_000);
+  await avancar(60_000);
   await avancar(90_000);
   assert.equal(estado.listagens, 2);
   assert.deepEqual(horarios(), [0]);

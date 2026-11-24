@@ -1,4 +1,5 @@
-import { obterToken } from "./token.ts";
+import { obterToken, removerToken } from "./token.ts";
+import { ROTAS } from "../caminhos.ts";
 
 /** Comunicação com o backend. Em desenvolvimento o Vite encaminha /api; no container, o Nginx. */
 const BASE_URL = "/api";
@@ -41,6 +42,16 @@ async function chamar<T>(caminho: string, init: RequestInit): Promise<T> {
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const response = await fetch(`${BASE_URL}${caminho}`, { ...init, headers });
+
+  // Token inválido/expirado em rota protegida: limpa armazenamento e leva ao login com aviso.
+  // O 401 em /auth/login (credenciais inválidas) NÃO deve limpar token nem redirecionar;
+  // a página de login trata exibindo "E-mail ou senha inválidos" no formulário.
+  if (response.status === 401 && caminho !== "/auth/login") {
+    removerToken();
+    window.location.href = `${ROTAS.login}?expired=1`;
+    throw new ErroApi(401, "Sessão expirada", "unauthorized", null);
+  }
+
   if (!response.ok) {
     const corpo = await lerCorpo(response);
     const retryAfter = Number(response.headers.get("Retry-After"));

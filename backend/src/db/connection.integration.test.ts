@@ -1,3 +1,10 @@
+// Configurar variáveis de ambiente para o pg.Client criado no processo principal
+process.env.PGHOST ??= "localhost";
+process.env.PGPORT ??= "5432";
+process.env.PGDATABASE ??= "greener";
+process.env.PGUSER ??= "greener";
+process.env.PGPASSWORD ??= "greener_dev_only";
+
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
@@ -9,12 +16,19 @@ import type { TestContext } from "node:test";
 import pg from "pg";
 
 function prepararProcesso(t: TestContext, codigo: string, ambiente: NodeJS.ProcessEnv = {}) {
+  const envPadrao = {
+    PGHOST: "localhost",
+    PGPORT: "5432",
+    PGDATABASE: "greener",
+    PGUSER: "greener",
+    PGPASSWORD: "greener_dev_only",
+  };
   const processo = spawn(process.execPath, [
     "--experimental-strip-types", "--input-type=module", "--eval",
     `import { consultar, encerrarConexao } from "./src/db/connection.ts"; ${codigo}`,
   ], {
     cwd: fileURLToPath(new URL("../../", import.meta.url)),
-    env: { ...process.env, ...ambiente },
+    env: { ...process.env, ...envPadrao, ...ambiente },
     stdio: ["ignore", "ignore", "pipe", "ipc"],
   });
   let erros = "";

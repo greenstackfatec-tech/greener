@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import logo from "../assets/greener-icon.png";
 import { ROTAS } from "../caminhos.ts";
 import { ResumoConsumo } from "./ResumoConsumo.tsx";
+import { Footer } from "./Footer.tsx";
 import "./LayoutAutenticacao.css";
 
 function Logo() {
@@ -55,9 +56,7 @@ export function LayoutAutenticacao({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <p className="auth-rodape">
-          <span>GreenStack · Projeto acadêmico</span>
-        </p>
+        <Footer variante="minimo" />
       </main>
     </div>
   );

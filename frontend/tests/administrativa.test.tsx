@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import "@testing-library/jest-dom";
 import { MemoryRouter } from "react-router";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AdministrativaPage } from "../src/pages/AdministrativaPage.tsx";
 import { ErroApi } from "../src/services/api.ts";
 import * as configuracao from "../src/services/configuracao.ts";
@@ -35,6 +35,8 @@ const INDICADORES_API: indicadores.Indicadores = {
   emissaoTotalCo2eG: 1.25,
   servicosAtivos: 2,
   servicosIndisponiveis: 1,
+  ultimaColetaEm: null,
+  intervaloColetaSegundos: null,
 };
 
 function abrirPagina() {
@@ -96,7 +98,7 @@ test("lista os serviços reais com energia e emissão da última coleta", async 
   expect(screen.getByText("2 serviços · última coleta de cada um")).toBeTruthy();
 });
 
-test("serviço sem coleta mostra traço, e serviço removido não aparece", async () => {
+test("serviço sem coleta mostra traço na energia, explicação no CO₂e, e serviço removido não aparece", async () => {
   vi.mocked(servicos.listarServicos).mockResolvedValue([
     servico({
       id: 4,
@@ -113,7 +115,9 @@ test("serviço sem coleta mostra traço, e serviço removido não aparece", asyn
   abrirPagina();
 
   const item = (await screen.findByText("Inventory Sync")).closest("li") as HTMLElement;
-  expect(within(item).getAllByText("—")).toHaveLength(2);
+  // Energia mostra traço (—), CO₂e mostra explicação quando não há valor
+  expect(within(item).getAllByText("—")).toHaveLength(1);
+  expect(within(item).getByText("CO₂e = energia × intensidade de carbono")).toBeTruthy();
   expect(within(item).getByText("Sem métricas · Localização não informada")).toBeTruthy();
   expect(screen.queryByText("Serviço Antigo")).toBeNull();
   expect(screen.getByText("1 serviço · última coleta de cada um")).toBeTruthy();
@@ -132,6 +136,8 @@ test("banco sem coletas calculadas mostra zero e explica, em vez de inventar val
     emissaoTotalCo2eG: 0,
     servicosAtivos: 0,
     servicosIndisponiveis: 0,
+    ultimaColetaEm: null,
+    intervaloColetaSegundos: null,
   });
   abrirPagina();
 
@@ -173,10 +179,13 @@ test("falha ao carregar os serviços não derruba a tela nem os indicadores", as
   expect(screen.queryByText("Billing API")).toBeNull();
 });
 
-test("o card \"Por recurso\" avisa que o dado ainda não existe, sem barras inventadas", async () => {
+test("não exibe o card \"Por recurso\" enquanto não há dados reais", async () => {
   abrirPagina();
 
-  expect(await screen.findByText(/Ainda não disponível: a divisão do consumo/)).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Por recurso" })).toBeNull();
+  await screen.findByText("Billing API");
+  expect(screen.queryByRole("heading", { name: "Por recurso" })).toBeNull();
+  expect(screen.queryByText(/Ainda não disponível: a divisão do consumo/)).toBeNull();
   expect(screen.queryByRole("progressbar")).toBeNull();
   expect(screen.queryByText("62%")).toBeNull();
 });

@@ -40,13 +40,14 @@ async function preparar(t: TestContext, umServico = false) {
     listaVazia: false,
     metricasInvalidas: false,
     intervaloApi: 60,
+    intervaloLocal: 60,
     cpuPercentual: 25,
   };
   const gravacoes: unknown[][] = [];
   t.mock.method(pg.Pool.prototype, "query", async (sql: string, parametros: unknown[] = []) => {
     consultas.push({ sql, parametros });
     if (sql.includes("FROM aplicacoes")) return { rows: [{ id: 7 }] };
-    if (sql.includes("FROM configuracoes")) return { rows: [{ valor: "60" }] };
+    if (sql.includes("FROM configuracoes")) return { rows: [{ valor: String(estado.intervaloLocal) }] };
     if (sql.includes("WITH anteriores AS MATERIALIZED")) return { rows: [] };
     if (sql.includes("FROM regioes"))
       return { rows: [{ id: parametros[1] === "Brazil" ? 11 : 12 }] };
@@ -393,7 +394,8 @@ test("lista de serviços vazia sincroniza a presença sem gravar amostras", asyn
 
 test("TP06 rotina consulta novamente a API e grava cada novo estado, com recuperação de falha", async (t) => {
   const { estado, gravacoes } = await preparar(t, true);
-  estado.intervaloApi = 1;
+  estado.intervaloLocal = 1;
+  estado.intervaloApi = 30;
   const rotina = criarRotinaColeta({
     listarServicos, buscarIntervaloAlternativo, coletarServico,
     logger: { log() {}, warn() {}, error() {} },
@@ -420,7 +422,7 @@ test("TP06 rotina consulta novamente a API e grava cada novo estado, com recuper
   assert.equal(gravacoes[0][1], 25);
   assert.equal(gravacoes[2][1], 40);
   assert.equal(gravacoes[0][0], gravacoes[2][0]);
-  assert.equal(gravacoes[2][5], 1);
+  assert.equal(gravacoes[2][5], 30);
 });
 
 test("coletas manuais concorrentes e automáticas usam a mesma fila por serviço", async (t) => {
@@ -456,14 +458,15 @@ test("coletas manuais concorrentes e automáticas usam a mesma fila por serviço
   assert.equal(gravacoes.length, 3);
 });
 
-test("o agendador recebe o intervalo da API mesmo quando a persistência falha", async (t) => {
-  const { estado } = await preparar(t, true);
+test("falha de persistência preserva a duração da amostra na tentativa de gravação", async (t) => {
+  const { estado, consultas } = await preparar(t, true);
   estado.intervaloApi = 90;
   estado.falharColeta = true;
   t.mock.method(console, "error", () => {});
-  const intervalos: number[] = [];
-  await assert.rejects(() => coletarServico(servicos[0], 60, (valor) => { intervalos.push(valor); }));
-  assert.deepEqual(intervalos, [90]);
+  await assert.rejects(() => coletarServico(servicos[0], 60));
+  const gravacao = consultas.find((consulta) => consulta.sql.includes("INSERT INTO metricas_servico"));
+  assert.equal(gravacao?.parametros[5], 90);
+  assert.equal(gravacao?.parametros[8], 90);
 });
 
 test("a função pública de início mantém o contrato anterior e compartilha uma única rotina", async (t) => {
@@ -547,7 +550,8 @@ test("rejeição na fila não bloqueia a próxima coleta concorrente do mesmo se
 
 test("coleta automática publica falha e recuperação no mesmo diagnóstico da manual", async (t) => {
   const { estado } = await preparar(t, true);
-  estado.intervaloApi = 1;
+  estado.intervaloLocal = 1;
+  estado.intervaloApi = 30;
   estado.semCarbono = true;
   t.mock.method(console, "log", () => {});
   t.after(() => rotinaColeta.parar());
@@ -558,7 +562,7 @@ test("coleta automática publica falha e recuperação no mesmo diagnóstico da 
       await setTimeout(10);
     }
   };
-  rotinaColeta.iniciar(1);
+  rotinaColeta.iniciar();
   await aguardar(() => consultarMonitoramentoColeta().falhasAtivas.some((f) => f.etapa === "carbono"));
   assert.equal(rotinaColeta.status().executando, true);
   estado.semCarbono = false;
@@ -655,7 +659,8 @@ test("falha ao gravar ausência é persistência e permite tentar novamente sem 
 
 test("rotina mantém intervalo e histórico ao passar por sucesso, ausência e recuperação", async (t) => {
   const { estado, gravacoes } = await preparar(t, true);
-  estado.intervaloApi = 1;
+  estado.intervaloLocal = 1;
+  estado.intervaloApi = 30;
   const rotina = criarRotinaColeta({
     listarServicos, buscarIntervaloAlternativo, coletarServico,
     logger: { log() {}, warn() {}, error() {} },
@@ -685,5 +690,6 @@ test("rotina mantém intervalo e histórico ao passar por sucesso, ausência e r
   assert.deepEqual(gravacoes.map((g) => g[6]), ["sucesso", "sem_metricas", "sucesso"]);
   assert.deepEqual(gravacoes[0], primeira);
   assert.equal(gravacoes[2][1], 40);
-  assert.ok(gravacoes.every((g) => g[0] === 41 && g[5] === 1));
+  assert.ok(gravacoes.every((g) => g[0] === 41));
+  assert.deepEqual(gravacoes.map((g) => g[5]), [30, 1, 30]);
 });

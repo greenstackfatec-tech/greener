@@ -1,64 +1,75 @@
 # 🧮 Cálculos de consumo energético e emissões do GreenER
 
-<br>
+← [Voltar à documentação](README.md)
 
 ## 1. Objetivo
 
-Este documento descreve o modelo simplificado definido para estimar o consumo energético de aplicações de software e as emissões de dióxido de carbono equivalente (CO₂e), conforme o documento de especificação do desafio GreenER.
+Este documento descreve o modelo simplificado utilizado pelo GreenER para estimar o consumo energético dos serviços monitorados e as emissões de dióxido de carbono equivalente (CO₂e).
 
-O modelo utiliza métricas de infraestrutura dos serviços monitorados e o fator regional de intensidade de carbono. Seu objetivo é produzir estimativas padronizadas que permitam comparar serviços, regiões e tendências. Ele **não mede diretamente** o consumo elétrico real de servidores ou datacenters.
+O modelo utiliza métricas de infraestrutura e o fator regional de intensidade de carbono. Seu objetivo é produzir estimativas comparáveis entre serviços e períodos. Ele **não mede diretamente** o consumo elétrico real de servidores ou datacenters.
 
-<br>
+A implementação está em `backend/src/calculos/calculo-energia.ts`. A classe `CalculadoraEnergia` coordena a obtenção do fator regional e o cálculo completo da coleta.
 
 ## 2. Variáveis e fatores utilizados
 
-O cálculo considera CPU, memória RAM, disco, rede, duração do intervalo de coleta e intensidade de carbono da região.
+O cálculo considera CPU, memória RAM, disco, rede, duração da amostra e intensidade de carbono da região.
 
 | Variável | Descrição | Unidade |
 |---|---|---|
-| `CPU` | Percentual de utilização da CPU informado para o serviço. | % |
-| `CPU_MAX_WATTS` | Potência máxima de CPU adotada pelo modelo. | W |
-| `RAM_GB` | Quantidade de memória utilizada. | GB |
-| `RAM_WATTS_PER_GB` | Fator de consumo de memória utilizado pelo modelo. | W/GB |
-| `DISK_GB` | Valor de uso de disco utilizado pelo modelo. | GB |
-| `DISK_WATTS_PER_GB` | Fator de consumo de disco utilizado pelo modelo. | W/GB |
-| `NETWORK_GB` | Valor de tráfego de rede utilizado pelo modelo. | GB |
-| `NETWORK_WATTS_PER_GB` | Fator de consumo de rede utilizado pelo modelo. | W/GB |
-| `TEMPO_HORAS` | Duração do intervalo de coleta. | h |
-| `CARBON_INTENSITY` | Intensidade de carbono da região do serviço. | gCO₂e/kWh |
+| `cpu_percent` | Percentual de utilização da CPU informado pela API de métricas. | % |
+| `CPU_W` | Potência de referência da CPU a 100% de utilização. | W |
+| `memory_gb` | Memória informada para o serviço. | GB |
+| `RAM_W_POR_GB` | Fator de potência adotado para memória. | W/GB |
+| `disk_gb` | Métrica de disco informada para o serviço. | GB |
+| `DISCO_W_POR_GB` | Fator de potência adotado para disco. | W/GB |
+| `network_gb` | Métrica de rede informada para o serviço. | GB |
+| `REDE_W_POR_GB` | Fator de potência adotado para rede. | W/GB |
+| `collection_interval_seconds` | Duração da amostra informada pela API de métricas. | s |
+| `carbon_intensity_gco2e_per_kwh` | Intensidade de carbono da região. | gCO₂e/kWh |
 
-<br>
+### 2.1 Fatores de potência do código
+
+Os fatores estão definidos em `FATORES_POTENCIA`:
+
+| Recurso | Constante | Valor |
+|---|---|---:|
+| CPU a 100% | `CPU_W` | 100 W |
+| Memória | `RAM_W_POR_GB` | 0,375 W/GB |
+| Disco | `DISCO_W_POR_GB` | 0,01 W/GB |
+| Rede | `REDE_W_POR_GB` | 0,02 W/GB |
+
+Esses fatores são constantes da implementação atual, não parâmetros editáveis pela interface.
 
 ## 3. Estimativa de potência
 
-A potência estimada é a soma das parcelas atribuídas a CPU, memória, disco e rede.
+A potência estimada é a soma das parcelas atribuídas à CPU, memória, disco e rede.
 
 ### 3.1 Potência da CPU
 
 ```text
 Potência CPU (W) =
-  (Uso de CPU (%) / 100) × Potência Máxima da CPU (W)
+  (Uso de CPU (%) / 100) × 100 W
 ```
 
 ### 3.2 Potência da memória
 
 ```text
 Potência Memória (W) =
-  Memória Utilizada (GB) × Fator de Consumo da Memória (W/GB)
+  Memória (GB) × 0,375 W/GB
 ```
 
 ### 3.3 Potência do disco
 
 ```text
 Potência Disco (W) =
-  Uso de Disco (GB) × Fator de Consumo do Disco (W/GB)
+  Disco (GB) × 0,01 W/GB
 ```
 
 ### 3.4 Potência da rede
 
 ```text
 Potência Rede (W) =
-  Tráfego de Rede (GB) × Fator de Consumo da Rede (W/GB)
+  Rede (GB) × 0,02 W/GB
 ```
 
 ### 3.5 Potência total estimada
@@ -71,136 +82,149 @@ Potência Estimada (W) =
   Potência Rede
 ```
 
-<br>
+A implementação arredonda a potência calculada para oito casas decimais.
 
 ## 4. Estimativa de energia
 
-A energia consumida durante um intervalo de coleta é calculada usando a potência média estimada e a duração do intervalo em horas.
+A energia é calculada pela potência estimada e pela duração da amostra recebida da API de métricas.
 
 ```text
-Energia (kWh) = Potência Estimada (W) × Tempo de Coleta (h) / 1000
+Duração (h) = collection_interval_seconds / 3600
+
+Energia (kWh) =
+  Potência Estimada (W) × Duração (h) / 1000
 ```
 
 O divisor `1000` converte watt-hora para quilowatt-hora.
 
-<br>
+**Importante: existem dois intervalos diferentes no projeto.**
+
+- `collection_interval_seconds`: duração da amostra fornecida pela API externa. Este é o valor utilizado no cálculo de energia e armazenado com a coleta.
+- `intervalo_coleta_segundos`: intervalo de agendamento definido pela aplicação e persistido na tabela `configuracoes`. Este valor determina quando a próxima coleta será executada.
+
+O backend utiliza o segundo para agendar a rotina e o primeiro para calcular a energia da amostra. Alterar um deles não significa alterar o outro.
 
 ## 5. Estimativa de emissões de CO₂e
 
-A emissão estimada é calculada multiplicando a energia estimada pelo fator de intensidade de carbono correspondente à região onde o serviço está hospedado.
+A emissão estimada é calculada multiplicando a energia pela intensidade de carbono correspondente à região do serviço.
 
 ```text
-CO₂e (g) = Energia (kWh) × Intensidade de Carbono (gCO₂e/kWh)
+CO₂e (g) =
+  Energia (kWh) × Intensidade de Carbono (gCO₂e/kWh)
 ```
 
-O fator regional representa a emissão média, em gramas de CO₂ equivalente, associada à geração de 1 kWh de energia elétrica naquela região.
+O backend consulta a Greener Carbon Intensity API usando `location.region_code` da API de métricas.
 
-<br>
+Quando não há código de região, ou quando a consulta da intensidade de carbono falha, o cálculo completo não é concluído. As métricas recebidas podem ser preservadas, mas os campos de potência, energia e emissão permanecem sem resultado calculado. O sistema não inventa uma intensidade regional nem substitui dados ausentes por zero.
 
 ## 6. Fórmula consolidada
-
-A fórmula completa pode ser representada da seguinte maneira:
 
 ```text
 CO₂e (g) =
   [
     (
-      (CPU / 100 × CPU_MAX_WATTS)
-      + (RAM_GB × RAM_WATTS_PER_GB)
-      + (DISK_GB × DISK_WATTS_PER_GB)
-      + (NETWORK_GB × NETWORK_WATTS_PER_GB)
+      (CPU (%) / 100 × 100 W)
+      + (RAM (GB) × 0,375 W/GB)
+      + (Disco (GB) × 0,01 W/GB)
+      + (Rede (GB) × 0,02 W/GB)
     )
-    × TEMPO_HORAS
+    × (Duração da amostra (s) / 3600)
     / 1000
   ]
-  × CARBON_INTENSITY
+  × Intensidade de Carbono (gCO₂e/kWh)
 ```
 
-<br>
+## 7. Exemplo de cálculo conforme o teste atual
 
-## 7. Exemplo de cálculo
-
-Considere um serviço executado durante 60 segundos em uma região com intensidade de carbono de `85 gCO₂e/kWh`.
+O teste `backend/src/calculos/calculo-energia.test.ts` utiliza o seguinte conjunto de dados:
 
 ### 7.1 Dados de entrada
 
 | Parâmetro | Valor |
 |---|---:|
-| Uso de CPU | 50% |
-| `CPU_MAX_WATTS` | 100 W |
-| Memória utilizada | 2 GB |
-| `RAM_WATTS_PER_GB` | 0,375 W/GB |
-| Uso de disco | 10 GB |
-| `DISK_WATTS_PER_GB` | 0,01 W/GB |
-| Tráfego de rede | 1 GB |
-| `NETWORK_WATTS_PER_GB` | 0,02 W/GB |
-| Tempo de coleta | 60 segundos = aproximadamente 0,0167 h |
-| Intensidade de carbono | 85 gCO₂e/kWh |
+| Uso de CPU | 10% |
+| Potência de referência da CPU | 100 W |
+| Memória | 2 GB |
+| Fator de memória | 0,375 W/GB |
+| Disco | 10 GB |
+| Fator de disco | 0,01 W/GB |
+| Rede | 0,5 GB |
+| Fator de rede | 0,02 W/GB |
+| Duração da amostra | 60 segundos |
+| Intensidade de carbono | 433 gCO₂e/kWh |
 
 ### 7.2 Cálculo da potência
 
 ```text
-CPU = 50 / 100 × 100 = 50 W
+CPU = 10 / 100 × 100 = 10 W
 RAM = 2 × 0,375 = 0,75 W
-DISCO = 10 × 0,01 = 0,10 W
-REDE = 1 × 0,02 = 0,02 W
+Disco = 10 × 0,01 = 0,10 W
+Rede = 0,5 × 0,02 = 0,01 W
 
-Potência Estimada = 50 + 0,75 + 0,10 + 0,02
-Potência Estimada = 50,87 W
+Potência Estimada = 10 + 0,75 + 0,10 + 0,01
+Potência Estimada = 10,86 W
 ```
 
 ### 7.3 Cálculo da energia
 
 ```text
-Energia = 50,87 × 0,0167 / 1000
-Energia ≈ 0,0008495 kWh
+Duração = 60 / 3600 = 0,016666... h
+
+Energia = 10,86 × (60 / 3600) / 1000
+Energia = 0,000181 kWh
 ```
 
 ### 7.4 Cálculo das emissões
 
 ```text
-CO₂e = 0,0008495 × 85
-CO₂e ≈ 0,0722 gCO₂e
+CO₂e = 0,000181 × 433
+CO₂e = 0,078373 gCO₂e
 ```
 
-Portanto, para esse intervalo, a emissão estimada é de aproximadamente **0,072 gCO₂e**.
+Portanto, para os dados usados no teste atual, a emissão calculada é **0,078373 gCO₂e**, antes de qualquer formatação para apresentação.
 
-Os valores acima reproduzem o exemplo numérico apresentado na especificação do desafio. Como o tempo foi arredondado para `0,0167` hora, o resultado também é aproximado.
+O teste verifica a potência de `10,86 W`, a duração de 60 segundos e que os resultados de energia e emissão são positivos. O título histórico do teste ainda contém a referência `0.0722 gCO2e`, mas esse valor não é assertado e não corresponde aos parâmetros atualmente utilizados no corpo do teste. O exemplo documentado aqui segue os valores efetivos do código.
 
-<br>
+## 8. Precisão e validações
 
-## 8. Cálculos por serviço e comparação entre regiões
+As funções de cálculo arredondam os resultados para oito casas decimais por meio de `toFixed(8)`:
 
-O modelo pode ser aplicado individualmente a cada serviço monitorado. Os resultados permitem comparar o impacto estimado entre aplicações e avaliar como a intensidade de carbono regional influencia as emissões.
+- potência estimada;
+- energia em kWh;
+- emissão de CO₂e em gramas.
 
-Para comparar resultados de maneira coerente, é necessário considerar:
+As funções de cálculo rejeitam valores negativos para as métricas utilizadas, potência, duração e intensidade de carbono. A integração também valida o formato e a faixa das respostas das APIs antes de encaminhar os valores para o cálculo.
+
+Valores iguais a zero são válidos e não devem ser confundidos com valores ausentes (`null`).
+
+## 9. Cálculos por serviço e comparação entre regiões
+
+O modelo é aplicado individualmente a cada coleta de serviço. Os resultados persistidos permitem consultar tendências e comparar serviços por período.
+
+Para realizar comparações coerentes, é necessário considerar:
 
 - a mesma metodologia e os mesmos fatores de conversão;
 - unidades compatíveis;
-- intervalos de coleta equivalentes;
-- o fator de intensidade de carbono correspondente à região e ao período analisados;
-- a disponibilidade e a qualidade das métricas utilizadas.
+- períodos e durações de amostra comparáveis;
+- o fator de intensidade de carbono correspondente à região e aos dados utilizados;
+- a disponibilidade e a qualidade das métricas.
 
-Uma simulação de migração para outra região deve manter o consumo energético estimado e alterar o fator regional de intensidade de carbono, a menos que o cenário avaliado também considere mudanças na infraestrutura ou no consumo.
+O ranking e a comparação utilizam os resultados persistidos no histórico. Eles não recalculam potência nem CO₂e na camada de frontend.
 
-<br>
-
-## 9. Fontes e rastreabilidade
-
-As fontes de dados previstas para o projeto são:
+## 10. Fontes e rastreabilidade
 
 - **Greener Metrics Aggregator API:** https://metrics.unilaunch.org/docs
 - **Greener Carbon Intensity API:** https://carbon.unilaunch.org/docs
 - **Especificação GreenER:** https://docs.unilaunch.org/share/x29w8jgwdb/p/greener-abp-2-semestre-b7FiqU6UC1
+- **Implementação:** `backend/src/calculos/calculo-energia.ts`
+- **Testes:** `backend/src/calculos/calculo-energia.test.ts`
 
-<br>
+## 11. Considerações finais
 
-## 10. Considerações finais
+A aplicação consistente do modelo transforma métricas de infraestrutura em indicadores estimados de consumo energético e emissão de CO₂e. A interpretação dos resultados deve considerar as premissas do modelo, a duração de cada amostra, o fator regional e a disponibilidade dos dados de entrada.
 
-A aplicação consistente do modelo simplificado permite transformar métricas de infraestrutura em indicadores comparáveis de consumo energético e emissões estimadas de CO₂e. Para preservar a confiabilidade desses indicadores, a implementação deve respeitar as fórmulas, as unidades e os fatores definidos na especificação do desafio, além de tratar explicitamente dados ausentes e falhas de integração.
-<br>
- Para mais detalhes sobre a <b>Documentação Geral</b> clique <a href="https://github.com/greenstackfatec-tech/greener/blob/develop/docs/README.md">aqui</a>.
+Para consultar como os resultados são armazenados e disponibilizados pela API, veja [`arquitetura.md`](./arquitetura.md) e [`api.md`](./api.md).
 
 ---
 
-**FATEC Jacareí · Desenvolvimento de Software Multiplataforma · 2026**
+**Green Stack · FATEC Jacareí · Desenvolvimento de Software Multiplataforma · 2026**

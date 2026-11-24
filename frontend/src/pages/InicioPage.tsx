@@ -2,6 +2,7 @@ import "@fontsource-variable/inter";
 import { Link } from "react-router";
 import logo from "../assets/greener-icon.png";
 import { ROTAS } from "../caminhos.ts";
+import { Footer } from "../components/Footer.tsx";
 import "./InicioPage.css";
 
 const BENEFICIOS = [
@@ -267,16 +268,6 @@ function ChamadaFinal() {
   );
 }
 
-function Rodape() {
-  return (
-    <footer className="inicio-footer">
-      <div className="inicio-container inicio-footer-conteudo">
-        <Marca />
-        <p>GreenStack · Projeto acadêmico</p>
-      </div>
-    </footer>
-  );
-}
 
 export function InicioPage() {
   return (
@@ -290,7 +281,7 @@ export function InicioPage() {
         <ChamadaFinal />
       </main>
 
-      <Rodape />
+      <Footer />
     </div>
   );
 }

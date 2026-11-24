@@ -8,6 +8,12 @@ export const ROTAS = {
   cadastro: "/cadastro",
   administrativa: "/administrativa",
   dashboard: "/dashboard",
+  historico: "/historico",
+  ranking: "/ranking",
+  comparacao: "/comparacao",
+  mapa: "/mapa",
   /** Galeria do DD07; só registrada em desenvolvimento. */
   dashboardEstados: "/dashboard/estados",
+  /** Página 404 - rota catch-all */
+  notFound: "*",
 } as const;

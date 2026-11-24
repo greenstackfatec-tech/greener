@@ -14,8 +14,9 @@
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "tests/**/*.test.tsx"]
+  "include": ["src"]
 }

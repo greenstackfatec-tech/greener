@@ -1,7 +1,7 @@
-import { compare } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import { ErroHttp } from "./auth.http.ts";
 import { LimitadorLogin } from "./auth.limiter.ts";
-import { buscarUsuarioPorEmail } from "./auth.repository.ts";
+import { buscarUsuarioPorEmail, criarUsuario } from "./auth.repository.ts";
 import { gerarToken } from "./jwt.ts";
 
 export interface CredenciaisLogin {
@@ -22,9 +22,12 @@ function validarCredenciais(dados: unknown): CredenciaisLogin {
     throw new ErroHttp(400, "invalid_request", "Informe e-mail e senha como texto.");
   }
   const { email, senha } = dados as Record<string, unknown>;
+  // Regex sem caracteres de controle literais (evita no-control-regex)
+  // Usa \p{C} (Unicode "Other, control") para excluir caracteres de controle
+  const EMAIL_REGEX = /^[^\s@\p{C}]+@[^\s@\p{C}]+\.[^\s@\p{C}]+$/u;
   if (
     typeof email !== "string" || email.trim().length > 150
-    || !/^[^\s@\u0000-\u001f\u007f]+@[^\s@\u0000-\u001f\u007f]+\.[^\s@\u0000-\u001f\u007f]+$/.test(email.trim())
+    || !EMAIL_REGEX.test(email.trim())
     || typeof senha !== "string" || senha.length === 0
     || Buffer.byteLength(senha, "utf8") > 72 || senha.includes("\0")
   ) {
@@ -52,4 +55,17 @@ export async function autenticar(dados: unknown): Promise<LoginAutenticado | nul
     concluirTentativa("erro");
     throw erro;
   }
+}
+
+export async function cadastrar(dados: unknown): Promise<{ id: string }> {
+  const { email, senha } = validarCredenciais(dados);
+  const { nome } = dados as Record<string, unknown>;
+  if (typeof nome !== "string" || nome.trim().length === 0 || nome.trim().length > 100 || nome.includes("\0")) {
+    throw new ErroHttp(400, "invalid_request", "Informe um nome de 1 a 100 caracteres.");
+  }
+  if (senha.length < 8) {
+    throw new ErroHttp(400, "invalid_request", "Use uma senha com pelo menos 8 caracteres e no máximo 72 bytes.");
+  }
+  const senhaHash = await hash(senha, 10);
+  return criarUsuario(nome.trim(), email, senhaHash);
 }

@@ -21,6 +21,9 @@ jobs:
       - name: Typecheck
         working-directory: backend
         run: npm run typecheck
+      - name: Lint
+        working-directory: backend
+        run: npm run lint
 
   frontend-typecheck:
     name: Frontend tests + typecheck + lint + build

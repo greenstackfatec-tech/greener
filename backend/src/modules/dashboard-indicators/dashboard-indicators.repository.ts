@@ -3,9 +3,7 @@
  * TP10 - Calcular indicadores consolidados: consumo total, emissão total, serviços ativos e indisponíveis (RF08).
  */
 
-import { criarPool } from "../../db/connection.ts";
-
-const pool = criarPool();
+import { consultar } from "../../db/connection.ts";
 
 /** Indicadores consolidados do ambiente. */
 export interface IndicadoresConsolidados {
@@ -13,6 +11,8 @@ export interface IndicadoresConsolidados {
   emissaoTotalCo2eG: number;
   servicosAtivos: number;
   servicosIndisponiveis: number;
+  /** Data e hora da coleta mais recente de qualquer serviço; null se ainda não houve coleta. */
+  ultimaColetaEm: Date | null;
 }
 
 /**
@@ -21,6 +21,7 @@ export interface IndicadoresConsolidados {
  * - Emissão total: soma de emissao_co2e_g das últimas coletas bem-sucedidas por serviço
  * - Serviços ativos: contagem de serviços com status 'ativo'
  * - Serviços indisponíveis: contagem de serviços com status 'indisponivel'
+ * - Última coleta: coletado_em mais recente da tabela metricas_servico (TP16)
  * @returns Indicadores consolidados
  */
 export async function buscarIndicadoresConsolidados(): Promise<IndicadoresConsolidados> {
@@ -50,28 +51,25 @@ export async function buscarIndicadoresConsolidados(): Promise<IndicadoresConsol
       COALESCE(SUM(l.energia_kwh), 0) as consumo_total_kwh,
       COALESCE(SUM(l.emissao_co2e_g), 0) as emissao_total_co2e_g,
       c.servicos_ativos,
-      c.servicos_indisponiveis
+      c.servicos_indisponiveis,
+      (SELECT MAX(coletado_em) FROM metricas_servico) as ultima_coleta_em
     FROM contagem_servicos c
     LEFT JOIN ultima_coleta_por_servico l ON TRUE
     GROUP BY c.servicos_ativos, c.servicos_indisponiveis
   `;
 
   try {
-    const resultado = await pool.query(sql);
+    const resultado = await consultar(sql);
     const row = resultado.rows[0];
     return {
       consumoTotalKwh: Number(row.consumo_total_kwh) || 0,
       emissaoTotalCo2eG: Number(row.emissao_total_co2e_g) || 0,
       servicosAtivos: Number(row.servicos_ativos) || 0,
       servicosIndisponiveis: Number(row.servicos_indisponiveis) || 0,
+      ultimaColetaEm: row.ultima_coleta_em ? new Date(row.ultima_coleta_em) : null,
     };
   } catch (erro) {
     console.error("[DASHBOARD-INDICATORS-REPOSITORY] Erro ao buscar indicadores:", erro);
-    throw new Error("Falha ao buscar indicadores consolidados no banco de dados");
+    throw new Error("Falha ao buscar indicadores consolidados no banco de dados", { cause: erro });
   }
-}
-
-/** Fecha o pool de conexões (para testes/encerramento). */
-export async function encerrarPool(): Promise<void> {
-  await pool.end();
 }

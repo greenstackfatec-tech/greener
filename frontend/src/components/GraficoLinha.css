@@ -1,0 +1,349 @@
+/* GraficoLinha - Gráfico de linha SVG puro (DW11 / RF04) */
+.grafico-linha {
+  --cor-energia: #25863c;
+  --cor-co2e: #2e63a8;
+  --cor-texto: #20352a;
+  --cor-muted: #748078;
+  --cor-grid: #e8eee9;
+  --cor-fundo: #fff;
+  --cor-borda: #e8eee9;
+  --raio: 12px;
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 16px 16px 12px;
+  font-family: "Inter Variable", Inter, system-ui, sans-serif;
+  position: relative;
+}
+
+/* Utilitário para esconder visualmente mas manter acessível */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Estado vazio */
+.grafico-linha-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--cor-muted);
+  text-align: center;
+  padding: 24px;
+}
+.grafico-linha-vazio svg {
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+.grafico-linha-vazio p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Legenda interativa */
+.grafico-linha-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--cor-grid);
+}
+.grafico-linha-legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--cor-texto);
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+.grafico-linha-legenda-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.grafico-linha-legenda-item:focus-visible {
+  outline: 2px solid var(--cor-energia);
+  outline-offset: 2px;
+}
+.grafico-linha-legenda-item--oculta {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+.grafico-linha-legenda-cor {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.grafico-linha-legenda-toggle {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+/* SVG */
+.grafico-linha-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Eixos */
+.grafico-linha-eixo-y text,
+.grafico-linha-eixo-x text {
+  font-family: inherit;
+  font-size: 10px;
+  fill: var(--cor-muted);
+  user-select: none;
+}
+
+/* Eixo Y esquerdo (Energia) - rótulos à esquerda */
+.grafico-linha-eixo-y--esquerda text {
+  fill: var(--cor-energia);
+}
+
+/* Eixo Y direito (CO₂e) - rótulos à direita */
+.grafico-linha-eixo-y--direita text {
+  fill: var(--cor-co2e);
+}
+
+/* Grid */
+.grafico-linha-grid line {
+  stroke: var(--cor-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+/* Séries */
+.grafico-linha-serie {
+  transition: opacity 0.2s ease;
+}
+.grafico-linha-area {
+  transition: opacity 0.2s ease;
+}
+.grafico-linha-linha {
+  transition: stroke-width 0.15s ease, filter 0.15s ease;
+}
+.grafico-linha-serie:hover .grafico-linha-linha {
+  stroke-width: 3.5;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
+}
+
+/* Pontos */
+.grafico-linha-ponto {
+  transition: r 0.15s ease, stroke-width 0.15s ease, transform 0.15s ease;
+  cursor: crosshair;
+}
+.grafico-linha-ponto:hover,
+.grafico-linha-ponto:focus-visible {
+  r: 7;
+  stroke-width: 3;
+  transform: scale(1.2);
+}
+.grafico-linha-ponto-halo {
+  animation: grafico-pulso 1.5s ease-out infinite;
+}
+@keyframes grafico-pulso {
+  0% {
+    r: 6;
+    opacity: 0.6;
+  }
+  50% {
+    r: 12;
+    opacity: 0.2;
+  }
+  100% {
+    r: 6;
+    opacity: 0;
+  }
+}
+
+/* Linha vertical de hover */
+.grafico-linha-hover-linha {
+  pointer-events: none;
+}
+
+/* Tooltip */
+.grafico-linha-tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  animation: grafico-tooltip-entrada 0.12s ease-out;
+}
+@keyframes grafico-tooltip-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.grafico-linha-tooltip-conteudo {
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+  min-width: 160px;
+}
+.grafico-linha-tooltip-data {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--cor-muted);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cor-grid);
+}
+.grafico-linha-tooltip-serie {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0 6px 10px;
+  border-left: 3px solid;
+  margin: 0 -4px;
+}
+.grafico-linha-tooltip-serie:first-of-type {
+  padding-top: 2px;
+}
+.grafico-linha-tooltip-serie:last-of-type {
+  padding-bottom: 2px;
+}
+.grafico-linha-tooltip-cabecalho {
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.grafico-linha-tooltip-valor {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--cor-texto);
+  line-height: 1.2;
+}
+.grafico-linha-tooltip-valor span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--cor-muted);
+  margin-left: 4px;
+}
+.grafico-linha-tooltip-seta {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--cor-grid);
+  position: absolute;
+  bottom: -6px;
+  left: 20px;
+}
+
+/* Estatísticas */
+.grafico-linha-estatisticas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--cor-grid);
+}
+.grafico-linha-stat {
+  flex: 1;
+  min-width: 180px;
+  padding: 12px 14px;
+  background: #fafbfa;
+  border: 1px solid;
+  border-radius: 10px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.grafico-linha-stat:hover {
+  background: #f3f6f3;
+}
+.grafico-linha-stat-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--cor-muted);
+  margin-bottom: 8px;
+}
+.grafico-linha-stat-valores {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.grafico-linha-stat-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--cor-texto);
+}
+.grafico-linha-stat-item small {
+  font-size: 10px;
+  color: var(--cor-muted);
+  font-weight: 500;
+}
+.grafico-linha-stat-item strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+.grafico-linha-stat-divider {
+  color: var(--cor-grid);
+  font-size: 14px;
+}
+
+/* Responsivo: Mobile (≤700px) */
+@media (max-width: 700px) {
+  .grafico-linha {
+    padding: 12px 12px 8px;
+  }
+  .grafico-linha-legenda {
+    gap: 10px;
+  }
+  .grafico-linha-legenda-item {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+  .grafico-linha-stat {
+    min-width: 150px;
+    padding: 10px 12px;
+  }
+  .grafico-linha-stat-item strong {
+    font-size: 13px;
+  }
+
+  .grafico-linha-legenda {
+    justify-content: center;
+  }
+  .grafico-linha-estatisticas {
+    justify-content: center;
+  }
+  .grafico-linha-stat {
+    min-width: 100%;
+  }
+  .grafico-linha-tooltip-conteudo {
+    padding: 8px 12px;
+    min-width: 120px;
+  }
+  .grafico-linha-tooltip-valor {
+    font-size: 16px;
+  }
+}
