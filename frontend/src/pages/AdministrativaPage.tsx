@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
-import { ConsumoPorRecurso, type ItemRecurso } from "../components/ConsumoPorRecurso.tsx";
 import { IntervaloColeta } from "../components/IntervaloColeta.tsx";
 import { LayoutAdministrativo } from "../components/LayoutAdministrativo.tsx";
 import { ResumoConsumoVisao } from "../components/ResumoConsumo.tsx";
@@ -15,13 +14,24 @@ import type { Indicadores } from "../services/indicadores.ts";
 import { situacaoDoServico, type Servico } from "../services/servicos.ts";
 import "./AdministrativaPage.css";
 
-/**
- * Parcela do consumo por recurso (CPU, RAM, disco, rede).
- * TODO: nenhum endpoint devolve esse dado hoje. Quando o backend expuser (hoje a divisão só existe
- * dentro de calcularPotencia, em backend/src/calculos), troque `null` pela chamada à API.
- * Enquanto for `null`, o card avisa que o dado não está disponível, sem mostrar valores inventados.
- */
-const CONSUMO_POR_RECURSO: ItemRecurso[] | null = null;
+/** Ícone de informação com tooltip explicando a diferença energia vs CO₂e. */
+function InfoEnergiaCarbono() {
+  const texto = "Energia (kWh) é o consumo medido. CO₂e (g) = energia × intensidade de carbono da região (gCO₂e/kWh).";
+  return (
+    <span
+      className="adm-info"
+      tabIndex={0}
+      role="tooltip"
+      aria-label={texto}
+      data-tooltip={texto}
+    >
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <circle cx="8" cy="8" r="7" />
+        <path d="M8 5v4M8 11v1" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
 
 /** Últimos indicadores válidos: os atuais ou, se a última consulta falhou, os anteriores. */
 function dadosDe(estado: EstadoIndicadores): Indicadores | null {
@@ -91,14 +101,14 @@ export function AdministrativaPage() {
 
       <div className="adm-indicadores" aria-busy={carregandoIndicadores}>
         <article className="adm-card adm-indicador">
-          <p className="adm-indicador-rotulo">Energia estimada</p>
+          <p className="adm-indicador-rotulo"><span>Energia estimada</span> <InfoEnergiaCarbono /></p>
           <p className="adm-indicador-valor">{dados === null ? "—" : `${numero(dados.consumoTotalKwh, 4)} kWh`}</p>
           <p className="adm-indicador-apoio">{apoio("Última coleta de cada serviço", true)}</p>
         </article>
         <article className="adm-card adm-indicador">
-          <p className="adm-indicador-rotulo">Emissões estimadas</p>
+          <p className="adm-indicador-rotulo"><span>Emissões estimadas</span> <InfoEnergiaCarbono /></p>
           <p className="adm-indicador-valor">{dados === null ? "—" : `${numero(dados.emissaoTotalCo2eG, 3)} g CO₂e`}</p>
-          <p className="adm-indicador-apoio">{apoio("Calculadas com a intensidade de carbono da região", true)}</p>
+          <p className="adm-indicador-apoio">{apoio("CO₂e = energia × intensidade de carbono da região", true)}</p>
         </article>
         <article className="adm-card adm-indicador">
           <p className="adm-indicador-rotulo">Serviços ativos</p>
@@ -118,7 +128,6 @@ export function AdministrativaPage() {
         <div className="adm-card adm-card-grafico">
           <ResumoConsumoVisao estado={indicadores} />
         </div>
-        <ConsumoPorRecurso itens={CONSUMO_POR_RECURSO} />
       </div>
 
       <section className="adm-card" aria-labelledby="aplicacoes-titulo" aria-busy={servicos.carregando}>
@@ -160,7 +169,14 @@ export function AdministrativaPage() {
                 </div>
                 <div className="adm-aplicacao-valores">
                   <strong>{servico.energiaKwh === null ? "—" : `${numero(servico.energiaKwh, 4)} kWh`}</strong>
-                  <span>{servico.emissaoCo2eG === null ? "—" : `${numero(servico.emissaoCo2eG, 3)} g CO₂e`}</span>
+                  {servico.emissaoCo2eG !== null ? (
+                    <>
+                      <span>{numero(servico.emissaoCo2eG, 3)} g CO₂e</span>
+                      <small className="adm-co2e-explicacao">= energia × intensidade de carbono</small>
+                    </>
+                  ) : (
+                    <small className="adm-co2e-explicacao">CO₂e = energia × intensidade de carbono</small>
+                  )}
                 </div>
               </li>
             ))}

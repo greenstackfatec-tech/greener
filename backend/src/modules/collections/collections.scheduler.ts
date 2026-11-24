@@ -14,7 +14,6 @@ interface DependenciasRotina {
   coletarServico(
     servico: Servico,
     intervaloAlternativo: number,
-    informarIntervalo: (segundos: number) => void,
   ): Promise<ResultadoColeta>;
   agora?: () => number;
   agendar?: (callback: () => void, milissegundos: number) => ReturnType<typeof setTimeout>;
@@ -27,7 +26,6 @@ interface AgendamentoServico {
   presente: boolean;
   emExecucao: boolean;
   proximaEm: number;
-  intervaloApi?: number;
 }
 
 export function criarRotinaColeta(dependencias: DependenciasRotina) {
@@ -119,28 +117,18 @@ export function criarRotinaColeta(dependencias: DependenciasRotina) {
   function coletar(entrada: AgendamentoServico) {
     entrada.emExecucao = true;
     acompanhar(async () => {
-      const informarIntervalo = (segundos: number) => {
-        if (intervaloAgendavel(segundos)) entrada.intervaloApi = segundos;
-        else logger.warn(
-          `[COLETA] ${entrada.servico.id}: intervalo da API ${segundos}s não agendável; ` +
-          `usando ${entrada.intervaloApi ?? intervaloAlternativo}s no timer. Amostra preservada.`,
-        );
-      };
       try {
         const resultado = await dependencias.coletarServico(
-          entrada.servico, entrada.intervaloApi ?? intervaloAlternativo, informarIntervalo,
+          entrada.servico, intervaloAlternativo,
         );
         logger.log(`[COLETA] ${entrada.servico.id}: resultado=${resultado.resultado}, statusMetricas=${resultado.status}`);
         if (resultado.erro) logger.error(`[COLETA] ${entrada.servico.id}: ${resultado.erro}`);
       } catch (erro) {
         logger.error(`[COLETA] ${entrada.servico.id}: falha na coleta; nova tentativa programada:`, erro);
       }
-      if (entrada.intervaloApi === undefined) {
-        logger.warn(`[COLETA] ${entrada.servico.id}: sem intervalo válido da API; usando ${intervaloAlternativo}s.`);
-      }
     }, () => {
       entrada.emExecucao = false;
-      entrada.proximaEm = agora() + (entrada.intervaloApi ?? intervaloAlternativo) * 1000;
+      entrada.proximaEm = agora() + intervaloAlternativo * 1000;
       if (!entrada.presente) servicos.delete(entrada.servico.id);
     });
   }

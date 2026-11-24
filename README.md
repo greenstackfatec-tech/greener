@@ -46,6 +46,7 @@ greener/
 │   │   ├── integrations/
 │   │   ├── mocks/
 │   │   ├── modules/
+│   │   │   ├── analytics/
 │   │   │   ├── auth/
 │   │   │   ├── collections/
 │   │   │   ├── configuracoes/
@@ -56,22 +57,15 @@ greener/
 │   │   └── shared/
 │   ├── Dockerfile
 │   ├── package.json
-│   ├── package-lock.json
-│   ├── README.md
-│   └── tsconfig.json
+│   └── README.md
 ├── database/
 │   ├── migrations/
 │   ├── README.md
-│   ├── modelagem_bd.png
 │   ├── schema.sql
 │   └── seed.sql
 ├── docs/
 │   ├── design/
 │   ├── diagramas/
-│   │   ├── README.md
-│   │   ├── diagrama-casos-de-uso.md
-│   │   ├── diagrama-classes.md
-│   │   └── diagrama-sequencia.md
 │   ├── sprints/
 │   │   ├── product-backlog.md
 │   │   ├── sprint-1.md
@@ -84,6 +78,7 @@ greener/
 │   ├── mocks.md
 │   └── plano-de-entregas.md
 ├── frontend/
+│   ├── mock-servicos.ts
 │   ├── src/
 │   │   ├── assets/
 │   │   ├── components/
@@ -96,20 +91,15 @@ greener/
 │   │   ├── caminhos.ts
 │   │   ├── estadosServico.ts
 │   │   ├── formatacao.ts
-│   │   ├── rotas.tsx
-│   │   └── ...
+│   │   └── rotas.tsx
 │   ├── Dockerfile
 │   ├── nginx.conf
-│   ├── index.html
 │   ├── package.json
-│   ├── package-lock.json
 │   └── README.md
 ├── .env.example
-├── .gitignore
 ├── compose.yaml
 ├── compose.persistence.yaml
-├── README.md
-└── teste.sql
+└── README.md
 ```
 
 <br>
@@ -129,19 +119,41 @@ O <b>Plano de Entregas</b> pode ser encontrado [aqui](./docs/plano-de-entregas.m
 
 <br>
 
-#### Funcionalidades implementadas
+## ✨ Funcionalidades
 
-- Integração do backend com a API de métricas dos serviços e com a API de intensidade de carbono.
-- Descoberta e consulta dos serviços monitorados.
-- Coleta manual e rotina de coleta periódica, respeitando o intervalo informado para cada serviço.
-- Persistência dos serviços e dos registros de coleta no PostgreSQL.
-- Cálculo estimado de potência, energia e emissão de CO₂e a partir das métricas disponíveis.
-- Consulta do histórico de coletas e dos indicadores consolidados do dashboard.
-- Identificação de estados como ativo, indisponível e sem métricas, de acordo com os dados recebidos.
-- Autenticação de usuários por JWT no backend e tela de login integrada.
-- Interface web com tela inicial para verificar a disponibilidade do backend e do banco e dashboard para consultar os serviços.
+### Monitoramento e indicadores
 
-Os valores apresentados dependem das respostas das APIs e dos registros disponíveis no banco. Quando um dado não é fornecido, a interface deve indicar a ausência de informação, sem substituir o valor por um número fictício.
+- Integração com a API de métricas para descobrir e consultar serviços monitorados.
+- Coleta manual e rotina automática de coleta.
+- Persistência dos serviços, estados e observações de coleta no PostgreSQL.
+- Identificação de serviços ativos, indisponíveis, removidos e ativos sem métricas.
+- Estimativa de potência, energia e emissão de CO₂e com base nas métricas disponíveis e no fator regional.
+- Dashboard com indicadores consolidados e dados da última coleta de cada serviço.
+- Atualização automática da interface, com preservação dos últimos dados válidos quando uma consulta falha.
+
+### Análise e visualização
+
+- **Histórico:** consulta de coletas por serviço e período, com visualização da evolução de energia e CO₂e.
+- **Ranking:** classificação por consumo energético ou emissão de CO₂e, usando total ou média por coleta, com filtros, ordenação e tendência.
+- **Comparação:** comparação de dois a cinco serviços em um mesmo período.
+- **Mapa:** globo 3D estilizado que apresenta serviços com latitude e longitude válidas.
+- **Filtros:** seleção por serviço, região e período nas telas que compartilham esse contexto.
+
+### Autenticação
+
+- Login integrado ao backend e emissão de JWT.
+- Proteção das rotas privadas.
+- Tratamento de token ausente, inválido ou expirado.
+- Logout no frontend, removendo o token do armazenamento do navegador.
+
+**Limitações conhecidas da versão atual:**
+
+- O cadastro cria a conta com nome, e-mail e senha. Embora o formulário também envie tipo de pessoa e CPF/CNPJ, esses dois campos ainda não são persistidos pelo backend.
+- A área administrativa consulta o intervalo de coleta, mas a rota para alterá-lo (`PUT /monitoring-settings`) ainda não está implementada.
+- O logout remove o token do navegador. Como o backend não possui endpoint de revogação, o JWT permanece válido até completar sua validade de uma hora.
+- O mapa não calcula coordenadas ausentes. Serviços sem latitude ou longitude continuam disponíveis nas demais telas, mas não são plotados.
+
+Os valores apresentados dependem das respostas das APIs e dos registros disponíveis no banco. Dados ausentes são representados como indisponíveis, sem substituição por medições fictícias.
 
 <br>
 
@@ -151,7 +163,7 @@ Os valores apresentados dependem das respostas das APIs e dos registros disponí
 | :---: | :---: | :---: | :--- | :---: |
 | 1 | 19/10/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-1.md) | [Ver vídeo](https://youtu.be/gBj58b91ARw) |
 | 2 | 09/11/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-2.md) | [Ver vídeo](https://www.youtube.com/watch?v=dAeaiwG0VI0) |
-| 3 | 23/11/2026 | ⬜ | [Indisponível]() | [Indisponível](#) |
+| 3 | 23/11/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-3.md) | [Ver vídeo](https://www.youtube.com/watch?v=8_LDRV6ipf4) |
 
 ### Legenda:
 
@@ -174,6 +186,12 @@ O <b>Sprint Backlog</b> pode ser encontrado [aqui](./docs/sprints/sprint-1.md)
 A segunda sprint tem como objetivo consolidar uma versão funcional do GreenER, integrando a coleta periódica de métricas dos serviços, a persistência dos dados no banco e os cálculos estimados de potência, consumo energético e emissões de CO₂e. Também contempla a implementação da autenticação JWT, dos indicadores ambientais consolidados e do dashboard para visualização dos serviços monitorados, seus estados e respectivos dados. 
 <br>
 O andamento das atividades, as entregas, as pendências e as evidências podem ser consultados no <b>Relatório da Sprint 2</b>, disponível [aqui](./docs/sprints/sprint-2.md)
+
+<br>
+
+## 🎯 Sprint 3 — Análise, autenticação, visualização e consolidação
+
+A terceira sprint avançou nas rotas e telas de histórico, ranking e comparação, reforçou a autenticação, adicionou o mapa geográfico e ampliou os ajustes de responsividade e qualidade. As atividades, o burndown e as pendências de fechamento estão disponível [aqui](./docs/sprints/sprint-3.md).
 
 <br>
 
@@ -249,7 +267,7 @@ cp .env.example .env
 
 O arquivo `.env.example` contém as configurações iniciais para execução local.
 
-Para habilitar a autenticação JWT, configure a variável `JWT_SECRET` no arquivo `.env`. Gere uma chave com o comando:
+O exemplo já inclui um `JWT_SECRET` exclusivo de desenvolvimento para permitir o login local. Fora desse ambiente, substitua-o por uma chave própria, gerada com o comando:
 
 ```bash
 node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"

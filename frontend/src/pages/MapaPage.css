@@ -1,0 +1,96 @@
+/* Tela do mapa (DW15). Reaproveita o casco do DashboardPage.css (dash-*) e só define o que é do mapa. */
+.mapa-aviso {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid #f2dfa8;
+  border-radius: 10px;
+  background: var(--estado-vazio-fundo, #fcf3db);
+  color: var(--estado-vazio-texto, #844c0f);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.mapa-aviso[data-completo] {
+  border-color: #cfe6d4;
+  background: var(--estado-ativo-fundo, #e8f6ec);
+  color: var(--estado-ativo-texto, #134125);
+}
+.mapa-aviso p { margin: 0; }
+.mapa-aviso a { color: inherit; font-weight: 700; }
+.mapa-aviso details { margin-top: 8px; }
+.mapa-aviso summary { cursor: pointer; font-weight: 600; min-height: 24px; }
+.mapa-aviso ul { margin: 8px 0 0; padding-left: 20px; }
+
+.mapa-grade {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.mapa-painel,
+.mapa-globo {
+  background: #fff;
+  border: 1px solid var(--line, #e8eee9);
+  border-radius: 11px;
+  padding: 22px;
+  min-width: 0;
+}
+
+.mapa-painel h2,
+.mapa-globo h2 { margin: 0 0 6px; font-size: 16px; color: #20352a; }
+.mapa-ajuda,
+.mapa-globo-topo p { margin: 0 0 16px; font-size: 13px; color: #6b786f; }
+
+.mapa-campo { display: grid; gap: 6px; margin-bottom: 16px; font-size: 13px; font-weight: 600; color: #3f5948; }
+.mapa-campo select {
+  height: 42px; padding: 0 12px; border: 1px solid #dce6de; border-radius: 8px;
+  background: #fff; color: #20352a; font: 14px inherit;
+}
+.mapa-campo select:focus-visible { outline: 2px solid #25863c; outline-offset: 2px; }
+
+.mapa-detalhe { padding: 16px; border: 1px solid #cfe6d4; border-radius: 10px; background: #f6fbf7; }
+.mapa-detalhe header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+.mapa-detalhe h3 { margin: 0; font-size: 16px; color: #20352a; }
+.mapa-detalhe dl { display: grid; gap: 10px; margin: 0; }
+.mapa-detalhe dl > div { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid #e3eee5; }
+.mapa-detalhe dt { font-size: 13px; color: #6b786f; }
+.mapa-detalhe dd { margin: 0; font-size: 14px; font-weight: 600; color: #20352a; text-align: right; overflow-wrap: anywhere; }
+.mapa-origem { margin: 12px 0 0; font-size: 12px; color: #6b786f; line-height: 1.5; }
+.mapa-origem code { font-size: 12px; }
+
+.mapa-selo { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 650; white-space: nowrap; }
+.mapa-selo[data-situacao="ativo"] { color: var(--estado-ativo-texto, #134125); background: var(--estado-ativo-fundo, #e8f6ec); }
+.mapa-selo[data-situacao="sem_metricas"] { color: var(--estado-sem-metricas-texto, #2e63a8); background: var(--estado-sem-metricas-fundo, #e8f1fb); }
+.mapa-selo[data-situacao="indisponivel"],
+.mapa-selo[data-situacao="removido"] { color: var(--estado-indisponivel-texto, #5e6b63); background: var(--estado-indisponivel-fundo, #f0f3f0); }
+
+.mapa-mesmo-local { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: #4b5d50; }
+.mapa-mesmo-local button {
+  min-height: 36px; padding: 0 12px; border: 1px solid #cfe6d4; border-radius: 8px;
+  background: #fff; color: #25863c; font: 600 13px inherit; cursor: pointer;
+}
+.mapa-mesmo-local button:focus-visible { outline: 2px solid #25863c; outline-offset: 2px; }
+
+.mapa-vazio { margin: 0; padding: 16px; border: 1px dashed #cfe6d4; border-radius: 10px; color: #6b786f; font-size: 13px; }
+
+.mapa-legenda { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 18px 0 0; padding: 0; list-style: none; font-size: 12px; color: #4b5d50; }
+.mapa-legenda li { display: flex; align-items: center; gap: 6px; }
+.mapa-legenda i { width: 10px; height: 10px; border-radius: 50%; background: var(--estado-ativo, #25863c); }
+.mapa-legenda li[data-situacao="sem_metricas"] i { background: var(--estado-sem-metricas, #2e63a8); }
+.mapa-legenda li[data-situacao="indisponivel"] i { background: var(--estado-indisponivel, #5e6b63); }
+
+.mapa-globo-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.mapa-rodape-globo { margin: 12px 0 0; font-size: 12px; color: #6b786f; text-align: center; }
+
+/* Celular (<= 700 px): uma coluna, seleção acima do globo; cards em largura total, espaço de pelo menos 16 px entre blocos e texto de pelo menos 12 px. */
+@media (max-width: 700px) {
+  .mapa-grade { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .mapa-painel, .mapa-globo { padding: 16px; }
+  .mapa-mesmo-local button { flex: 1 1 100%; min-height: 44px; }
+  .mapa-campo select { height: 44px; }
+  .mapa-globo-topo { flex-direction: column; }
+}
+
+/* O aviso de erro e os cartões de estado foram feitos para ficar dentro do painel do dashboard; aqui ficam soltos. */
+.mapa-corpo > .dash-aviso-erro { margin: 0 0 16px; }
+.mapa-corpo > .dash-estado { padding: 0; }

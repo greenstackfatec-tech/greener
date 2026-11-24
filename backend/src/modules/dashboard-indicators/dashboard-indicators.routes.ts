@@ -4,9 +4,10 @@
  */
 
 import type { Rota } from "../../shared/http.ts";
+import { exigirAutenticacao } from "../auth/auth.middleware.ts";
 import { obterIndicadores } from "./dashboard-indicators.controller.ts";
 
 // A route só liga "método + caminho" ao controller.
 export const rotasDashboardIndicators: Rota[] = [
-  { metodo: "GET", caminho: "/dashboard/indicadores", tratar: obterIndicadores },
+  { metodo: "GET", caminho: "/dashboard/indicadores", tratar: exigirAutenticacao(obterIndicadores) },
 ];

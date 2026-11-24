@@ -1,12 +1,11 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom";
 import { RouterProvider } from "react-router";
-import { afterAll, afterEach, beforeEach, expect, test, vi } from "vitest";
 import { router } from "../src/rotas.tsx";
 import { removerToken } from "../src/services/token.ts";
 
 beforeEach(() => {
   removerToken();
-  // O painel de consumo das telas de autenticação não depende de um backend real.
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({
     consumo_total_kwh: 0,
     emissao_total_co2e_g: 0,
@@ -40,4 +39,13 @@ test("/administrativa sem token redireciona para /login", async () => {
   expect(await screen.findByRole("heading", { name: "Bem-vindo de volta" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Entrar" })).toBeTruthy();
   expect(router.state.location.pathname).toBe("/login");
+});
+
+test("/ranking sem token redireciona para /login", async () => {
+  await act(async () => { await router.navigate("/ranking"); });
+  render(<RouterProvider router={router} />);
+
+  expect(await screen.findByRole("heading", { name: "Bem-vindo de volta" })).toBeInTheDocument();
+  expect(router.state.location.pathname).toBe("/login");
+  expect(router.state.location.state).toMatchObject({ from: { pathname: "/ranking" } });
 });

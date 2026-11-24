@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { NavLink } from "react-router";
 import logo from "../assets/greener-icon.png";
 import { ROTAS } from "../caminhos.ts";
+import { Footer } from "./Footer.tsx";
 import "./LayoutAdministrativo.css";
 
 function IconeInicio() {
@@ -91,6 +92,7 @@ export function LayoutAdministrativo({ children, aoSair }: LayoutAdministrativoP
       </header>
 
       <main className="adm-conteudo">{children}</main>
+      <Footer variante="minimo" />
     </div>
   );
 }

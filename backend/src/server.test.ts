@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { createServer } from "node:http";
@@ -6,8 +7,16 @@ import { setTimeout } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import type { TestContext } from "node:test";
+import { gerarToken } from "./modules/auth/jwt.ts";
 
 async function preparar(t: TestContext, automatico?: string) {
+  const segredoAnterior = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = randomBytes(48).toString("base64url");
+  t.after(() => {
+    if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = segredoAnterior;
+  });
+  const headers = { authorization: `Bearer ${await gerarToken("1")}` };
   let listagens = 0;
   const api = createServer((_request, response) => {
     listagens++;
@@ -32,7 +41,7 @@ async function preparar(t: TestContext, automatico?: string) {
   const processo = spawn(process.execPath, [
     "--experimental-strip-types", "--input-type=module", "--eval",
     `import pg from "pg";
-     pg.Pool.prototype.query = async () => ({ rows: [{ valor: "60" }] });
+     pg.Pool.prototype.query = async () => ({ rows: [{ valor: "45" }] });
      await import("./src/server.ts");
      process.on("message", () => { process.emit("SIGTERM"); process.disconnect(); });`,
   ], {
@@ -54,28 +63,33 @@ async function preparar(t: TestContext, automatico?: string) {
     try {
       const resposta = await fetch(`${base}/health/live`, { signal: AbortSignal.timeout(1000) });
       if (resposta.ok) break;
-    } catch {}
+    } catch {
+      // Ignora erros de conexão até o servidor subir
+    }
     assert.ok(Date.now() < limite, saida || "Servidor não iniciou");
     await setTimeout(10);
   }
-  const status = async () => (await (await fetch(`${base}/collections/rotina/status`)).json()) as {
+  const status = async () => (await (await fetch(`${base}/collections/rotina/status`, { headers })).json()) as {
     dados: { executando: boolean; encerrando: boolean; intervaloAlternativoSegundos: number };
   };
   const iniciar = (body = "{}") => fetch(`${base}/collections/rotina/iniciar`, {
-    method: "POST", headers: { "content-type": "application/json" }, body,
+    method: "POST", headers: { ...headers, "content-type": "application/json" }, body,
   });
-  const parar = () => fetch(`${base}/collections/rotina/parar`, { method: "POST" });
+  const parar = () => fetch(`${base}/collections/rotina/parar`, { method: "POST", headers });
   async function encerrar() {
     const fim = once(processo, "exit", { signal: AbortSignal.timeout(5000) });
     processo.send("SIGTERM");
     const [codigo] = await fim;
     assert.equal(codigo, 0, saida);
   }
-  return { status, iniciar, parar, encerrar, listagens: () => listagens };
+  return { base, status, iniciar, parar, encerrar, listagens: () => listagens };
 }
 
 test("TP06 servidor inicia a rotina por padrão, compartilha status/controle e encerra sem timers", async (t) => {
   const app = await preparar(t);
+  assert.equal((await app.status()).dados.executando, true);
+  const bloqueada = await fetch(`${app.base}/collections/rotina/parar`, { method: "POST" });
+  assert.equal(bloqueada.status, 401);
   assert.equal((await app.status()).dados.executando, true);
   assert.equal((await app.iniciar()).status, 400);
   assert.equal((await app.parar()).status, 200);
@@ -86,8 +100,14 @@ test("TP06 servidor inicia a rotina por padrão, compartilha status/controle e e
   await app.encerrar();
 });
 
-test("ambiente isolado pode desativar início automático e validar intervalo alternativo pelo HTTP", async (t) => {
+test("início HTTP valida o body e usa a configuração persistida sem aceitar substituição", async (t) => {
   const app = await preparar(t, "false");
+  assert.equal((await app.status()).dados.executando, false);
+  assert.equal(app.listagens(), 0);
+  const bloqueada = await fetch(`${app.base}/collections/rotina/iniciar`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: "{",
+  });
+  assert.equal(bloqueada.status, 401);
   assert.equal((await app.status()).dados.executando, false);
   assert.equal(app.listagens(), 0);
   for (const body of ["null", "[]", "{", '{"intervaloSegundos":0}', '{"intervaloSegundos":2147484}', '{"intervaloSegundos":"30"}']) {
@@ -98,9 +118,13 @@ test("ambiente isolado pode desativar início automático e validar intervalo al
   const dados = (await inicio.json()) as {
     dados: { intervaloSegundos: number; intervaloAlternativoSegundos: number };
   };
-  assert.equal(dados.dados.intervaloSegundos, 1);
+  assert.equal(dados.dados.intervaloSegundos, 45);
   assert.equal(dados.dados.intervaloSegundos, dados.dados.intervaloAlternativoSegundos);
-  assert.equal((await app.status()).dados.intervaloAlternativoSegundos, 1);
+  assert.equal((await app.status()).dados.intervaloAlternativoSegundos, 45);
+  assert.equal((await app.parar()).status, 200);
+  const reinicio = await app.iniciar();
+  assert.equal(reinicio.status, 200);
+  assert.equal((await reinicio.json() as { dados: { intervaloSegundos: number } }).dados.intervaloSegundos, 45);
   assert.equal((await app.parar()).status, 200);
   await app.encerrar();
 });

@@ -2,7 +2,7 @@ import { responder } from "../../shared/http.ts";
 import type { Rota } from "../../shared/http.ts";
 import { ErroHttp, lerJson } from "./auth.http.ts";
 import { ErroLimiteLogin } from "./auth.limiter.ts";
-import { autenticar } from "./auth.service.ts";
+import { autenticar, cadastrar } from "./auth.service.ts";
 
 export const login: Rota["tratar"] = async (request, response) => {
   response.setHeader("cache-control", "no-store");
@@ -18,6 +18,17 @@ export const login: Rota["tratar"] = async (request, response) => {
     if (erro instanceof ErroLimiteLogin) {
       response.setHeader("retry-after", erro.tentarNovamenteEmSegundos);
     }
+    responder(response, erro.status, { error: erro.codigo, message: erro.message });
+  }
+};
+
+export const cadastro: Rota["tratar"] = async (request, response) => {
+  response.setHeader("cache-control", "no-store");
+  try {
+    const resultado = await cadastrar(await lerJson(request));
+    responder(response, 201, resultado);
+  } catch (erro) {
+    if (!(erro instanceof ErroHttp)) throw erro;
     responder(response, erro.status, { error: erro.codigo, message: erro.message });
   }
 };

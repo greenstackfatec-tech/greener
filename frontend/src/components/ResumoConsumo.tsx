@@ -1,7 +1,26 @@
-import { useIndicadores, type EstadoIndicadores } from "../hooks/useIndicadores.ts";
+import type { EstadoIndicadores } from "../hooks/useIndicadores.ts";
 
 function formatar(valor: number, casas: number): string {
   return valor.toLocaleString("pt-BR", { maximumFractionDigits: casas });
+}
+
+/** Ícone de informação com tooltip explicando a diferença energia vs CO₂e. */
+function InfoEnergiaCarbono() {
+  const texto = "Energia (kWh) é o consumo medido. CO₂e (g) = energia × intensidade de carbono da região (gCO₂e/kWh).";
+  return (
+    <span
+      className="resumo-info"
+      tabIndex={0}
+      role="tooltip"
+      aria-label={texto}
+      data-tooltip={texto}
+    >
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <circle cx="8" cy="8" r="7" />
+        <path d="M8 5v4M8 11v1" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
 }
 
 /**
@@ -35,12 +54,13 @@ export function ResumoConsumoVisao({ estado }: { estado: EstadoIndicadores }) {
       {estado.tipo === "ok" && (estado.dados.consumoTotalKwh > 0 || estado.dados.emissaoTotalCo2eG > 0) && (
         <dl className="resumo-lista">
           <div className="resumo-item" data-destaque="">
-            <dt>Consumo total</dt>
+            <dt><span>Consumo total</span> <InfoEnergiaCarbono /></dt>
             <dd>{formatar(estado.dados.consumoTotalKwh, 4)} <small>kWh</small></dd>
           </div>
           <div className="resumo-item">
-            <dt>Emissão total</dt>
+            <dt><span>Emissão total</span> <InfoEnergiaCarbono /></dt>
             <dd>{formatar(estado.dados.emissaoTotalCo2eG, 3)} <small>g CO₂e</small></dd>
+            <dd className="resumo-explicacao">CO₂e = energia × intensidade de carbono da região</dd>
           </div>
           <div className="resumo-item">
             <dt>Serviços ativos</dt>
@@ -56,11 +76,12 @@ export function ResumoConsumoVisao({ estado }: { estado: EstadoIndicadores }) {
   );
 }
 
-/**
- * Painel de consumo da tela de login. Mostra os indicadores consolidados reais
- * (GET /dashboard/indicadores). Não há nenhum valor fixo neste arquivo.
- */
+/** As telas públicas não consultam os indicadores, que exigem autenticação. */
 export function ResumoConsumo() {
-  const estado = useIndicadores();
-  return <ResumoConsumoVisao estado={estado} />;
+  return (
+    <section className="resumo" aria-labelledby="resumo-titulo">
+      <h2 id="resumo-titulo">Consumo de energia</h2>
+      <p className="resumo-aviso">Entre na sua conta para acompanhar o consumo de energia e as emissões dos seus softwares.</p>
+    </section>
+  );
 }

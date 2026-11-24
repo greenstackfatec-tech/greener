@@ -1,11 +1,26 @@
+// Configurar variáveis de ambiente ANTES de importar módulos que criam pools
+process.env.PGHOST ??= "localhost";
+process.env.PGPORT ??= "5432";
+process.env.PGDATABASE ??= "greener";
+process.env.PGUSER ??= "greener";
+process.env.PGPASSWORD ??= "greener_dev_only";
+
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import test from "node:test";
+import { gerarToken } from "../auth/jwt.ts";
 import pg from "pg";
 
 test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (t) => {
+  const segredoAnterior = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = randomBytes(48).toString("base64url");
+  t.after(() => {
+    if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = segredoAnterior;
+  });
+  const headersAutenticacao = { authorization: `Bearer ${await gerarToken("1")}` };
   const schema = `indicadores_${randomUUID().replaceAll("-", "")}`;
   const administrador = new pg.Pool({ connectionTimeoutMillis: 5000 });
   await administrador.query(`CREATE SCHEMA "${schema}"`);
@@ -27,8 +42,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
   await banco.query(await readFile(new URL("../../../../database/schema.sql", import.meta.url), "utf8"));
   const { tratarRequisicao } = await import("../../app.ts");
   const { encerrarConexao } = await import("../../db/connection.ts");
-  const { encerrarPool } = await import("./dashboard-indicators.repository.ts");
-  encerramentos.push(encerrarConexao, encerrarPool);
+  encerramentos.push(encerrarConexao);
   const servidor = createServer((request, response) => {
     void tratarRequisicao(request, response).catch(() => {
       response.writeHead(500);
@@ -44,7 +58,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
   assert.ok(endereco && typeof endereco !== "string");
   const baseUrl = `http://127.0.0.1:${endereco.port}`;
   async function indicadores() {
-    const resposta = await fetch(`${baseUrl}/dashboard/indicadores`);
+    const resposta = await fetch(`${baseUrl}/dashboard/indicadores`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 200, await resposta.clone().text());
     assert.match(resposta.headers.get("content-type") ?? "", /application\/json/);
     return resposta.json();
@@ -54,6 +68,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     assert.deepEqual(await indicadores(), {
       consumo_total_kwh: 0, emissao_total_co2e_g: 0,
       servicos_ativos: 0, servicos_indisponiveis: 0,
+      ultima_coleta_em: null, intervalo_coleta_segundos: 60,
     });
   });
 
@@ -74,6 +89,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     assert.deepEqual(await indicadores(), {
       consumo_total_kwh: 0, emissao_total_co2e_g: 0,
       servicos_ativos: 2, servicos_indisponiveis: 1,
+      ultima_coleta_em: null, intervalo_coleta_segundos: 60,
     });
   });
 
@@ -91,6 +107,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     assert.deepEqual(await indicadores(), {
       consumo_total_kwh: 0.32345678, emissao_total_co2e_g: 1.25,
       servicos_ativos: 2, servicos_indisponiveis: 1,
+      ultima_coleta_em: "2026-11-01T10:02:00.000Z", intervalo_coleta_segundos: 60,
     });
   });
 
@@ -103,6 +120,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     assert.deepEqual(await indicadores(), {
       consumo_total_kwh: 0.6, emissao_total_co2e_g: 1.75,
       servicos_ativos: 2, servicos_indisponiveis: 1,
+      ultima_coleta_em: "2026-11-01T10:03:00.000Z", intervalo_coleta_segundos: 60,
     });
   });
 
@@ -115,6 +133,19 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     assert.deepEqual(await indicadores(), {
       consumo_total_kwh: 0.8, emissao_total_co2e_g: 2.25,
       servicos_ativos: 2, servicos_indisponiveis: 1,
+      ultima_coleta_em: "2026-11-01T10:03:00.000Z", intervalo_coleta_segundos: 60,
+    });
+  });
+
+  await t.test("devolve o intervalo de coleta salvo em configuracoes", async () => {
+    await banco.query(
+      `INSERT INTO configuracoes (chave, valor) VALUES ('intervalo_coleta_segundos', '120')
+       ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor`,
+    );
+    assert.deepEqual(await indicadores(), {
+      consumo_total_kwh: 0.8, emissao_total_co2e_g: 2.25,
+      servicos_ativos: 2, servicos_indisponiveis: 1,
+      ultima_coleta_em: "2026-11-01T10:03:00.000Z", intervalo_coleta_segundos: 120,
     });
   });
 
@@ -122,7 +153,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
     t.mock.method(console, "error", () => {});
     await banco.query("ALTER TABLE metricas_servico RENAME TO metricas_servico_teste");
     try {
-      const resposta = await fetch(`${baseUrl}/dashboard/indicadores`);
+      const resposta = await fetch(`${baseUrl}/dashboard/indicadores`, { headers: headersAutenticacao });
       assert.equal(resposta.status, 500);
       assert.deepEqual(await resposta.json(), { error: "internal_error" });
     } finally {
@@ -131,7 +162,7 @@ test("GET /dashboard/indicadores calcula os totais com PostgreSQL real", async (
   });
 
   await t.test("retorna 404 para caminho inexistente", async () => {
-    const resposta = await fetch(`${baseUrl}/dashboard/nao-existe`);
+    const resposta = await fetch(`${baseUrl}/dashboard/nao-existe`, { headers: headersAutenticacao });
     assert.equal(resposta.status, 404);
   });
 });

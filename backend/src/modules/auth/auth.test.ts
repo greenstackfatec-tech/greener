@@ -5,6 +5,7 @@ import { createServer, request as requisicaoHttp } from "node:http";
 import test from "node:test";
 import type { TestContext } from "node:test";
 import pg from "pg";
+import { compare } from "bcryptjs";
 import { decodeJwt, SignJWT } from "jose";
 import type { JWTPayload } from "jose";
 import { tratarRequisicao } from "../../app.ts";
@@ -13,6 +14,7 @@ import { gerarToken, lerConfiguracaoJwt, verificarToken } from "./jwt.ts";
 import { exigirAutenticacao } from "./auth.middleware.ts";
 import { ErroLimiteLogin, LimitadorLogin } from "./auth.limiter.ts";
 import type { LoginAutenticado } from "./auth.service.ts";
+import { rotinaColeta } from "../collections/collections.service.ts";
 
 process.env.JWT_SECRET = randomBytes(48).toString("base64url");
 
@@ -52,8 +54,15 @@ async function assinar(payload: JWTPayload, algoritmo = "HS256", chave = lerConf
 test("login e proteção HTTP passam pelas camadas reais, simulando só a consulta ao banco", async (t) => {
   let consultas = 0;
   let falharConsulta = false;
+  let intervaloConfigurado = "45";
+  let falharConfiguracao = false;
   const emailsExistentes = new Set([usuario.email, "limitada@greener.com"]);
   t.mock.method(pg.Pool.prototype, "query", async (sql: string, parametros: unknown[]) => {
+    if (/FROM configuracoes\b/.test(sql)) {
+      assert.deepEqual(parametros, ["intervalo_coleta_segundos"]);
+      if (falharConfiguracao) throw new Error("Detalhe interno da consulta de configuração");
+      return { rows: [{ valor: intervaloConfigurado }] };
+    }
     if (!/FROM usuarios\b/.test(sql)) return { rows: [] };
     consultas += 1;
     assert.match(sql, /WHERE email = \$1$/);
@@ -85,9 +94,31 @@ test("login e proteção HTTP passam pelas camadas reais, simulando só a consul
     assert.equal(configuracao.status, 200);
     assert.equal(configuracao.headers.get("cache-control"), "no-store");
     const dadosConfiguracao = await configuracao.json() as { intervaloColetaSegundos: unknown };
-    assert.ok(typeof dadosConfiguracao.intervaloColetaSegundos === "number"
-      && Number.isSafeInteger(dadosConfiguracao.intervaloColetaSegundos)
-      && dadosConfiguracao.intervaloColetaSegundos > 0);
+    assert.deepEqual(dadosConfiguracao, { intervaloColetaSegundos: 45 });
+  });
+
+  await t.test("configuração inválida ou banco indisponível não devolvem um intervalo fictício", async (t) => {
+    const base = await iniciarServidor(t);
+    const respostaLogin = await login(base);
+    const { token } = await respostaLogin.json() as LoginAutenticado;
+    const consultar = () => fetch(`${base}/monitoring-settings`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    try {
+      for (const valor of ["0", "-1", "inválido", "1.5", "2147484"]) {
+        intervaloConfigurado = valor;
+        assert.equal((await consultar()).status, 500);
+      }
+      intervaloConfigurado = "45";
+      falharConfiguracao = true;
+      const resposta = await consultar();
+      assert.equal(resposta.status, 500);
+      assert.ok(!(await resposta.text()).includes("Detalhe interno"));
+    } finally {
+      intervaloConfigurado = "45";
+      falharConfiguracao = false;
+    }
+    assert.deepEqual(await (await consultar()).json(), { intervaloColetaSegundos: 45 });
   });
 
   await t.test("senha errada e usuário inexistente têm a mesma resposta e não recebem token", async (t) => {
@@ -243,8 +274,8 @@ test("login e proteção HTTP passam pelas camadas reais, simulando só a consul
     }
     const publica = await fetch(`${base}/health/live`);
     assert.equal(publica.status, 200);
-    assert.equal((await fetch(`${base}/services`)).status, 200);
-    assert.equal((await fetch(`${base}/collections`)).status, 200);
+    assert.equal((await fetch(`${base}/services`)).status, 401);
+    assert.equal((await fetch(`${base}/collections`)).status, 401);
   });
 
   await t.test("sem segredo, rotas públicas funcionam e a autenticação não libera acesso", async (t) => {
@@ -253,7 +284,7 @@ test("login e proteção HTTP passam pelas camadas reais, simulando só a consul
     const segredoAnterior = process.env.JWT_SECRET;
     try {
       delete process.env.JWT_SECRET;
-      for (const caminho of ["/health/live", "/health/ready", "/services", "/collections"]) {
+      for (const caminho of ["/health/live", "/health/ready"]) {
         assert.equal((await fetch(`${base}${caminho}`)).status, 200);
       }
       const resposta = await login(base);
@@ -268,6 +299,194 @@ test("login e proteção HTTP passam pelas camadas reais, simulando só a consul
     } finally {
       if (segredoAnterior === undefined) delete process.env.JWT_SECRET;
       else process.env.JWT_SECRET = segredoAnterior;
+    }
+  });
+});
+
+test("rotas de coleta e dashboard recusam acesso sem autorização antes de executar ações", async (t) => {
+  const base = await iniciarServidor(t);
+  const consulta = t.mock.method(pg.Pool.prototype, "query", async () => {
+    throw new Error("Uma requisição bloqueada não deve consultar o banco");
+  });
+  const fetchOriginal = globalThis.fetch;
+  let externas = 0;
+  t.mock.method(globalThis, "fetch", (...args: Parameters<typeof fetch>) => {
+    if (!String(args[0]).startsWith(`${base}/`)) {
+      externas++;
+      throw new Error("Uma requisição bloqueada não deve consultar APIs externas");
+    }
+    return fetchOriginal(...args);
+  });
+  const estadoAnterior = rotinaColeta.status();
+  const token = await gerarToken("1");
+  const rotas = [
+    ["POST", "/collections/executar"],
+    ["POST", "/collections/rotina/iniciar"],
+    ["POST", "/collections/rotina/parar"],
+    ["GET", "/collections/rotina/status"],
+    ["GET", "/collections"],
+    ["GET", "/collections?serviceId=17"],
+    ["GET", "/services"],
+    ["GET", "/services/17"],
+    ["GET", "/dashboard/indicadores"],
+    ["GET", "/analytics/historico/17"],
+    ["GET", "/analytics/ranking"],
+    ["GET", "/analytics/comparacao"],
+  ];
+  for (const [method, caminho] of rotas) {
+    await t.test(`${method} ${caminho}`, async () => {
+      for (const authorization of [undefined, "Bearer invalido"]) {
+        const resposta = await fetch(`${base}${caminho}`, {
+          method,
+          headers: authorization ? { authorization } : {},
+          ...(method === "POST" ? { body: "{" } : {}),
+        });
+        assert.equal(resposta.status, 401);
+        assert.deepEqual(await resposta.json(), { error: "unauthorized", message: "Token ausente ou inválido." });
+        assert.equal(resposta.headers.get("cache-control"), "no-store");
+        assert.equal(resposta.headers.get("www-authenticate"), authorization ? 'Bearer error="invalid_token"' : "Bearer");
+      }
+      const separador = caminho.includes("?") ? "&" : "?";
+      const resposta = await fetch(`${base}${caminho}${separador}token=${token}`, { method });
+      assert.equal(resposta.status, 401);
+    });
+  }
+  assert.equal(consulta.mock.calls.length, 0);
+  assert.equal(externas, 0);
+  assert.deepEqual(rotinaColeta.status(), estadoAnterior);
+});
+
+test("cadastro público persiste bcrypt e permite login sem alterar contas existentes", async (t) => {
+  const contas = new Map<string, { id: string; nome: string; senha_hash: string }>();
+  let consultas = 0;
+  let falha: unknown;
+  t.mock.method(pg.Pool.prototype, "query", async (sql: string, parametros: unknown[]) => {
+    consultas += 1;
+    if (falha !== undefined) throw falha;
+    if (/INSERT INTO usuarios\b/.test(sql)) {
+      assert.match(sql, /VALUES \(\$1, \$2, \$3\) RETURNING id::text$/);
+      assert.equal(parametros.length, 3);
+      const [nome, email, senha_hash] = parametros as string[];
+      if (contas.has(email)) throw { code: "23505", constraint: "usuarios_email_key" };
+      const id = String(9007199254740993n + BigInt(contas.size));
+      contas.set(email, { id, nome, senha_hash });
+      return { rows: [{ id }] };
+    }
+    assert.match(sql, /FROM usuarios WHERE email = \$1$/);
+    return { rows: contas.has(parametros[0] as string) ? [contas.get(parametros[0] as string)] : [] };
+  });
+  const base = await iniciarServidor(t);
+  const cadastrar = (dados: unknown) => fetch(`${base}/auth/register`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(dados),
+  });
+
+  await t.test("aceita o corpo mínimo e os campos adicionais da tela sem armazená-los", async () => {
+    const casos = [
+      { nome: "Pessoa Teste", email: "nova@example.com", senha: "Senha123" },
+      { nome: "  Pessoa Física  ", email: "  fisica@example.com  ", senha: " Senha123 ", tipoPessoa: "fisica", documento: "52998224725" },
+      { nome: "Empresa Teste", email: "empresa@example.com", senha: "Senha123", tipoPessoa: "juridica", documento: "11222333000181" },
+      { nome: "Limite", email: "limite-ascii@example.com", senha: "a".repeat(72) },
+      { nome: "Unicode", email: "limite-utf8@example.com", senha: "á".repeat(36) },
+      { nome: "O'Hara", email: "o'hara@example.com", senha: "Senha123", tipoPessoa: "outro", documento: null },
+    ];
+    for (const dados of casos) {
+      const resposta = await cadastrar(dados);
+      assert.equal(resposta.status, 201);
+      assert.equal(resposta.headers.get("cache-control"), "no-store");
+      assert.match(resposta.headers.get("content-type") ?? "", /application\/json/);
+      const conta = contas.get(dados.email.trim());
+      assert.ok(conta);
+      assert.deepEqual(await resposta.json(), { id: conta.id });
+      assert.equal(conta.nome, dados.nome.trim());
+      assert.deepEqual(Object.keys(conta).sort(), ["id", "nome", "senha_hash"]);
+      assert.match(conta.senha_hash, /^\$2[aby]\$10\$/);
+      assert.notEqual(conta.senha_hash, dados.senha);
+      assert.equal(await compare(dados.senha, conta.senha_hash), true);
+      const autenticada = await login(base, { email: dados.email, senha: dados.senha });
+      assert.equal(autenticada.status, 200);
+      const { token } = await autenticada.json() as LoginAutenticado;
+      assert.equal(await verificarToken(token), conta.id);
+    }
+  });
+
+  await t.test("duplicidade de e-mail retorna conflito sem sobrescrever a senha", async () => {
+    const antes = { ...contas.get("nova@example.com") };
+    const resposta = await cadastrar({ nome: "Outra Pessoa", email: " nova@example.com ", senha: "OutraSenha123" });
+    assert.equal(resposta.status, 409);
+    assert.equal(resposta.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await resposta.json(), { error: "email_already_exists", message: "Este e-mail já está cadastrado." });
+    assert.deepEqual(contas.get("nova@example.com"), antes);
+    assert.equal((await login(base, { email: "nova@example.com", senha: "Senha123" })).status, 200);
+    assert.equal((await login(base, { email: "nova@example.com", senha: "OutraSenha123" })).status, 401);
+  });
+
+  await t.test("requisições simultâneas com mesmo e-mail criam somente uma conta", async () => {
+    const antes = contas.size;
+    const dados = { nome: "Concorrência", email: "simultaneo@example.com", senha: "Senha123" };
+    const respostas = await Promise.all([cadastrar(dados), cadastrar(dados)]);
+    assert.deepEqual(respostas.map(resposta => resposta.status).sort(), [201, 409]);
+    await Promise.all(respostas.map(resposta => resposta.json()));
+    assert.equal(contas.size, antes + 1);
+  });
+
+  await t.test("rejeita dados inválidos antes de acessar o banco", async () => {
+    const valido = { nome: "Pessoa Teste", email: "valida@example.com", senha: "Senha123" };
+    const casos: unknown[] = [null, [], "texto", 123, {}];
+    for (const nome of [undefined, null, 123, "", "   ", "a".repeat(101), "Pessoa\0Teste"]) casos.push({ ...valido, nome });
+    for (const email of [undefined, null, 123, "", "invalido", "a\0@exemplo.com", `${"a".repeat(145)}@exemplo.com`]) casos.push({ ...valido, email });
+    for (const senha of [undefined, null, 123, "", "1234567", "a".repeat(73), "á".repeat(37), "Senha123\0"]) casos.push({ ...valido, senha });
+    const antes = consultas;
+    for (const dados of casos) {
+      const resposta = await cadastrar(dados);
+      assert.equal(resposta.status, 400);
+      assert.equal((await resposta.json() as { error: string }).error, "invalid_request");
+    }
+    assert.equal(consultas, antes);
+  });
+
+  await t.test("mantém os erros de JSON, tipo de conteúdo e tamanho do corpo", async () => {
+    const antes = consultas;
+    const casos = [
+      { body: "{", tipo: "application/json", status: 400, codigo: "invalid_json" },
+      { body: "", tipo: "application/json", status: 400, codigo: "invalid_json" },
+      { body: "texto", tipo: "text/plain", status: 415, codigo: "unsupported_media_type" },
+      { body: "a".repeat(8193), tipo: "application/json", status: 413, codigo: "payload_too_large" },
+    ];
+    for (const caso of casos) {
+      const resposta = await fetch(`${base}/auth/register`, {
+        method: "POST", headers: { "content-type": caso.tipo }, body: caso.body,
+      });
+      assert.equal(resposta.status, caso.status);
+      assert.equal((await resposta.json() as { error: string }).error, caso.codigo);
+      assert.equal(resposta.headers.get("cache-control"), "no-store");
+    }
+    assert.equal(consultas, antes);
+  });
+
+  await t.test("falhas inesperadas do banco não são confundidas com e-mail duplicado", async () => {
+    try {
+      for (const erro of [new Error("Detalhe interno"), { code: "23505", constraint: "usuarios_pkey" }, { code: "23503" }, null]) {
+        falha = erro;
+        const resposta = await cadastrar({ nome: "Falha", email: "falha@example.com", senha: "Senha123" });
+        assert.equal(resposta.status, 500);
+        assert.deepEqual(await resposta.json(), { error: "internal_server_error" });
+      }
+    } finally {
+      falha = undefined;
+    }
+    assert.equal(contas.has("falha@example.com"), false);
+  });
+
+  await t.test("cadastro público funciona também sem segredo JWT configurado", async () => {
+    const segredo = process.env.JWT_SECRET;
+    try {
+      delete process.env.JWT_SECRET;
+      const resposta = await cadastrar({ nome: "Pública", email: "publica@example.com", senha: "Senha123" });
+      assert.equal(resposta.status, 201);
+      await resposta.json();
+    } finally {
+      if (segredo === undefined) delete process.env.JWT_SECRET;
+      else process.env.JWT_SECRET = segredo;
     }
   });
 });

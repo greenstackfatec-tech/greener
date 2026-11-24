@@ -12,6 +12,11 @@ if (!Number.isInteger(timeoutConsultaMs) || timeoutConsultaMs < 1 || timeoutCons
 
 export function criarPool(): pg.Pool {
   const pool = new pg.Pool({
+    host: process.env.PGHOST,
+    port: process.env.PGPORT ? Number(process.env.PGPORT) : undefined,
+    database: process.env.PGDATABASE,
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
     connectionTimeoutMillis: timeoutConexaoSegundos * 1000,
     query_timeout: timeoutConsultaMs,
     statement_timeout: timeoutConsultaMs,

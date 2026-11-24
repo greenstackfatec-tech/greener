@@ -1,19 +1,40 @@
 import type { ReactNode } from "react";
 import type { EstadoIndicadores } from "../hooks/useIndicadores.ts";
-import { numero } from "../formatacao.ts";
+import { dataHoraSaoPaulo, duracao, numero } from "../formatacao.ts";
 import "./CardsIndicadores.css";
+
+/** Pequeno ícone de informação com tooltip explicando a diferença energia vs CO₂e. */
+function InfoEnergiaCarbono() {
+  const texto = "Energia (kWh) é o consumo medido. CO₂e (g) = energia × intensidade de carbono da região (gCO₂e/kWh).";
+  return (
+    <span
+      className="ind-info"
+      tabIndex={0}
+      role="tooltip"
+      aria-label={texto}
+      data-tooltip={texto}
+    >
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <circle cx="8" cy="8" r="7" />
+        <path d="M8 5v4M8 11v1" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
 
 interface Props {
   estado: EstadoIndicadores;
   /** Ação do botão "Tentar de novo" do aviso de erro. */
   aoTentarDeNovo: () => void;
+  /** Intervalo de atualização automática da tela, em segundos. */
+  intervaloAtualizacaoSegundos: number;
 }
 
 interface CartaoProps {
   icone: ReactNode;
   cor: "green" | "gray";
-  titulo: string;
-  valor: string;
+  titulo: ReactNode;
+  valor: ReactNode;
   unidade?: string;
   legenda: string;
   carregando: boolean;
@@ -58,7 +79,7 @@ const IconeEmissao = (
  * emissão total, serviços ativos e serviços indisponíveis.
  * Os valores vêm de GET /dashboard/indicadores; aqui não há nenhum número fixo.
  */
-export function CardsIndicadores({ estado, aoTentarDeNovo }: Props) {
+export function CardsIndicadores({ estado, aoTentarDeNovo, intervaloAtualizacaoSegundos }: Props) {
   const carregando = estado.tipo === "carregando";
   const dados = estado.tipo === "ok" ? estado.dados : estado.tipo === "erro" ? estado.dadosAnteriores : null;
   const semCalculo = dados !== null && dados.consumoTotalKwh === 0 && dados.emissaoTotalCo2eG === 0;
@@ -94,7 +115,7 @@ export function CardsIndicadores({ estado, aoTentarDeNovo }: Props) {
         <Cartao
           icone={IconeEnergia}
           cor="green"
-          titulo="Consumo total"
+          titulo={<><span>Consumo total</span> <InfoEnergiaCarbono /></>}
           valor={numero(dados?.consumoTotalKwh ?? null, 4)}
           unidade="kWh"
           legenda={legenda("Última coleta de cada serviço", true)}
@@ -103,10 +124,10 @@ export function CardsIndicadores({ estado, aoTentarDeNovo }: Props) {
         <Cartao
           icone={IconeEmissao}
           cor="green"
-          titulo="Emissão total"
+          titulo={<><span>Emissão total</span> <InfoEnergiaCarbono /></>}
           valor={numero(dados?.emissaoTotalCo2eG ?? null, 3)}
           unidade="g CO₂e"
-          legenda={legenda("CO₂e estimado", true)}
+          legenda={legenda("CO₂e = energia × intensidade de carbono da região", true)}
           carregando={carregando}
         />
         <Cartao
@@ -126,6 +147,17 @@ export function CardsIndicadores({ estado, aoTentarDeNovo }: Props) {
           carregando={carregando}
         />
       </div>
+
+      {/* Hora da última coleta e intervalos (TP16 / RNF02). */}
+      {dados !== null && (
+        <p className="ind-coleta">
+          {dados.ultimaColetaEm
+            ? `Última coleta: ${dataHoraSaoPaulo(dados.ultimaColetaEm)} (horário de São Paulo)`
+            : "Nenhuma coleta registrada ainda"}
+          {dados.intervaloColetaSegundos !== null && ` · Coleta a cada ${duracao(dados.intervaloColetaSegundos)}`}
+          {` · Tela atualiza a cada ${duracao(intervaloAtualizacaoSegundos)}`}
+        </p>
+      )}
     </section>
   );
 }

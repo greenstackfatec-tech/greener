@@ -1,3 +1,10 @@
+// Configurar variáveis de ambiente ANTES de importar módulos que criam pools
+process.env.PGHOST ??= "localhost";
+process.env.PGPORT ??= "5432";
+process.env.PGDATABASE ??= "greener";
+process.env.PGUSER ??= "greener";
+process.env.PGPASSWORD ??= "greener_dev_only";
+
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -7,19 +14,29 @@ import type { AgregacaoParams, HistoricoParams, RankingParams } from "./analytic
 
 const { Pool } = pg;
 
+// Configuração de conexão para o banco de testes (localhost:5432 do docker-compose)
+const dbConfig = {
+  host: process.env.PGHOST ?? "localhost",
+  port: Number(process.env.PGPORT ?? 5432),
+  database: process.env.PGDATABASE ?? "greener",
+  user: process.env.PGUSER ?? "greener",
+  password: process.env.PGPASSWORD ?? "greener_dev_only",
+  connectionTimeoutMillis: 5000,
+};
+
 test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
   // Isola cada execução em schema próprio
   const schema = `analytics_${randomUUID().replaceAll("-", "")}`;
-  const administrador = new Pool({ connectionTimeoutMillis: 5000 });
-  const banco = new Pool({ options: `-c search_path=${schema}`, connectionTimeoutMillis: 5000 });
+  const administrador = new Pool({ ...dbConfig });
+  const banco = new Pool({ ...dbConfig, options: `-c search_path=${schema}` });
   const opcoesAnteriores = process.env.PGOPTIONS;
   // O fuso da sessão difere de UTC para detectar dependência acidental do servidor.
   process.env.PGOPTIONS = `-c search_path=${schema} -c TimeZone=Pacific/Auckland`;
   let schemaCriado = false;
-  let encerrarRepositorio: (() => Promise<void>) | undefined;
+let _encerrarRepositorio: (() => Promise<void>) | undefined = undefined;
   t.after(async () => {
     try {
-      await encerrarRepositorio?.();
+      await _encerrarRepositorio?.();
     } finally {
       try {
         await banco.end();
@@ -43,7 +60,7 @@ test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
     agregarMetricasPorPeriodo,
     encerrarPool,
   } = await import("./analytics.repository.ts");
-  encerrarRepositorio = encerrarPool;
+  _encerrarRepositorio = encerrarPool;
 
   // Dados de teste base
   const app = await banco.query("INSERT INTO aplicacoes (nome) VALUES ('App Teste') RETURNING id");
@@ -68,7 +85,7 @@ test("Módulo Analytics — consultas SQL com PostgreSQL real", async (t) => {
      RETURNING id`,
     [appId, rSudesteId, rVirginiaId],
   );
-  const [s1, s2, s3, s4] = servicos.rows.map((s) => s.id); // s1,s2 = Sudeste; s3,s4 = Virginia
+  const [s1, s2, s3, _s4] = servicos.rows.map((s) => s.id); // s1,s2 = Sudeste; s3,s4 = Virginia
 
   // Coletas: s1 e s2 têm coletas bem-sucedidas; s3 tem uma; s4 é indisponível
   await banco.query(
