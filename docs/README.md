@@ -11,51 +11,57 @@ docs/
 ├── README.md
 ├── plano-de-entregas.md
 ├── arquitetura.md
-├── calculos.md
 ├── api.md
-└── sprints/
-    ├── product-backlog.md
-    ├── sprint-1.md
-    ├── sprint-2.md
-    └── sprint-3.md
-└── design/
-    ├── greener-circle-logo.png
-    ├── greener-icon.png
-    ├── greener-styleguide.png
-    ├── greenstack-icon.png
-    └── ...
+├── calculos.md
+├── mocks.md
+├── sprints/
+│   ├── product-backlog.md
+│   ├── sprint-1.md
+│   ├── sprint-2.md
+│   └── sprint-3.md
+├── design/
+│   └── ...
+└── diagramas/
+    ├── README.md
+    ├── diagrama-casos-de-uso.md
+    ├── diagrama-classes.md
+    └── diagrama-sequencia.md
 ```
 
-<br>
-
-## 🗂️ Documentos
+## 🗂️ Documentos técnicos e de planejamento
 
 | Documento | Finalidade |
 |---|---|
-| [Plano de Entregas](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/plano%20de%20entregas.md) | Organiza objetivos, entregas previstas, responsáveis, critérios de aceite e evidências de cada sprint. |
-| [Arquitetura](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/arquitetura.md) | Descreve a organização dos componentes do sistema e a comunicação entre frontend, backend, banco de dados e serviços externos. |
-| [Cálculos](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/calculos.md) | Registra a metodologia, as fórmulas, as unidades e as premissas utilizadas para estimar consumo energético e emissões de CO₂e. |
-| [Documentação da API](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/api.md) | Reúne informações sobre endpoints, parâmetros, respostas e autenticação das APIs utilizadas ou disponibilizadas pelo projeto. |
-| [Execução com Docker Compose](../README.md#-como-executar-o-projeto-com-docker) | Instruções para configurar o `.env`, iniciar PostgreSQL, backend e frontend e verificar a disponibilidade dos serviços. |
-| [Product Backlog](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/product-backlog.md) | Centraliza e prioriza requisitos, funcionalidades, melhorias e correções do produto. |
-| [Relatório da Sprint 1](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/sprint-1.md) | Registra o planejamento, as atividades, as entregas, as evidências, as pendências e as decisões da primeira sprint. |
-| [Relatório da Sprint 2](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/sprint-2.md) | Registra o planejamento, as atividades, as entregas, as evidências, as pendências e as decisões da segunda sprint. |
-| [Relatório da Sprint 3](https://github.com/greenstackfatec-tech/greener/blob/develop/docs/sprints/sprint-3.md) | Registra o planejamento, as atividades, as entregas, as evidências, as pendências e as decisões da terceira sprint. |
+| [Plano de Entregas](./plano-de-entregas.md) | Organiza objetivos, entregas, responsáveis, critérios de aceite, evidências e Definition of Done (DoD). |
+| [Arquitetura](./arquitetura.md) | Descreve os componentes, a comunicação entre frontend, backend, banco de dados e serviços externos, além do modelo de dados. |
+| [Documentação da API](./api.md) | Reúne endpoints, métodos, parâmetros, autenticação, exemplos de resposta e erros. Distingue rotas implementadas de contratos planejados. |
+| [Cálculos](./calculos.md) | Registra metodologia, fórmulas, unidades, fatores e premissas para estimar energia e emissões de CO₂e. |
+| [Mocks locais](./mocks.md) | Explica os mocks das APIs externas no backend e o mock da API GreenER no frontend, incluindo cenários e comandos de execução. |
+| [Product Backlog](./sprints/product-backlog.md) | Centraliza e prioriza requisitos, funcionalidades, melhorias e correções. |
+| [Relatório da Sprint 1](./sprints/sprint-1.md) | Registra planejamento, atividades, entregas, evidências e retrospectiva da primeira sprint. |
+| [Relatório da Sprint 2](./sprints/sprint-2.md) | Registra planejamento, atividades, entregas, evidências e retrospectiva da segunda sprint. |
+| [Relatório da Sprint 3](./sprints/sprint-3.md) | Registra planejamento, atividades, entregas, evidências e retrospectiva da terceira sprint. |
 
-<br>
+## 📖 Documentação dos módulos
+
+Os READMEs de cada parte do repositório complementam os documentos técnicos:
+
+| Documento | Conteúdo |
+|---|---|
+| [README principal](../README.md) | Apresentação do produto, funcionalidades, tecnologias, sprints e execução com Docker Compose. |
+| [README do frontend](../frontend/README.md) | Rotas e telas, autenticação no navegador, comunicação com o backend, atualização automática, modo mock, responsividade e testes. |
+| [README do backend](../backend/README.md) | Módulos, endpoints, autenticação, rotina de coleta, persistência, integrações, variáveis de ambiente e testes. |
+| [README do banco de dados](../database/README.md) | Schema, seed, tabelas, relacionamentos, migrações e persistência. |
 
 ## 🎨 Recursos visuais
 
-A pasta design/ reúne os recursos visuais do projeto, incluindo logotipos, ícones, guia de estilo e imagens de referência das interfaces. Esses arquivos servem como apoio à documentação visual e ajudam a manter a consistência dos elementos gráficos utilizados no GreenER.
-O <b>Design</b> pode ser encontrado <a href="https://github.com/greenstackfatec-tech/greener/tree/develop/docs/design">aqui</a>.
+A pasta `design/` reúne os recursos visuais do projeto, incluindo logotipos, ícones, guia de estilo e imagens de referência das interfaces. Esses arquivos apoiam a documentação visual e ajudam a manter a consistência dos elementos gráficos utilizados no GreenER.
 
-<br>
+O [material de design](./design/) pode ser consultado diretamente na pasta correspondente.
 
-## ✅ Considerações finais
+## 📐 Diagramas
 
-A organização da documentação em arquivos específicos facilita a localização das informações, melhora a compreensão da arquitetura e do funcionamento do sistema e contribui para o acompanhamento das entregas ao longo do desenvolvimento.
-
-Manter os documentos atualizados, com informações claras e referências consistentes, favorece a rastreabilidade dos requisitos, a reprodução dos procedimentos e a continuidade do projeto. Dessa forma, a documentação funciona como uma fonte centralizada de consulta e apoio à evolução do GreenER.
+Os diagramas de casos de uso, classes e sequência estão na pasta [`diagramas/`](./diagramas/). Eles registram a visão de domínio e os fluxos de referência elaborados durante o desenvolvimento.
 
 ---
 
