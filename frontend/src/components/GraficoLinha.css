@@ -139,9 +139,9 @@
 .grafico-linha-linha {
   transition: stroke-width 0.15s ease, filter 0.15s ease;
 }
-.grafico-linha-serie:hover .grafico-linha-linha {
-  stroke-width: 3.5;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
+/* Linhas e áreas não capturam o mouse: o retângulo de detecção embaixo cuida do tooltip. */
+.grafico-linha-series {
+  pointer-events: none;
 }
 
 /* Pontos */
