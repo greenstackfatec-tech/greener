@@ -127,8 +127,12 @@ function mapearY(valor: number, minY: number, maxY: number, altura: number): num
   return altura - ((valor - minY) / (maxY - minY)) * altura;
 }
 
-/** Gera path SVG para linha suave (curva catmull-rom simplificada). */
-function gerarPath(
+/**
+ * Gera os paths SVG (linha e área) de uma série, já no sistema de coordenadas do SVG
+ * (somando as margens). Lacunas de coleta maiores que 3x o intervalo típico quebram a
+ * linha, para não desenhar dados que não existem.
+ */
+function gerarPaths(
   pontos: PontoGrafico[],
   serieId: "energia" | "co2e",
   minX: number,
@@ -136,76 +140,42 @@ function gerarPath(
   minY: number,
   maxY: number,
   largura: number,
-  altura: number
-): string {
+  altura: number,
+  dx: number,
+  dy: number
+): { linha: string; area: string } {
   const validos = pontos
-    .map((p) => ({
-      x: mapearX(dataParaTimestamp(p.data), minX, maxX, largura),
-      y: mapearY(valorDaSerie(p, serieId)!, minY, maxY, altura),
-      valor: valorDaSerie(p, serieId),
-    }))
-    .filter((p) => p.valor !== null);
+    .filter((p) => valorDaSerie(p, serieId) !== null)
+    .map((p) => {
+      const ts = dataParaTimestamp(p.data);
+      return {
+        ts,
+        x: mapearX(ts, minX, maxX, largura) + dx,
+        y: mapearY(valorDaSerie(p, serieId)!, minY, maxY, altura) + dy,
+      };
+    });
+  if (validos.length < 2) return { linha: "", area: "" };
 
-  if (validos.length < 2) return "";
-
-  let path = `M${validos[0].x.toFixed(2)},${validos[0].y.toFixed(2)}`;
+  const intervalos = validos.slice(1).map((p, i) => p.ts - validos[i].ts).sort((a, b) => a - b);
+  const limiteLacuna = intervalos[Math.floor(intervalos.length / 2)] * 3 || Infinity;
+  const segmentos: (typeof validos)[] = [[validos[0]]];
   for (let i = 1; i < validos.length; i++) {
-    const xMid = (validos[i - 1].x + validos[i].x) / 2;
-    const yMid = (validos[i - 1].y + validos[i].y) / 2;
-    if (i === 1) {
-      path += ` Q${validos[0].x.toFixed(2)},${validos[0].y.toFixed(2)} ${xMid.toFixed(2)},${yMid.toFixed(2)}`;
-    } else {
-      path += ` Q${validos[i - 1].x.toFixed(2)},${validos[i - 1].y.toFixed(2)} ${xMid.toFixed(2)},${yMid.toFixed(2)}`;
+    if (validos[i].ts - validos[i - 1].ts > limiteLacuna) segmentos.push([]);
+    segmentos[segmentos.length - 1].push(validos[i]);
+  }
+
+  const f = (n: number) => n.toFixed(2);
+  const base = f(altura + dy);
+  let linha = "";
+  let area = "";
+  for (const seg of segmentos) {
+    const trecho = seg.map((p, i) => `${i === 0 ? "M" : "L"}${f(p.x)},${f(p.y)}`).join(" ");
+    linha += ` ${trecho}`;
+    if (seg.length > 1) {
+      area += ` M${f(seg[0].x)},${base} L${trecho.slice(1)} L${f(seg[seg.length - 1].x)},${base} Z`;
     }
   }
-  if (validos.length > 1) {
-    const last = validos[validos.length - 1];
-    const prev = validos[validos.length - 2];
-    path += ` Q${prev.x.toFixed(2)},${prev.y.toFixed(2)} ${last.x.toFixed(2)},${last.y.toFixed(2)}`;
-  }
-  return path;
-}
-
-/** Gera path SVG para área sob a linha. */
-function gerarPathArea(
-  pontos: PontoGrafico[],
-  serieId: "energia" | "co2e",
-  minX: number,
-  maxX: number,
-  minY: number,
-  maxY: number,
-  largura: number,
-  altura: number
-): string {
-  const validos = pontos
-    .map((p) => ({
-      x: mapearX(dataParaTimestamp(p.data), minX, maxX, largura),
-      y: mapearY(valorDaSerie(p, serieId)!, minY, maxY, altura),
-      valor: valorDaSerie(p, serieId),
-    }))
-    .filter((p) => p.valor !== null);
-
-  if (validos.length < 2) return "";
-
-  let path = `M${validos[0].x.toFixed(2)},${altura}`;
-  path += ` L${validos[0].x.toFixed(2)},${validos[0].y.toFixed(2)}`;
-  for (let i = 1; i < validos.length; i++) {
-    const xMid = (validos[i - 1].x + validos[i].x) / 2;
-    const yMid = (validos[i - 1].y + validos[i].y) / 2;
-    if (i === 1) {
-      path += ` Q${validos[0].x.toFixed(2)},${validos[0].y.toFixed(2)} ${xMid.toFixed(2)},${yMid.toFixed(2)}`;
-    } else {
-      path += ` Q${validos[i - 1].x.toFixed(2)},${validos[i - 1].y.toFixed(2)} ${xMid.toFixed(2)},${yMid.toFixed(2)}`;
-    }
-  }
-  if (validos.length > 1) {
-    const last = validos[validos.length - 1];
-    const prev = validos[validos.length - 2];
-    path += ` Q${prev.x.toFixed(2)},${prev.y.toFixed(2)} ${last.x.toFixed(2)},${last.y.toFixed(2)}`;
-  }
-  path += ` L${validos[validos.length - 1].x.toFixed(2)},${altura}`;
-  path += ` Z`;
-  return path;
+  return { linha: linha.trim(), area: area.trim() };
 }
 
 const SERIES_PADRAO: Serie[] = [
@@ -238,15 +208,20 @@ const SERIES_PADRAO: Serie[] = [
 ];
 
 export function GraficoLinha({
-  pontos,
+  pontos: pontosRecebidos,
   series = SERIES_PADRAO,
   altura = 320,
-  margens = { topo: 20, direita: 60, fundo: 50, esquerda: 60 },
+  margens = { topo: 20, direita: 64, fundo: 50, esquerda: 76 },
   vazioTexto = "Nenhum dado de coleta no período selecionado.",
   aoAlternarSerie,
   mostrarEstatisticas = true,
 }: Props) {
   // ===== TODOS OS HOOKS NO TOPO =====
+  // Eixo X e linhas assumem ordem cronológica; ordena aqui para não depender de quem chama.
+  const pontos = useMemo(
+    () => [...pontosRecebidos].sort((a, b) => dataParaTimestamp(a.data) - dataParaTimestamp(b.data)),
+    [pontosRecebidos]
+  );
   const [hoveredPoint, setHoveredPoint] = useState<PontoProjetado | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [seriesVisiveis, setSeriesVisiveis] = useState<Record<"energia" | "co2e", boolean>>({
@@ -282,7 +257,7 @@ export function GraficoLinha({
     return () => ro.disconnect();
   }, []);
 
-  const largura = Math.max(300, larguraContainer - margens.esquerda - margens.direita);
+  const largura = Math.max(300, larguraContainer);
   const larguraInterna = largura - margens.esquerda - margens.direita;
   const alturaInterna = altura - margens.topo - margens.fundo;
 
@@ -593,11 +568,11 @@ export function GraficoLinha({
             })}
             {/* Rótulo do eixo */}
             <text
-              x={margens.esquerda - 40}
+              x={14}
               y={margens.topo + alturaInterna / 2}
               textAnchor="middle"
               dominantBaseline="middle"
-              transform={`rotate(-90, ${margens.esquerda - 40}, ${margens.topo + alturaInterna / 2})`}
+              transform={`rotate(-90, 14, ${margens.topo + alturaInterna / 2})`}
               fontSize="11"
               fill="#5a645d"
               fontWeight="600"
@@ -651,8 +626,9 @@ export function GraficoLinha({
         <g className="grafico-linha-series">
           {seriesAtivas.map((s) => {
             const eixo = s.eixoY === "esquerda" ? eixosY.esquerda : eixosY.direita;
-            const pathArea = gerarPathArea(pontos, s.id, minX, maxX, eixo.min, eixo.max, larguraInterna, alturaInterna);
-            const pathLinha = gerarPath(pontos, s.id, minX, maxX, eixo.min, eixo.max, larguraInterna, alturaInterna);
+            const { area: pathArea, linha: pathLinha } = gerarPaths(
+              pontos, s.id, minX, maxX, eixo.min, eixo.max, larguraInterna, alturaInterna, margens.esquerda, margens.topo
+            );
             const pontosValidos = pontos
               .map((p) => ({
                 x: mapearX(dataParaTimestamp(p.data), minX, maxX, larguraInterna) + margens.esquerda,
@@ -681,7 +657,8 @@ export function GraficoLinha({
                     d={pathLinha}
                     fill="none"
                     stroke={s.cor}
-                    strokeWidth="2.5"
+                    strokeWidth={s.id === "co2e" ? 2 : 2.5}
+                    strokeDasharray={s.id === "co2e" ? "6 4" : undefined}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     className="grafico-linha-linha"
@@ -691,6 +668,8 @@ export function GraficoLinha({
                 {/* Pontos */}
                 {pontosValidos.map((p, idx) => {
                   const estaHover = isHovered && activePoint?.data === p.data;
+                  // Com muitas coletas, os marcadores viram ruído: só o ponto em foco aparece.
+                  if (!estaHover && pontosValidos.length > 40) return null;
                   return (
                     <g key={`${s.id}-${idx}`}>
                       <circle
