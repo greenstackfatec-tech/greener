@@ -1,49 +1,269 @@
 # Frontend GreenER
 
-O frontend do **GreenER** é a aplicação web utilizada para consultar o estado dos serviços monitorados e visualizar as informações disponibilizadas pelo backend.
+O frontend do **GreenER** é a aplicação web utilizada para consultar o estado dos serviços monitorados, acompanhar indicadores ambientais e visualizar análises de energia e emissões de CO₂e.
 
-Tecnologias principais: **React 19.3.1**, **TypeScript 6.0.3** e **Vite 8.3.5**. No ambiente Docker, a versão de produção é servida pelo Nginx.
+Tecnologias principais: **React 19.3.1**, **TypeScript 6.0.3** e **Vite 8.3.5**. No ambiente Docker, o build é gerado com Node.js 24 e servido pelo Nginx.
 
-| Pasta | Responsabilidade | Conteúdo atual |
+<br>
+
+## 1. Organização do projeto
+
+O código-fonte está em `frontend/src/`.
+
+| Diretório / arquivo | Responsabilidade |
+|---|---|
+| `main.tsx` e `App.tsx` | Inicialização e composição da aplicação. |
+| `rotas.tsx` | Declaração das rotas públicas, privadas e de desenvolvimento. |
+| `caminhos.ts` | Centralização dos caminhos de navegação. |
+| `pages/` | Páginas de início, login, cadastro, dashboard, administração, histórico, ranking, comparação, mapa e estados. |
+| `components/` | Componentes reutilizáveis, formulários, filtros, cartões, navegação e visualizações. |
+| `services/` | Cliente HTTP e integração com autenticação, cadastro, serviços, indicadores, análises e configuração. |
+| `hooks/` | Consultas de dados, atualização automática, filtros e acompanhamento da rotina. |
+| `contexts/` e `providers/` | Estado e provedores compartilhados da aplicação. |
+| `utils/` | Validações e funções auxiliares. |
+| `assets/` | Imagens e recursos visuais. |
+| `mock-servicos.ts` | Plugin Vite com respostas simuladas da API GreenER para desenvolvimento. |
+| `vite.config.ts` | Configuração do Vite, proxy e modo mock. |
+
+<br>
+
+## 2. Telas e rotas
+
+As rotas estão declaradas em `src/rotas.tsx`.
+
+| Rota | Tela | Situação atual |
 |---|---|---|
-| `src/pages/` | Telas da aplicação | `InicioPage.tsx`, `LoginPage.tsx`, `DashboardPage.tsx`, `EstadosPage.tsx` |
-| `src/components/` | Componentes de interface reutilizáveis | `StatusBackend.tsx`, `LayoutAutenticacao.tsx`, `CampoTexto.tsx`, `CartaoEstado.tsx`, `CardsIndicadores.tsx`, `BotaoSair.tsx` |
-| `src/services/` | Comunicação com o backend | `api.ts`, `auth.ts`, `token.ts`, `servicos.ts` |
-| `src/assets/` | Imagens usadas pelas telas | `greener-icon.png` |
-| `src/hooks/` | Lógica de interface reutilizável | `useProntidao.ts`, `useServicos.ts`, `useAgora.ts` |
-| `src/contexts/` | Estado compartilhado entre componentes | `ProntidaoContext.ts` |
-| `src/providers/` | Provedores de contexto e dependências | `ProntidaoProvider.tsx` |
+| `/` | Início | Apresenta o GreenER e consulta `GET /health/ready` para mostrar a disponibilidade do backend e do PostgreSQL. |
+| `/login` | Login | Integrada a `POST /auth/login`, com validação, opção “Lembrar de mim” e tratamento de credenciais inválidas e limite de tentativas. |
+| `/cadastro` | Cadastro | Formulário de pessoa física ou jurídica com validações no frontend; envia `POST /auth/register`. O backend persiste nome, e-mail e hash da senha, mas ainda ignora tipo de pessoa e CPF/CNPJ. |
+| `/dashboard` | Visão geral | Apresenta indicadores consolidados, lista de serviços, estados, busca, filtros, ordenação e alternância entre cartões e tabela. |
+| `/administrativa` | Área administrativa | Apresenta indicadores e serviços reais e consulta a configuração do intervalo de coleta. A alteração do intervalo ainda depende de endpoint PUT não implementado. |
+| `/historico` | Histórico | Consulta o histórico de um serviço no período e apresenta a evolução de energia e CO₂e em gráfico. |
+| `/ranking` | Ranking | Classifica serviços por energia ou CO₂e, usando total ou média por coleta, com período, aplicação, ordenação, resumo, tendência e paginação. |
+| `/comparacao` | Comparação | Seleciona de dois a cinco serviços e compara os valores no mesmo período. |
+| `/mapa` | Mapa | Apresenta um globo 3D estilizado com serviços que possuem latitude e longitude válidas. |
+| `/dashboard/estados` | Galeria de estados | Rota de desenvolvimento para conferir estados visuais; não é registrada no build de produção. |
 
-## Telas e rotas
+As rotas privadas são agrupadas pelo componente `RotaPrivada`. Sem token válido no armazenamento do navegador, o acesso é direcionado para `/login`.
 
-As rotas ficam em `src/rotas.tsx`. A tela de início é a única implementada. As demais rotas já estão registradas e mostram uma página provisória com o nome da tela, até as tarefas indicadas serem entregues.
+<br>
 
-| Rota | Tela | Tarefa | Situação |
-|---|---|---|---|
-| `/` | Início | DW18 | Implementada (mostra o status do backend) |
-| `/login` | Login | DW19 | Implementada (JWT, "lembrar de mim", erros e bloqueio por tentativas) |
-| `/cadastro` | Cadastro | DW20 | Página provisória |
-| `/administrativa` | Administrativa | DW21, DW22 | Implementada (indicadores e serviços da API, intervalo de coleta; o card "Por recurso" foi removido por falta de dados reais) |
-| `/dashboard` | Dashboard | DW05, DW06, DW07 | Implementada (cards de indicadores, tabela e estados visuais) |
-| `/ranking` | Ranking | DW12 | Implementada |
-| `/comparacao` | Comparação | DW13 | Implementada (2 a 5 serviços no mesmo período, com aviso de serviço sem dados) |
-| `/dashboard/estados` | Galeria dos estados do DD07 | DW07 | Só em desenvolvimento (`npm run dev`), para conferir com o mock |
-| `/mapa` | Mapa | DW15 | Implementada (globo 3D com os serviços que têm latitude e longitude; aviso de quantos ficaram fora) |
+## 3. Comunicação com o backend
 
-O cliente HTTP fica em `src/services/api.ts`. `requisitar<T>(caminho)` (GET) e `enviar<T>(caminho, corpo)` (POST com JSON) fazem as chamadas a partir de `/api`; as telas não usam `fetch` diretamente. Respostas fora de 2xx viram `ErroApi` (com `status`, `codigo` e, no HTTP 429, `tentarNovamenteEmSegundos`). Se houver token salvo, o cliente envia `Authorization: Bearer <token>` automaticamente.
+O cliente HTTP está em `src/services/api.ts`. As telas utilizam as funções centralizadas, em vez de realizar chamadas `fetch` diretamente.
 
-## Login
-## 1. Pré-requisitos
+| Função | Método | Finalidade |
+|---|---|---|
+| `requisitar<T>(caminho)` | GET | Consulta recursos do backend. |
+| `enviar<T>(caminho, corpo)` | POST | Envia dados em JSON. |
+| `atualizar<T>(caminho, corpo)` | PUT | Envia alterações em JSON. |
 
-Para desenvolvimento local:
+A URL-base é `/api`.
 
-- Node.js 24;
+- Em desenvolvimento normal, o Vite encaminha `/api/` para `http://localhost:3000`, removendo o prefixo `/api`.
+- No container de produção, o Nginx encaminha `/api/` para o serviço `backend`, na porta `3000`.
+- No modo `npm run dev:mock`, o plugin `mock-servicos.ts` responde às rotas simuladas e o proxy para o backend é desativado.
+
+O cliente acrescenta `Authorization: Bearer <token>` quando existe um token salvo. Respostas fora de 2xx são convertidas em `ErroApi`, que disponibiliza status HTTP, código de erro e, quando enviado pelo backend, o valor de `Retry-After`.
+
+Quando uma rota protegida retorna HTTP `401`, o cliente remove o token do navegador e redireciona para `/login?expired=1`. O `401` de `POST /auth/login` é tratado pela própria tela, sem acionar esse redirecionamento.
+<br>
+
+### 3.1 Principais endpoints consumidos
+
+| Método | Caminho | Utilização |
+|---|---|---|
+| GET | `/health/ready` | Verificar backend e banco na tela inicial. |
+| POST | `/auth/login` | Autenticar o usuário e obter JWT. |
+| POST | `/auth/register` | Criar a conta com nome, e-mail e senha. |
+| GET | `/services` | Consultar serviços e dados da última coleta. |
+| GET | `/dashboard/indicadores` | Consultar indicadores consolidados. |
+| GET | `/collections/rotina/status` | Consultar o diagnóstico da coleta no dashboard. |
+| GET | `/monitoring-settings` | Consultar o intervalo de coleta salvo. |
+| GET | `/analytics/historico/:servicoId` | Consultar histórico do serviço por período. |
+| GET | `/analytics/ranking` | Consultar ranking por energia ou CO₂e. |
+| GET | `/analytics/comparacao` | Consultar comparação entre serviços. |
+
+Os contratos completos estão em [`docs/api.md`](../docs/api.md).
+
+<br>
+
+## 4. Autenticação e cadastro
+
+### 4.1 Login
+
+A tela chama `POST /auth/login`. Quando recebe um JWT:
+
+- armazena em `localStorage` quando “Lembrar de mim” está marcado;
+- armazena em `sessionStorage` quando a opção não está marcada.
+
+O cliente HTTP envia o token automaticamente nas requisições seguintes.
+
+O backend limita as tentativas incorretas por e-mail e pode responder HTTP `429` com `Retry-After`. A tela apresenta o tempo de espera e bloqueia novos envios durante a contagem regressiva.
+
+### 4.2 Cadastro
+
+A tela permite alternar entre pessoa física e pessoa jurídica e valida nome, CPF/CNPJ, e-mail e senha no frontend.
+
+O endpoint `POST /auth/register` está implementado no backend. Atualmente, porém, ele persiste somente:
+
+- `nome`;
+- `email`;
+- `senha_hash` (hash bcrypt da senha).
+
+Os campos `tipoPessoa` e `documento` enviados pelo formulário são aceitos como campos adicionais, mas ignorados pelo backend. CPF/CNPJ ainda não são validados nem armazenados no banco, e o backend não emite o erro `document_already_exists`.
+
+### 4.3 Logout e sessão expirada
+
+O botão “Sair da conta” remove o token de `localStorage` e `sessionStorage` e navega para `/login`.
+
+Quando uma requisição protegida recebe HTTP `401`, o cliente remove o token e redireciona para a tela de login.
+
+<br>
+
+## 5. Funcionalidades das telas
+
+### 5.1 Dashboard
+
+O dashboard consulta:
+
+- `GET /services`, para serviços, estados, localização, métricas e resultados da última coleta;
+- `GET /dashboard/indicadores`, para consumo total, emissão total e contagem de serviços;
+- `GET /collections/rotina/status`, para o diagnóstico da rotina de coleta.
+
+A tela oferece cartões ou tabela, busca por serviço/localização, filtro por estado, ordenação por nome, energia ou CO₂e, além dos filtros compartilhados de serviço, região e período.
+
+O período selecionado é utilizado pelas telas de análise. A lista do dashboard continua apresentando a última coleta disponível de cada serviço.
+
+Estados como ativo, indisponível, sem métricas, carregando, erro e lista vazia são apresentados separadamente. Campos ausentes são mostrados como não disponíveis, sem conversão artificial de `null` para zero.
+
+### 5.2 Atualização automática
+
+O dashboard, o histórico, o mapa e as áreas que acompanham os serviços utilizam o intervalo de atualização definido em `src/config.ts`.
+
+| Intervalo | Padrão | Configuração |
+|---|---:|---|
+| Atualização da interface | 30 segundos | `VITE_INTERVALO_ATUALIZACAO_SEGUNDOS` no ambiente frontend; `INTERVALO_ATUALIZACAO_SEGUNDOS` na raiz para build Docker. |
+| Coleta no backend | 60 segundos no seed | Chave `intervalo_coleta_segundos` da tabela `configuracoes`. |
+
+O intervalo da interface tem mínimo de 5 segundos. Ele é independente do intervalo de coleta do backend.
+
+Quando uma atualização falha depois de uma resposta válida, a interface preserva os dados anteriores, informa que podem estar desatualizados e permite tentar novamente. O ciclo automático é pausado com a aba oculta e retomado ao retornar à página.
+
+### 5.3 Filtros compartilhados
+
+A barra `components/FiltrosAnalise.tsx` e a lógica em `src/filtros.ts` permitem filtrar por serviço, região e período (1 hora, 24 horas, 7 dias ou personalizado).
+
+O estado compartilhado é mantido em `sessionStorage` por `useFiltrosAnalise`, sendo utilizado no dashboard, histórico e comparação. O ranking possui seus próprios controles de período, aplicação, métrica, agregação e ordenação.
+
+Datas personalizadas incompletas ou inválidas impedem o envio da consulta.
+
+### 5.4 Histórico
+
+A rota `/historico` utiliza `GET /analytics/historico/:servicoId`, exigindo JWT.
+
+A tela permite escolher serviço e período e apresenta gráfico de linha com energia e CO₂e das coletas com status `sucesso` e valores disponíveis. Os dados são limitados e ordenados conforme os parâmetros enviados à API.
+
+Estados de carregamento, erro e ausência de registros são apresentados sem inventar medições.
+
+### 5.5 Ranking
+
+A rota `/ranking` utiliza `GET /analytics/ranking`, exigindo JWT.
+
+A tela permite escolher:
+
+- métrica: energia ou CO₂e;
+- agregação: total no período ou média por coleta;
+- período: atalhos ou intervalo personalizado;
+- escopo de aplicação;
+- ordenação crescente ou decrescente.
+
+A resposta detalhada inclui resumo, primeiro colocado, quantidade de serviços classificados, serviços sem dados e tendência em relação ao período anterior de mesma duração. A listagem é paginada em grupos de 20 serviços.
+
+A unidade de CO₂e apresentada na tela é convertida de gramas para quilogramas. Valores ausentes são exibidos como traço.
+
+### 5.6 Comparação
+
+A rota `/comparacao` utiliza `GET /analytics/comparacao`, exigindo JWT.
+
+A pessoa usuária seleciona de dois a cinco serviços e um período comum. A tela compara totais e médias de energia e CO₂e, com mínimo e máximo disponíveis pela resposta do backend.
+
+Um serviço sem coletas no período permanece na comparação com valores zerados e aviso retornado pela API. Esse caso não deve ser interpretado como uma medição válida igual a zero.
+
+### 5.7 Mapa
+
+A rota `/mapa` mostra um globo 3D estilizado com um pino por serviço que possui latitude e longitude válidas. O desenho utiliza SVG com projeção ortográfica de `d3-geo` e os dados geográficos do pacote `world-atlas`.
+
+- `src/mapa.ts`: validação de coordenadas, agrupamento e formatação.
+- `src/components/GloboServicos.tsx`: globo interativo.
+- `src/pages/MapaPage.tsx`: lista, detalhes do serviço e estados da tela.
+
+Serviços sem coordenadas válidas continuam disponíveis no dashboard e são listados como fora do mapa. Serviços no mesmo local podem compartilhar um pino.
+
+A interface não calcula coordenadas aproximadas por cidade e não possui endpoint para editar coordenadas.
+
+### 5.8 Área administrativa
+
+A rota `/administrativa` apresenta indicadores consolidados e a lista de serviços monitorados. O card de intervalo consulta `GET /monitoring-settings`.
+
+O formulário está preparado para enviar `PUT /monitoring-settings`, mas o backend atual não registra essa rota. A tentativa de alteração retorna 404/405 e a tela mostra aviso de que o servidor ainda não permite salvar a configuração.
+
+O card “Por recurso” foi removido porque o backend não disponibiliza uma base de dados adequada para apresentar essa distribuição como indicador real.
+
+<br>
+
+## 6. Desenvolvimento com dados simulados
+
+O frontend possui um modo mock implementado em `mock-servicos.ts` e ativado pelo Vite quando executado com `npm run dev:mock`.
+
+Na pasta `frontend`:
+
+```bash
+npm ci
+npm run dev:mock
+```
+
+A aplicação fica disponível em `http://localhost:5173`. O modo mock não utiliza o backend nem o PostgreSQL.
+
+O plugin simula:
+
+| Método | Caminho | Conteúdo |
+|---|---|---|
+| GET | `/api/services` | Seis serviços fictícios com estados e localizações diferentes. |
+| GET | `/api/dashboard/indicadores` | Indicadores calculados a partir dos serviços fictícios. |
+| GET | `/api/analytics/historico/:servicoId` | Histórico sintético com variação aleatória. |
+| GET | `/api/analytics/ranking` | Ranking fictício com total, média, tendência e resumo. |
+| GET | `/api/analytics/comparacao` | Comparação simulada para os IDs selecionados. |
+| POST | `/api/auth/login` | Token fictício para demonstração. |
+| GET | `/api/__mock` | Consulta ou altera o cenário ativo. |
+
+Cenários: `ok`, `vazio`, `erro`, `lento` e `rede`.
+
+Para selecionar um cenário:
+
+```text
+http://localhost:5173/api/__mock?cenario=ok
+http://localhost:5173/api/__mock?cenario=vazio
+http://localhost:5173/api/__mock?cenario=erro
+http://localhost:5173/api/__mock?cenario=lento
+http://localhost:5173/api/__mock?cenario=rede
+```
+
+O cenário `lento` aplica atraso específico à rota de ranking. O cenário `vazio` não possui resposta completa para todas as rotas, inclusive o histórico. Para detalhes dos cenários e do mock das APIs externas do backend, consulte [`docs/mocks.md`](../docs/mocks.md).
+
+<br>
+
+## 7. Instalação e execução local
+
+### 7.1 Pré-requisitos
+
+- Node.js 24 para o ambiente de desenvolvimento e build do frontend;
 - npm;
-- backend disponível em `http://localhost:3000` para utilizar os dados reais da API.
+- backend disponível em `http://localhost:3000` para utilizar dados reais.
 
-Para executar todo o ambiente com Docker, consulte o [README principal](../README.md).
+Para executar a aplicação completa com Docker Compose, consulte o [README principal](../README.md).
 
-## 2. Instalação e execução local
+### 7.2 Instalar e iniciar
 
 A partir da raiz do repositório:
 
@@ -59,338 +279,67 @@ O Vite disponibiliza a aplicação em:
 http://localhost:5173
 ```
 
-Durante o desenvolvimento, as chamadas em `/api/` são encaminhadas para `http://localhost:3000`, com remoção do prefixo `/api`, conforme `vite.config.ts`. Para consultas reais, o backend também precisa estar iniciado e conectado ao PostgreSQL.
+No modo normal, o Vite encaminha `/api/` ao backend. Para utilizar dados reais, o backend precisa estar iniciado e conectado ao PostgreSQL.
 
-## 3. Telas e rotas
+### 7.3 Scripts disponíveis
 
-As rotas estão declaradas em `src/rotas.tsx`, e seus caminhos ficam centralizados em `src/caminhos.ts`.
-
-| Rota | Tela | Situação atual |
-|---|---|---|
-| `/` | Início | Apresenta o GreenER e a disponibilidade do backend e do banco. |
-| `/login` | Login | Integrada a `POST /auth/login`, com validação, opção “Lembrar de mim” e tratamento de erros e limite de tentativas. |
-| `/cadastro` | Cadastro | Formulário de pessoa física ou jurídica com validação no frontend. O endpoint de cadastro ainda não existe no backend, portanto o envio não conclui o registro. |
-| `/dashboard` | Dashboard | Apresenta serviços, estados, busca e filtros. Os dados dependem dos campos enviados pelo backend. |
-| `/ranking` | Ranking | Classificação por energia ou CO₂e, com total no período ou média por coleta, filtros, tendência e paginação (`GET /analytics/ranking`). |
-| `/administrativa` | Área administrativa | Indicadores e lista de serviços vindos da API (`GET /dashboard/indicadores` e `GET /services`) e leitura da configuração de monitoramento. O card "Por recurso" foi removido por falta de dados reais, e a alteração do intervalo depende de endpoint ainda não disponível. |
-| `/comparacao` | Comparação | Seleção de 2 a 5 serviços e de um período; mostra energia e CO₂e totais lado a lado (`GET /analytics/comparacao`). Serviço sem coleta no período aparece como "Sem dados no período". |
-| `/dashboard/estados` | Galeria de estados | Disponível somente em desenvolvimento para conferência com os mocks. |
-
-**Observação sobre as rotas:** `src/rotas.tsx` contém mais de uma declaração para `/cadastro` e `/administrativa`. Revise essas entradas e mantenha uma única configuração por caminho antes de considerar a navegação dessas páginas definitiva.
-
-### 3.1 Tela inicial
-
-A tela inicial utiliza o contexto de prontidão para consultar `GET /health/ready`. O componente `StatusBackend` apresenta a disponibilidade do backend e do PostgreSQL.
-
-### 3.2 Login
-
-A tela de login chama `POST /auth/login`. Quando recebe um JWT, o frontend armazena o token:
-
-- em `localStorage` quando “Lembrar de mim” está marcado;
-- em `sessionStorage` quando a opção não está marcada.
-
-Quando há token salvo, o cliente HTTP envia `Authorization: Bearer <token>`. A ação de sair remove o token.
-
-Pendências que dependem de outras tarefas: recuperação de senha (sem endpoint), proteção das rotas privadas e redirecionamento de quem já está logado.
-
-Logout (DW17). O botão "Sair da conta" `(components/BotaoSair.tsx)` fica na barra lateral do Dashboard, do Histórico, do Ranking, da Comparação e do Mapa; na área administrativa o botão equivalente está em `LayoutAdministrativo`. Ele chama `sair()` (`services/auth.ts`), que remove o token do `localStorage` e do `sessionStorage`, e navega para `/login`. Como o JWT é stateless e não há endpoint de logout, o token continua válido no backend até expirar (1 h): o logout vale só para o navegador.
-
-O backend limita tentativas incorretas e pode responder HTTP `429` com `Retry-After`. A tela apresenta o tempo de espera e bloqueia novos envios enquanto a contagem regressiva não termina. A recuperação de senha ainda não possui endpoint implementado.
-
-### 3.3 Cadastro
-
-O formulário permite alternar entre pessoa física e pessoa jurídica e valida os campos antes do envio. A integração foi preparada para `POST /auth/register`, mas esse endpoint ainda não está implementado no backend. Portanto, o cadastro não deve ser apresentado como funcionalidade concluída de ponta a ponta.
-
-### 3.4 Dashboard
-
-**Cards de indicadores consolidados (DW06, RF08).** No topo do dashboard, quatro cards mostram consumo total (kWh), emissão total (g CO₂e), serviços ativos e serviços indisponíveis. Os valores vêm de `GET /dashboard/indicadores` (rota pública), consultada por `useIndicadores` e apresentada por `components/CardsIndicadores.tsx`; não há nenhum número fixo no código. Os estados são:
-
-| Estado | O que a tela mostra |
-|---|---|
-| Carregando | Um bloco cinza no lugar de cada número e a legenda “Carregando...”. |
-| Sucesso | Os valores no formato pt-BR. Se consumo e emissão chegam `0`, a legenda avisa “Ainda sem coletas calculadas”, pois o backend devolve `0` quando não há coleta calculada. |
-| Erro, sem dados anteriores | Traço (“—”) em cada card e um aviso com o botão “Tentar de novo”. O erro não vira zero. |
-| Erro, com dados anteriores | Os últimos valores válidos continuam na tela, com aviso de que podem estar desatualizados (RNF04). |
-
-**Última coleta e intervalos (TP16, RNF02).** Abaixo dos cards aparece a hora da última coleta no horário de São Paulo, o intervalo de coleta do backend e o intervalo de atualização da tela, por exemplo “Última coleta: 13/11/2026, 19:09 (horário de São Paulo) · Coleta a cada 1 min · Tela atualiza a cada 30 s”. A hora e o intervalo de coleta vêm de `GET /dashboard/indicadores` (`ultima_coleta_em` e `intervalo_coleta_segundos`); sem nenhuma coleta, a linha mostra “Nenhuma coleta registrada ainda”.
-
-Os cards são atualizados no mesmo intervalo da tabela (seção “Atualização automática”) e também pelo botão “Atualizar dados”. As contagens de ativos e indisponíveis seguem a regra do backend (status do serviço, sem os removidos), então “Serviços ativos” inclui os serviços ativos que ainda não enviaram métricas; já o filtro “Ativos” da tabela só considera os que têm coleta bem-sucedida.
-
-O dashboard consulta os serviços por `GET /services` e apresenta estados, busca textual e filtro por situação. O diagnóstico da rotina é consultado por `GET /collections/rotina/status`.
-
-**Filtros por serviço, região e período (DW14, RF10, RF11).** A barra `components/FiltrosAnalise.tsx` filtra a lista por serviço e por região (serviços sem região aparecem em "Não informado") e escolhe o período: última 1 h, últimas 24 h, últimos 7 dias ou personalizado (início e fim). Período personalizado sem data, com data inválida ou com início igual ou depois do fim fica marcado, com a mensagem do erro na tela. A regra fica em `src/filtros.ts` e o estado em `hooks/useFiltrosAnalise.ts`, guardado na `sessionStorage` para valer também no histórico, no ranking e na comparação; `resolverPeriodo` devolve o início e o fim prontos para as rotas do TP17. Na lista do dashboard, que mostra a coleta mais recente, o período não muda os valores. A lista também pode ser ordenada por nome, maior consumo ou maior emissão de CO₂e. Na atualização automática só os dados mudam: filtros, busca, ordenação e visão (cartões ou tabela) continuam como a pessoa deixou.
-
-A interface distingue estados como ativo, indisponível, sem métricas, carregando, erro de atualização e lista vazia. Campos que não chegam na resposta devem continuar sem valor, em vez de serem preenchidos com números fictícios.
-
-A consulta do diagnóstico é repetida a cada trinta segundos. Quando uma atualização falha após uma resposta válida, o hook de serviços preserva os últimos dados válidos para que a tela possa informar que eles podem estar desatualizados.
-
-### 3.5 Área administrativa
-
-Os três cards do topo (energia estimada, emissões estimadas e serviços ativos) usam `GET /dashboard/indicadores`, e a lista "Serviços monitorados" usa `GET /services` (energia e emissão da última coleta de cada serviço; serviços removidos ficam de fora). Ambas as consultas passam por `useIndicadores` e `useServicos`, são repetidas a cada `INTERVALO_ATUALIZACAO_SEGUNDOS` e mostram estados de carregamento, erro (com "Tentar de novo") e vazio. O painel "Consumo de energia" reaproveita o estado dos indicadores (`ResumoConsumoVisao`), sem uma segunda consulta.
-
-O card "Por recurso" (parcela de CPU, memória, disco e rede) foi removido da tela por falta de dados reais. O gráfico dos últimos 7 dias depende dos endpoints de histórico (TP17/DW11). Nenhum valor fixo é exibido no lugar dos dados indisponíveis.
-
-O card de intervalo consulta `GET /monitoring-settings`, rota protegida por JWT. O frontend possui uma chamada preparada para `PUT /monitoring-settings`, mas o backend atual disponibiliza somente o GET. A alteração do intervalo depende da implementação do endpoint correspondente.
-
-### 3.6 Ranking (DW12)
-
-A rota privada `/ranking` consulta `GET /analytics/ranking`, com autenticação JWT, para classificar serviços por consumo de energia (kWh) ou emissão de CO₂e (exibida em kg), usando o total no período ou a média por coleta. Os filtros de período (última 1 h, últimas 24 h, últimos 7 ou 30 dias, ou personalizado), escopo (todos os projetos ou uma aplicação), métrica e ordem crescente ou decrescente são enviados ao clicar em "Aplicar filtros"; datas personalizadas inválidas bloqueiam o envio. A consulta inicial usa os últimos 30 dias, CO₂e médio e ordem crescente. A tela apresenta resumo, primeiro colocado e classificação paginada de 20 serviços por página; a tendência mostra a variação percentual da métrica e agregação selecionadas em relação ao período anterior de mesma duração, ou "Sem base de comparação" quando não há valor anterior válido ou ele é zero. Há estados de carregamento, sucesso, erro com "Tentar novamente" e ausência de serviços com dados, além do aviso de serviços sem dados para a métrica selecionada; valores ausentes aparecem como traço, sem serem convertidos em zero.
-
-## 4. Organização dos arquivos
-
-A estrutura atual de `frontend/src/` está organizada da seguinte forma:
-
-| Diretório / arquivo | Responsabilidade |
-|---|---|
-| `App.tsx` | Composição da aplicação, provedores e roteamento. |
-| `main.tsx` | Ponto de entrada da aplicação React. |
-| `rotas.tsx` | Declaração das rotas. |
-| `caminhos.ts` | Constantes com caminhos de navegação. |
-| `pages/` | Páginas de início, login, cadastro, dashboard, administração e estados. |
-| `components/` | Componentes reutilizáveis de interface, formulários, layouts e indicadores. |
-| `services/` | Cliente HTTP e integração com endpoints de autenticação, configuração, serviços, coletas e indicadores. |
-| `hooks/` | Lógica reutilizável de prontidão, serviços, horário e monitoramento. |
-| `contexts/` | Contextos compartilhados da aplicação. |
-| `providers/` | Provedores de contexto. |
-| `assets/` | Imagens usadas na interface. |
-| `utils/` | Funções auxiliares e validações. |
-
-## 5. Comunicação com o backend
-
-O cliente HTTP fica em `src/services/api.ts`. As telas utilizam as funções centralizadas, em vez de implementarem chamadas `fetch` diretamente.
-
-| Função | Método | Finalidade |
-|---|---|---|
-| `requisitar<T>(caminho)` | GET | Consulta recursos do backend. |
-| `enviar<T>(caminho, corpo)` | POST | Envia dados em JSON. |
-| `atualizar<T>(caminho, corpo)` | PUT | Envia alterações em JSON. |
-
-A URL base do cliente é `/api`. O cliente adiciona o token JWT quando existe um token salvo e converte respostas HTTP fora de 2xx em `ErroApi`, que disponibiliza status, código de erro e o valor de `Retry-After`, quando recebido.
-
-### 5.1 Principais endpoints consumidos
-
-| Método | Caminho | Utilização |
-|---|---|---|
-| GET | `/health/ready` | Prontidão do backend e do banco na tela inicial. |
-| POST | `/auth/login` | Autenticação do usuário. |
-| POST | `/auth/register` | Cadastro preparado no frontend, ainda sem implementação no backend. |
-| GET | `/services` | Lista de serviços para o dashboard. |
-| GET | `/dashboard/indicadores` | Indicadores consolidados consumidos pela interface. |
-| GET | `/analytics/ranking` | Classificação dos serviços por energia ou CO₂e, com total ou média, resumo e tendência; protegida por JWT. |
-| GET | `/collections/rotina/status` | Diagnóstico da rotina de coleta. |
-| GET | `/monitoring-settings` | Consulta do intervalo, protegida por JWT. |
-| PUT | `/monitoring-settings` | Alteração preparada no frontend, ainda sem implementação no backend. |
-
-Os contratos, parâmetros e exemplos de resposta estão em [`docs/api.md`](../docs/api.md).
-
-## 6. Dados reais e dados demonstrativos
-
-As telas precisam distinguir dados recebidos da API dos valores utilizados somente para prototipação.
-
-| Origem | Onde é utilizado | Observação |
-|---|---|---|
-| API do backend | Início, login, dashboard, área administrativa e diagnóstico da coleta. | Os valores dependem das respostas efetivas dos endpoints. |
-| `mock-servicos.ts` | Cenários de desenvolvimento do dashboard. | Dados simulados, não são medições reais. |
-
-Quando um campo não é enviado pelo backend, a interface deve representar a ausência de informação, sem inventar valores ou transformar `null` em zero.
-
-## 7. Desenvolvimento com dados simulados
-
-O projeto possui um modo mock para desenvolver e conferir os estados do dashboard sem consultar o backend.
-
-Na pasta `frontend`, execute:
-
-```bash
-npm run dev:mock
-```
-
-A aplicação ficará disponível em `http://localhost:5173`. O mock atende `GET /api/services` e `GET /api/dashboard/indicadores`. Sem backend, o diagnóstico da coleta (`GET /api/collections/rotina/status`) não é atendido, então o aviso de erro de atualização do painel de serviços aparece no modo mock; isso é esperado.
-
-Para trocar o cenário, abra no navegador:
-
-```text
-http://localhost:5173/api/__mock?cenario=ok
-http://localhost:5173/api/__mock?cenario=vazio
-http://localhost:5173/api/__mock?cenario=erro
-http://localhost:5173/api/__mock?cenario=lento
-http://localhost:5173/api/__mock?cenario=rede
-```
-
-| Cenário | Comportamento |
-|---|---|
-| `ok` | Retorna serviços simulados com diferentes estados. |
-| `vazio` | Retorna uma lista vazia. |
-| `erro` | Retorna HTTP 502. |
-| `lento` | Atrasa a resposta em três segundos. |
-| `rede` | Encerra a conexão para simular falha de rede. |
-
-Após trocar o cenário, use a ação de atualizar dados no dashboard para conferir o comportamento. Os mocks existem somente para desenvolvimento.
-
-## 8. Scripts disponíveis
-
-Execute os comandos dentro da pasta `frontend`:
+Execute na pasta `frontend`:
 
 | Comando | Finalidade |
 |---|---|
 | `npm ci` | Instala as dependências fixadas no lockfile. |
-| `npm run dev` | Inicia o servidor de desenvolvimento Vite. |
-| `npm run dev:mock` | Inicia o Vite com o mock de serviços. |
-| `npm run build` | Executa a checagem de tipos e gera o build em `dist/`. |
+| `npm run dev` | Inicia o Vite com proxy para o backend. |
+| `npm run dev:mock` | Inicia o Vite com o mock de frontend. |
 | `npm run typecheck` | Executa a checagem de tipos TypeScript. |
 | `npm run lint` | Executa o ESLint. |
+| `npm run build` | Executa `tsc -b` e gera o build em `dist/`. |
 | `npm run preview` | Serve localmente o build gerado. |
+| `npm test` | Executa testes utilitários com Node e testes de interface com Vitest. |
 
-Para validar o frontend antes de enviar um Pull Request:
+Antes de enviar alterações, execute:
 
 ```bash
 npm ci
 npm run typecheck
 npm run lint
+npm test
 npm run build
 ```
 
-## 9. Docker
+### 7.4 Testes
 
-O `frontend/Dockerfile` utiliza dois estágios:
+O script `npm test` executa testes de serviços, indicadores, filtros, comparação e mapa com Node, além da suíte de interface com Vitest, React Testing Library e jsdom.
 
-1. Node 24 instala as dependências e gera a versão de produção com `npm run build`;
-2. Nginx 1.27 serve os arquivos gerados em `dist/`.
+Os testes cobrem o comportamento das funções de frontend e os componentes de interface. Para testes que dependem da API e do PostgreSQL, consulte os comandos de integração no [README do backend](../backend/README.md).
 
-O arquivo `nginx.conf` encaminha chamadas em `/api/` para o serviço `backend`, na porta `3000`. O frontend é servido na porta `80` do container e, no Compose, fica disponível em `http://localhost:8080` por padrão.
+<br>
 
-Para iniciar frontend, backend e PostgreSQL juntos, siga a seção Docker do [README principal](../README.md).
+## 8. Responsividade
 
-## 10. Documentação relacionada
+As telas possuem estilos responsivos para mobile e desktop. A implementação utiliza CSS e breakpoints específicos por área; o comportamento pode variar entre a tela inicial, autenticação, dashboard, área administrativa e visualizações analíticas.
+
+Ao validar a interface, conferir pelo menos larguras de 320, 360, 390, 768 e 1024 px:
+
+1. Não há rolagem horizontal fora de componentes que possuem rolagem própria, como a tabela do dashboard.
+2. Elementos não ficam cortados ou sobrepostos.
+3. Textos e controles permanecem legíveis e utilizáveis.
+4. A navegação entre telas continua acessível.
+5. O globo e os gráficos permanecem dentro de seus contêineres.
+
+O build de produção utiliza Nginx 1.27 Alpine, conforme `frontend/Dockerfile`.
+
+<br>
+
+## 9. Documentação relacionada
 
 - [README principal](../README.md)
+- [Índice da documentação](../docs/README.md)
 - [Documentação da API](../docs/api.md)
 - [Arquitetura e modelo de dados](../docs/arquitetura.md)
 - [Metodologia dos cálculos](../docs/calculos.md)
+- [Mocks locais](../docs/mocks.md)
 - [README do backend](../backend/README.md)
 
 ---
 
-## Responsividade
-
-As telas são feitas para celular, tablet e desktop (RNF01). A referência visual do celular são as imagens `docs/design/*-mobile.png`, todas com 390 px de largura. A responsividade é verificada manualmente; os testes automatizados de interface cobrem o roteamento e o estado acessível do botão de atualização do dashboard.
-
-### Breakpoints
-
-| Largura | Onde é usada | O que muda |
-|---|---|---|
-| até 359 px | Início, Administrativa | Telas muito estreitas: o status da prévia volta a uma coluna e o valor dos indicadores diminui para 28 px. |
-| até 640 px | Início | Celular: cabeçalho só com "Entrar", título de 32 px em 390 px, botões em coluna e prévia compacta. |
-| até 700 px | Dashboard | Celular: menu lateral só com ícones (62 px), cartões em uma coluna e filtros empilhados. |
-| até 900 px | Início | Tablet: hero e etapas em uma coluna. |
-| até 1023 px | Login, Cadastro, Administrativa | Celular e tablet: campos de 16 px e alvos de toque de 44 px. O layout de desktop começa em 1024 px. |
-| até 1100 px | Dashboard | Tablet: menu lateral de 205 px e indicadores em duas colunas. |
-
-Login, Cadastro e Administrativa são escritos primeiro para o celular. Os estilos de desktop ficam em `@media (min-width: 1024px)`. Ao criar uma tela nova, siga o mesmo padrão e reaproveite esses pontos de quebra, em vez de criar valores novos.
-
-### Regras de legibilidade e toque
-
-- **Texto:** no celular, nenhum texto visível com menos de 12 px (0,75 rem). No Dashboard, essa regra vale até 700 px; em tablet ele mantém a densidade do desktop.
-- **Campos de formulário:** 16 px no celular e no tablet. Com menos que isso, o Safari do iPhone dá zoom automático ao focar o campo.
-- **Alvos de toque:** botões, links de ação, campos e itens de menu com no mínimo 44 px de altura. Quando o visual do Figma é menor, a área de toque é ampliada sem mudar o layout (por exemplo, com `::after` ou `min-height` compensado na margem).
-- **Altura da tela:** use `min-height: 100vh` seguido de `min-height: 100dvh`. O `dvh` considera a barra de endereço do navegador no celular.
-
-### Tamanhos de teste
-
-Confira cada tela em **320, 360, 390, 768 e 1024 px**:
-
-| Largura | Representa |
-|---|---|
-| 320 px | Celulares pequenos (limite inferior) |
-| 360 px | Celulares Android comuns |
-| 390 px | Tamanho do Figma (iPhone) |
-| 768 px | Tablet em pé |
-| 1024 px | Tablet deitado e início do desktop |
-
-Em cada tamanho, verifique:
-
-1. Não há rolagem horizontal na página (a tabela do Dashboard rola dentro do próprio contêiner).
-2. Nada fica cortado ou sobreposto.
-3. Em 390 px, o visual segue o protótipo em `docs/design/`.
-4. Os textos continuam legíveis e os botões, fáceis de tocar.
-
-### Como testar
-
-Todos os comandos abaixo partem da pasta `frontend`.
-
-**1. Instalar e subir com dados de exemplo (sem backend):**
-
-```bash
-npm ci
-npm run dev:mock
-```
-
-Abra `http://localhost:5173`. Para trocar o cenário do Dashboard, acesse `http://localhost:5173/api/__mock?cenario=ok|vazio|erro|lento|rede` e clique em "Atualizar dados". O aviso de erro de atualização no modo mock é esperado (veja a seção do modo mock).
-
-**2. Simular o celular no navegador:** abra o DevTools (`F12`), ative a barra de dispositivos (`Ctrl+Shift+M`), escolha "Responsive" e percorra os tamanhos de teste em `/`, `/login`, `/cadastro`, `/administrativa` e `/dashboard`.
-
-**3. Ver a tela Administrativa sem backend.** A rota `/administrativa` exige token. Para conferir o layout, suba o modo mock (`npm run dev:mock`), que fornece indicadores e serviços de exemplo, e rode no console do navegador (`F12 > Console`):
-
-```js
-sessionStorage.setItem("greener.token","x."+btoa(JSON.stringify({exp:Math.floor(Date.now()/1000)+3600}))+".x")
-```
-
-Esse token é falso e serve apenas para testar a interface no seu computador. Não o salve em arquivo e não o inclua em PR, print ou log. O backend continua recusando-o. Sem o modo mock e sem backend, os cards e a lista mostram o estado de erro; o card do intervalo de coleta também mostra erro, pois o mock não atende `/monitoring-settings`.
-
-**4. Testar no celular de verdade** (única forma de confirmar o zoom do iPhone). Com o celular na mesma rede Wi-Fi do computador:
-
-```bash
-npm run dev:mock -- --host
-```
-
-Abra no celular o endereço da linha `Network` que o Vite mostra no terminal, por exemplo `http://192.168.0.25:5173`. Para usar dados reais, suba o backend (seção Docker do README principal) e use `npm run dev -- --host`.
-
-**5. Testar com Docker (build de produção, servido pelo Nginx).** Na raiz do repositório, com o `.env` criado a partir do `.env.example` e o `JWT_SECRET` preenchido:
-
-```bash
-docker compose up --build -d
-```
-
-A aplicação fica em `http://localhost:8080`. Para encerrar, use `docker compose down` (sem `-v`, para preservar o banco).
-
-**6. Checagens antes de abrir o Pull Request:**
-
-```bash
-npm run typecheck
-npm run lint
-npm run build
-npm test
-```
-
-`npm test` executa os testes de `servicos` e `indicadores` com Node e os testes de interface com Vitest, React Testing Library e jsdom. Estes verificam que `/cadastro` renderiza o formulário, que `/administrativa` sem token redireciona para `/login`, que a tela administrativa exibe os indicadores e os serviços da API (com os estados de carregamento, erro, vazio e sem coleta) e que o botão de atualização do dashboard acompanha o estado da consulta no nome acessível e em `aria-busy`. O CI executa a mesma suíte. Anexe ao PR capturas de tela de pelo menos dois tamanhos (por exemplo, 390 e 768 px), sem tokens nem dados pessoais.
-
----
-
-`npm run dev:mock` sobe o frontend com dados de exemplo para `/api/services` (arquivo `mock-servicos.ts`, só em desenvolvimento). Para trocar o cenário, abra `http://localhost:5173/api/__mock?cenario=ok|vazio|erro|lento|rede` e clique em "Atualizar dados" no dashboard. Para ver o erro com dados anteriores (RNF04), deixe em `ok`, mude para `erro` e atualize.
-
-## Mapa dos serviços (DW15, RF13)
-
-A rota `/mapa` mostra um globo 3D estilizado com um pino para cada serviço que tem latitude e longitude. O desenho é um SVG em projeção ortográfica (`d3-geo`), com o contorno dos continentes do pacote `world-atlas`. Não usa mapa real, tiles nem chave de API; o único dado externo ao navegador é `GET /api/services`, o mesmo do dashboard.
-
-- `src/mapa.ts`: regras sem React (coordenadas válidas, agrupamento, formatação, giro). Testado em `tests/mapa.test.ts`.
-- `src/components/GloboServicos.tsx`: o globo (arrastar gira; clicar ou Enter/Espaço no pino abre o serviço).
-- `src/pages/MapaPage.tsx`: a tela, com lista de serviços, detalhe com latitude e longitude, aviso de serviços fora do mapa e estados de carregando, erro e vazio. Testada em `tests/mapa.test.tsx`.
-
-Serviço sem latitude ou sem longitude (ou fora do intervalo válido) não aparece no globo, mas continua no dashboard; a tela informa quantos ficaram de fora e quais. Serviços com a mesma coordenada dividem um pino. A atualização automática troca só os dados: o serviço aberto continua aberto.
-
-Pendências que dependem de outras tarefas: o botão "Informar coordenadas" e a seleção País/Estado/Cidade do protótipo DD05 precisam de endpoint de escrita e de uma API geográfica. A posição aproximada só pela cidade também não foi feita: o RF13 manda não exibir no mapa o serviço sem coordenadas.
-
-## Atualização automática (DW08)
-
-O dashboard consulta `/api/services` sozinho, sem recarregar a página, e mostra no topo a **data e hora da última atualização** e o **intervalo** ("Atualiza a cada 30 s").
-
-| Intervalo | Padrão | Onde ajustar |
-|---|---|---|
-| Atualização da interface | 30 s (mínimo 5 s) | `VITE_INTERVALO_ATUALIZACAO_SEGUNDOS` em `frontend/.env` (desenvolvimento) ou `INTERVALO_ATUALIZACAO_SEGUNDOS` no `.env` da raiz (Docker; é aplicado na construção da imagem) |
-| Coleta de métricas no backend | 60 s | chave `intervalo_coleta_segundos` na tabela `configuracoes` |
-
-- O padrão da interface é menor que o da coleta, para cada coleta aparecer pouco depois de acontecer.
-- Busca, filtro e visão (cartões/tabela) não mudam durante a atualização.
-- Se uma atualização falha, a tela mantém os últimos dados com o aviso de erro e tenta de novo no ciclo seguinte.
-- O ciclo é pausado com a aba oculta e retomado, com atualização imediata, ao voltar.
-- O botão "Atualizar dados" continua disponível para atualizar na hora.
 **Green Stack · FATEC Jacareí · Desenvolvimento de Software Multiplataforma · 2026**
