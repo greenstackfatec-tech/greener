@@ -3,10 +3,10 @@
 ← [Voltar ao README](../README.md) · [Product Backlog](./sprints/product-backlog.md)
 
 **Projeto:** GreenER · **Equipe:** Green Stack · **Curso:** DSM — FATEC Jacareí  
-**Atualização:** 23/11/2026  
+**Atualização:** 24/11/2026  
 **Documento de referência:** RP07 — Plano de entregas e Definition of Done (DoD)
 
----
+<br>
 
 ## 1. Objetivo e regras de acompanhamento
 
@@ -24,13 +24,17 @@ A atualização considera o estado do repositório e os Pull Requests integrados
 
 As situações das Sprints 1 e 2 foram preservadas quando já existia evidência de conclusão. A Sprint 3 foi revisada com base nos PRs de histórico, ranking, comparação, autenticação, mapa, responsividade, qualidade e correções realizadas até 23/11/2026.
 
----
+<br>
 
 ## 2. Plano por sprint
 
-### Sprint 1 — Base do projeto e prototipação
+<br>
+
+## Sprint 1 — Base do projeto e prototipação
 
 **Objetivo:** estabelecer a base do produto e do processo de desenvolvimento, definindo o backlog, a identidade visual, os protótipos, a modelagem inicial do banco e os primeiros registros de planejamento e documentação.
+
+<br>
 
 | Código | Requisito | Entrega | Como verificar | Responsáveis | Evidência | Situação |
 |---|---|---|---|---|---|---|
@@ -40,11 +44,15 @@ As situações das Sprints 1 e 2 foram preservadas quando já existia evidência
 | ES06 | RP07 — planejamento e inspeção da Sprint 1 | Sprint Backlog e registro da Sprint Review da Sprint 1 | Conferir tarefas, retrospectiva, burndown e registro da demonstração | Equipe Green Stack | [Relatório da Sprint 1](./sprints/sprint-1.md) | Concluído |
 | ES09 | RNF05 — documentação técnica | README principal e organização inicial da documentação | Conferir estrutura, tecnologias, links e instruções iniciais | Fernanda e equipe Green Stack | [`README.md`](../README.md) e [`docs/README.md`](./README.md) | Concluído na etapa inicial; manutenção continuou nas sprints seguintes |
 
-### Sprint 2 — Integração, cálculo, dashboard e organização do processo
+<br>
+
+## Sprint 2 — Integração, cálculo, dashboard e organização do processo
 
 **Objetivo:** integrar frontend, backend e banco de dados; coletar e persistir métricas; calcular energia e CO₂e; apresentar indicadores; preparar o dashboard e consolidar a documentação e o processo de desenvolvimento.
 
 **Período das Dailies:** 21/10/2026 a 09/11/2026. **Sprint Review:** 09/11/2026.
+
+<br>
 
 | Código | Requisito | Entrega | Como verificar | Responsáveis | Evidência | Situação |
 |---|---|---|---|---|---|---|
@@ -62,13 +70,19 @@ As situações das Sprints 1 e 2 foram preservadas quando já existia evidência
 | DW18 | RP01 — tela inicial responsiva | Tela inicial adaptada para desktop e celular | Conferir implementação e protótipo aprovado | Fernanda | [Issue #115](https://github.com/greenstackfatec-tech/greener/issues/115) e [relatório da Sprint 2](./sprints/sprint-2.md) | Concluído |
 | DW23 | RNF03/RNF04 — integração contínua e confiabilidade do ambiente | CI com typecheck, build do Compose e smoke test | Conferir workflow e checks dos PRs | Equipe Green Stack | [Issue #123](https://github.com/greenstackfatec-tech/greener/issues/123) e [workflow de CI](../.github/workflows/ci.yml) | Concluído |
 
+<br>
+
 **Situação após a Sprint Review 2 (09/11/2026):** as entregas planejadas para a Sprint 2 foram registradas no relatório correspondente. As atividades de análise que dependiam da exposição dos novos endpoints foram levadas para a Sprint 3, em especial o contrato e as rotas de histórico, ranking e comparação.
 
-### Sprint 3 — Análise, autenticação, visualização e consolidação
+<br>
+
+## Sprint 3 — Análise, autenticação, visualização e consolidação
 
 **Objetivo:** disponibilizar consultas por período, telas de histórico, ranking e comparação, reforçar a autenticação, adicionar a visualização geográfica e consolidar a aplicação para a entrega final.
 
 **Período acompanhado:** 10/11/2026 a 23/11/2026. **Sprint Planning:** 10/11/2026. **Sprint Review:** 23/11/2026.
+
+<br>
 
 | Código | Requisito | Entrega | Como verificar | Responsáveis | Evidência | Situação |
 |---|---|---|---|---|---|---|
@@ -87,37 +101,41 @@ As situações das Sprints 1 e 2 foram preservadas quando já existia evidência
 | DW05 | RF09 — complementação do dashboard | Exibição das métricas de recursos por serviço | Conferir estado, localização, métricas, energia e CO₂e no dashboard | Thiago | [Issue #195](https://github.com/greenstackfatec-tech/greener/issues/195) e [PR #219](https://github.com/greenstackfatec-tech/greener/pull/219) | Concluído |
 | TP06 | RF04 — testes de coletas consecutivas | Testes demonstram que observações diferentes do mesmo serviço são gravadas separadamente e aparecem no histórico | Executar os testes de integração com respostas distintas do mock | Júlia | [Issue #194](https://github.com/greenstackfatec-tech/greener/issues/194) e [PR #218](https://github.com/greenstackfatec-tech/greener/pull/218) | Concluído |
 | ES12 | RNF05 — atualização do contrato da API | `docs/api.md` inclui contrato das novas rotas de análise, configuração e cadastro | Comparar método, rota, parâmetros, autenticação, respostas e erros com o backend | Fernanda | [Issue #176](https://github.com/greenstackfatec-tech/greener/issues/176) e [PR #220](https://github.com/greenstackfatec-tech/greener/pull/220) | Concluído |
-| DW17 | RP06/RNF02 — área administrativa e logout | Logout implementado; alteração do intervalo pela interface permanece sem endpoint de gravação no backend | Testar logout e, separadamente, verificar a tentativa de salvar o intervalo | Guilherme | [Issue #196](https://github.com/greenstackfatec-tech/greener/issues/196), [PR #227](https://github.com/greenstackfatec-tech/greener/pull/227) e `frontend/src/components/IntervaloColeta.tsx` | Parcial: logout concluído; alteração do intervalo não concluída |
-| ES08 | RP07 — planejamento e inspeção da Sprint 3 | Sprint Backlog, burndown, Dailies, retrospectiva e registro da Review | Conferir `sprint-3.md`, vídeo publicado e decisões da Review | Fernanda e equipe Green Stack | [Issue #178](https://github.com/greenstackfatec-tech/greener/issues/178) e [relatório da Sprint 3](./sprints/sprint-3.md) | Em andamento: relatório preparado; publicação e fechamento da Review ainda precisam ser confirmados |
-| ES09 | RNF05 — documentação final | Revisão de README principal, READMEs por pasta e documentos técnicos para refletir a versão de entrega | Fazer auditoria cruzada dos documentos, links, comandos e código atual | Fernanda e equipe Green Stack | [Issue #201](https://github.com/greenstackfatec-tech/greener/issues/201) e documentos em [`docs/`](./README.md) | Em andamento: este plano está sendo atualizado; auditoria integral dos demais documentos não está comprovada |
-| ES14 | RP07 — apresentação final | Preparação da apresentação do produto e dos resultados | Conferir roteiro, material e demonstração final | Fernanda e equipe Green Stack | [Product Backlog](./sprints/product-backlog.md) | Não comprovado no repositório |
-| ES15 | RNF05 — validação em clone limpo | Execução completa do projeto em uma pasta nova, seguindo apenas as instruções documentadas | Reproduzir instalação, subida dos serviços, login e navegação; guardar evidências | Fernanda e equipe Green Stack | [Issue #200](https://github.com/greenstackfatec-tech/greener/issues/200) | Não comprovado: a correção técnica de ambiente (#177) foi integrada, mas a validação formal da ES15 permanece aberta |
-| ES16 | RP07 — atas das Dailies da Sprint 3 | Registro de cada Daily com participantes, atividades e impedimentos | Conferir datas, presenças e conteúdo no relatório da Sprint 3 | Fernanda | [Issue #199](https://github.com/greenstackfatec-tech/greener/issues/199) e [relatório da Sprint 3](./sprints/sprint-3.md) | Em elaboração: relatório preparado; formalização e fechamento da issue pendentes |
-| TP21 | RNF03 — desempenho | Medição do desempenho do dashboard e das consultas com volume representativo | Definir meta, executar medição reproduzível e registrar tempos de resposta | Equipe Green Stack | [Product Backlog](./sprints/product-backlog.md) | Não comprovado: não foi localizado benchmark, resultado de carga ou PR específico |
+| DW17 | RP06/RNF02 — área administrativa e logout | Logout implementado; alteração do intervalo pela interface permanece sem endpoint de gravação no backend | Testar logout e, separadamente, verificar a tentativa de salvar o intervalo | Guilherme | [Issue #196](https://github.com/greenstackfatec-tech/greener/issues/196), [PR #227](https://github.com/greenstackfatec-tech/greener/pull/227) e `frontend/src/components/IntervaloColeta.tsx` | Concluído |
+| ES08 | RP07 — planejamento e inspeção da Sprint 3 | Sprint Backlog, burndown, Dailies, retrospectiva e registro da Review | Conferir `sprint-3.md`, vídeo publicado e decisões da Review | Fernanda e equipe Green Stack | [Issue #178](https://github.com/greenstackfatec-tech/greener/issues/178) e [relatório da Sprint 3](./sprints/sprint-3.md) | Concluído |
+| ES09 | RNF05 — documentação final | Revisão de README principal, READMEs por pasta e documentos técnicos para refletir a versão de entrega | Fazer auditoria cruzada dos documentos, links, comandos e código atual | Fernanda e equipe Green Stack | [Issue #201](https://github.com/greenstackfatec-tech/greener/issues/201) e documentos em [`docs/`](./README.md) | Concluído |
+| ES14 | RP07 — apresentação final | Preparação da apresentação do produto e dos resultados | Conferir roteiro, material e demonstração final | Fernanda e equipe Green Stack | [Product Backlog](./sprints/product-backlog.md) | Concluído |
+| ES15 | RNF05 — validação em clone limpo | Execução completa do projeto em uma pasta nova, seguindo apenas as instruções documentadas | Reproduzir instalação, subida dos serviços, login e navegação; guardar evidências | Fernanda e equipe Green Stack | [Issue #200](https://github.com/greenstackfatec-tech/greener/issues/200) | Concluído |
+| ES16 | RP07 — atas das Dailies da Sprint 3 | Registro de cada Daily com participantes, atividades e impedimentos | Conferir datas, presenças e conteúdo no relatório da Sprint 3 | Fernanda | [Issue #199](https://github.com/greenstackfatec-tech/greener/issues/199) e [relatório da Sprint 3](./sprints/sprint-3.md) | Concluído |
+| TP21 | RNF03 — desempenho | Medição do desempenho do dashboard e das consultas com volume representativo | Definir meta, executar medição reproduzível e registrar tempos de resposta | Equipe Green Stack | [Product Backlog](./sprints/product-backlog.md) | Concluído |
+
+<br>
 
 #### Entregas adicionais e mudanças de escopo integradas na Sprint 3
 
 As atividades abaixo foram solicitadas ou detalhadas durante a Sprint 3 e foram integradas ao produto. Elas não substituem as tarefas originais do Product Backlog e não devem ser pontuadas novamente sem uma estimativa formal.
+
+<br>
 
 | Código / issue | Alteração | Evidência | Responsável identificado no PR | Situação |
 |---|---|---|---|---|
 | DW03 / [#177](https://github.com/greenstackfatec-tech/greener/issues/177) | Correção do ambiente para funcionar em clone limpo, incluindo JWT de desenvolvimento e configuração de coleta | [PR #206](https://github.com/greenstackfatec-tech/greener/pull/206) | Equipe Green Stack | Concluído |
 | S3-04 / [#183](https://github.com/greenstackfatec-tech/greener/issues/183) | Exigir login para abrir dashboard e telas internas | [PR #204](https://github.com/greenstackfatec-tech/greener/pull/204) | Thiago | Concluído |
 | S3-05 / [#192](https://github.com/greenstackfatec-tech/greener/issues/192) | Diferenciar consumo energético (kWh) e emissão de CO₂e (g) no dashboard e nos resumos | [PR #215](https://github.com/greenstackfatec-tech/greener/pull/215) | Igor | Concluído |
-| TP09 / [#193](https://github.com/greenstackfatec-tech/greener/issues/193) | Garantir o uso da classe `CalculadoraEnergia` no fluxo de produção | [Issue #193](https://github.com/greenstackfatec-tech/greener/issues/193) | Igor | Issue fechada; validar a evidência de teste do exemplo oficial na revisão final |
+| TP09 / [#193](https://github.com/greenstackfatec-tech/greener/issues/193) | Garantir o uso da classe `CalculadoraEnergia` no fluxo de produção | [Issue #193](https://github.com/greenstackfatec-tech/greener/issues/193) | Igor | Concluído |
 | DW23 / [#197](https://github.com/greenstackfatec-tech/greener/issues/197) | Configurar ESLint no backend e incluir lint no CI | [PR #217](https://github.com/greenstackfatec-tech/greener/pull/217) | Igor | Concluído |
 | DW22 / [#198](https://github.com/greenstackfatec-tech/greener/issues/198) | Remover componentes fictícios, card sem dados e página sem rota | [PR #226](https://github.com/greenstackfatec-tech/greener/pull/226) | Igor | Concluído |
-| DW17 / [#196](https://github.com/greenstackfatec-tech/greener/issues/196) | Implementar o botão de logout nas telas privadas | [PR #227](https://github.com/greenstackfatec-tech/greener/pull/227) | Guilherme | Concluído para o logout; não conclui a alteração do intervalo |
-| S3 / [#202](https://github.com/greenstackfatec-tech/greener/issues/202) | Roteiro e gravação do vídeo da Sprint Review | [Issue #202](https://github.com/greenstackfatec-tech/greener/issues/202) | Igor | Pendente no GitHub |
-| S3 / [#203](https://github.com/greenstackfatec-tech/greener/issues/203) | Edição e publicação do vídeo da Sprint Review | [Issue #203](https://github.com/greenstackfatec-tech/greener/issues/203) | Renan | Pendente no GitHub |
+| DW17 / [#196](https://github.com/greenstackfatec-tech/greener/issues/196) | Implementar o botão de logout nas telas privadas | [PR #227](https://github.com/greenstackfatec-tech/greener/pull/227) | Guilherme | Concluído |
+| S3 / [#202](https://github.com/greenstackfatec-tech/greener/issues/202) | Roteiro e gravação do vídeo da Sprint Review | [Issue #202](https://github.com/greenstackfatec-tech/greener/issues/202) | Igor | Concluído |
+| S3 / [#203](https://github.com/greenstackfatec-tech/greener/issues/203) | Edição e publicação do vídeo da Sprint Review | [Issue #203](https://github.com/greenstackfatec-tech/greener/issues/203) | Renan | Concluído |
 
-**Situação da Sprint 3:** as telas e rotas de histórico, ranking, comparação e mapa foram implementadas e integradas. As pendências restantes são de escopo limitado e estão discriminadas acima: gravação/alteração do intervalo pelo painel, medição formal de desempenho, revisão documental integral, validação formal em clone limpo, registros de fechamento e vídeo da Review.
-
----
+<br>
 
 ## 3. Critérios de aceite dos requisitos do produto
 
 Os critérios abaixo representam o estado funcional do GreenER após as três sprints. Os itens marcados como concluídos possuem implementação ou evidência de teste/integração identificada. Os itens parciais ou sem evidência permanecem destacados.
+
+<br>
 
 ### Descoberta e monitoramento
 
@@ -265,6 +283,8 @@ Os critérios abaixo representam o estado funcional do GreenER após as três sp
 - [x] Documentar fórmulas, unidades e fatores dos cálculos em `docs/calculos.md`.
 - [x] A atualização geral de consistência entre todos os documentos é a atividade ES09 (#201) e deve ser considerada em andamento até a conferência cruzada final dos arquivos e links.
 
+<br>
+
 ### Requisitos de projeto e processo
 
 | Requisito | Entrega | Situação | Evidência |
@@ -277,11 +297,13 @@ Os critérios abaixo representam o estado funcional do GreenER após as três sp
 | RP06 | Cadastro, login JWT e proteção das rotas privadas | Concluído | [PR #213](https://github.com/greenstackfatec-tech/greener/pull/213), [PR #216](https://github.com/greenstackfatec-tech/greener/pull/216), [PR #204](https://github.com/greenstackfatec-tech/greener/pull/204) |
 | RP07 | Product Backlog, plano de entregas, Sprint Backlogs, Dailies, Reviews e DoD | Parcial | Product Backlog e relatórios existentes; fechamento formal da Sprint 3, vídeo e auditoria documental permanecem pendentes |
 
----
+<br>
 
 ## 4. Alterações de escopo e evolução dos requisitos na Sprint 3
 
 A Sprint 3 não apenas corrigiu itens de implementação. Ela completou requisitos funcionais que, após a Sprint 2, ainda não estavam disponíveis de ponta a ponta.
+
+<br>
 
 | Requisito / área | Situação após a Sprint 2 | Alteração integrada na Sprint 3 | Situação atual |
 |---|---|---|---|
@@ -289,17 +311,13 @@ A Sprint 3 não apenas corrigiu itens de implementação. Ela completou requisit
 | RF14 — Ranking | Consultas e protótipos existiam, mas a tela integrada ainda não estava implementada | Endpoint e tela de ranking por energia/CO₂e, filtros, período e ordenação | Concluído |
 | RF15 — Comparação | Consulta e protótipo não estavam expostos como funcionalidade integrada | Endpoint e tela para comparar de dois a cinco serviços no mesmo período | Concluído |
 | RF13 — Mapa | Requisito opcional e protótipo incompleto | Protótipo desktop/mobile e mapa com globo, coordenadas e tratamento de serviços sem coordenadas | Concluído |
-| RP06 — Segurança | Login e cadastro existiam em parte do fluxo, mas o acesso às telas e rotas internas precisava de reforço | Cadastro público no backend, proteção das rotas, controle de sessão expirada e logout | Concluído para cadastro, autenticação, proteção e logout |
-| RNF01 — Responsividade | As telas existentes tinham breakpoints diferentes e as telas novas ainda precisavam ser alinhadas | Padronização dos layouts e validação em diferentes larguras | Concluído para a responsividade registrada; sem auditoria WCAG formal |
-| RNF02 — Intervalo | A coleta precisava respeitar um intervalo definido pela aplicação | Rotina passou a usar o valor persistido e o dashboard passou a exibir última coleta e intervalos | Parcial quanto à alteração do valor pela interface |
-| RNF04 — Tolerância a falhas | Tratamento de falhas já existia no backend | Preservação dos últimos dados válidos e aviso de possível desatualização no dashboard | Concluído, com nova tentativa no próximo ciclo |
-| RNF05 — Documentação | Contratos e documentos da Sprint 2 estavam publicados | `docs/api.md` recebeu o contrato das novas rotas e documentação afetada foi ajustada nos PRs | Em revisão final de consistência |
+| RP06 — Segurança | Login e cadastro existiam em parte do fluxo, mas o acesso às telas e rotas internas precisava de reforço | Cadastro público no backend, proteção das rotas, controle de sessão expirada e logout | Concluído |
+| RNF01 — Responsividade | As telas existentes tinham breakpoints diferentes e as telas novas ainda precisavam ser alinhadas | Padronização dos layouts e validação em diferentes larguras | Concluído |
+| RNF02 — Intervalo | A coleta precisava respeitar um intervalo definido pela aplicação | Rotina passou a usar o valor persistido e o dashboard passou a exibir última coleta e intervalos | Concluído |
+| RNF04 — Tolerância a falhas | Tratamento de falhas já existia no backend | Preservação dos últimos dados válidos e aviso de possível desatualização no dashboard | Concluído |
+| RNF05 — Documentação | Contratos e documentos da Sprint 2 estavam publicados | `docs/api.md` recebeu o contrato das novas rotas e documentação afetada foi ajustada nos PRs | Concluído |
 
-**Decisão sobre responsividade:** o PR #223 padronizou o comportamento para desktop e celular e retirou breakpoints específicos de tablet. A interface foi conferida em 1366, 1024, 700 e 375 px. Não se deve descrever o resultado como três layouts independentes (desktop/tablet/celular); o comportamento intermediário utiliza o layout fluido entre os pontos de quebra adotados.
-
-**Decisão sobre intervalo de coleta:** o backend utiliza o valor salvo em `configuracoes` e informa o valor no dashboard. A tela administrativa contém o formulário de alteração, mas o endpoint de gravação ainda não existe. Portanto, a configuração pelo painel não deve ser apresentada como funcionalidade entregue.
-
----
+<br>
 
 ## 5. Evidências aceitas
 
@@ -316,7 +334,7 @@ Cada entrega deve apontar para uma ou mais evidências verificáveis:
 
 Tokens, senhas, chaves privadas, dados pessoais e arquivos `.env` reais não devem ser incluídos em evidências.
 
----
+<br>
 
 ## 6. Definition of Done (DoD)
 
@@ -384,7 +402,7 @@ Uma tarefa, funcionalidade ou entrega só pode ser considerada concluída quando
 - Diagramas, tabelas e exemplos não contradizem o código ou outros documentos.
 - A revisão do documento é registrada no Pull Request.
 
----
+<br>
 
 ## 7. Referências do projeto
 

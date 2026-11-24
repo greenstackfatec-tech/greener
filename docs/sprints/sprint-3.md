@@ -69,7 +69,7 @@ A atualização geral da documentação para refletir a versão final ainda est�
 
 > Clique no link abaixo para assistir ao vídeo referente à terceira sprint.
 
-[Sprint 3 - GreenER](#)
+[Sprint 3 - GreenER](https://www.youtube.com/watch?v=8_LDRV6ipf4)
 
 <br>
 
@@ -161,11 +161,11 @@ xychart-beta
 | [DW-12](https://github.com/greenstackfatec-tech/greener/issues/186) | Desenvolver a tela de ranking por energia ou CO₂e | 9 | 5 | DW | ✅ Concluída | Júlia |
 | [DW-10](https://github.com/greenstackfatec-tech/greener/issues/191) | Padronizar a responsividade para desktop e celular | 8 | 5 | DW | ✅ Concluída | Thiago |
 | [DW-22](https://github.com/greenstackfatec-tech/greener/issues/198) | Limpar o frontend, removendo componentes fictícios e páginas sem rota | 7 | 3 | DW | ✅ Concluída | Igor |
-| [DW-17](https://github.com/greenstackfatec-tech/greener/issues/196) | Implementar a área de configuração do intervalo de coleta e o logout | 7 | 3 | DW | ⚠️ Parcial: logout concluído; configuração pendente | Guilherme |
+| [DW-17](https://github.com/greenstackfatec-tech/greener/issues/196) | Implementar a área de configuração do intervalo de coleta e o logout | 7 | 3 | DW | ✅ Concluída | Guilherme |
 | [ES-08](https://github.com/greenstackfatec-tech/greener/issues/178) | Criar o Sprint Backlog da Sprint 3, manter o burndown e registrar a Sprint Review | 10 | 5 | ES | ✅ Concluída | Fernanda |
 | ES-14 | Preparar a apresentação final | 8 | 5 | ES | ✅ Concluída | Fernanda e equipe |
 | [ES-15](https://github.com/greenstackfatec-tech/greener/issues/200) | Conferir comandos, links e instruções em um clone limpo | 9 | 3 | ES | ✅ Concluída | Fernanda e equipe |
-| [ES-16](https://github.com/greenstackfatec-tech/greener/issues/199) | Registrar as atas das Daily Meetings da Sprint 3 | 8 | 2 | ES | ✅ Concluídae | Fernanda |
+| [ES-16](https://github.com/greenstackfatec-tech/greener/issues/199) | Registrar as atas das Daily Meetings da Sprint 3 | 8 | 2 | ES | ✅ Concluída | Fernanda |
 | TP-21 | Medir e ajustar o desempenho do dashboard e das consultas | 6 | 3 | TP | ✅ Concluída | Equipe |
 
 
