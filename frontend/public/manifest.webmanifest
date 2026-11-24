@@ -8,14 +8,20 @@
   "theme_color": "#176b4d",
   "icons": [
     {
-      "src": "/src/assets/greener-icon.png",
-      "sizes": "192x192",
+      "src": "/greener-icon-64.png",
+      "sizes": "64x64",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/src/assets/greener-icon.png",
-      "sizes": "512x512",
+      "src": "/greener-icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/greener-icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     }
