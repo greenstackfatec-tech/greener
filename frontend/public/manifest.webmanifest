@@ -1,0 +1,23 @@
+{
+  "name": "GreenER",
+  "short_name": "GreenER",
+  "description": "Monitoramento de energia e emissões de CO₂e para softwares mais conscientes",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#edf5ee",
+  "theme_color": "#176b4d",
+  "icons": [
+    {
+      "src": "/src/assets/greener-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/src/assets/greener-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

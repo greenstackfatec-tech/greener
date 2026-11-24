@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Fundo branco quadrado -->
+  <rect width="32" height="32" fill="white" rx="4"/>
+  <!-- "G" verde estilizado do GreenER (vetor leve) -->
+  <path d="M16 4C10.5 4 6 8.5 6 14c0 3.2 1.5 6 3.8 7.8L6 28l5.2-3.2C13.8 26 16 24.5 16 22c0-5.5 4.5-10 10-10s10 4.5 10 10c0 2.5-.8 4.8-2 6.5l3.5 2.2c2.2-2.5 3.5-5.5 3.5-9C30 8.5 25.5 4 16 4zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm1.5-11h-3v-2h3v2zm0 4h-3v-4h3v4z" fill="#1ba53b"/>
+</svg>

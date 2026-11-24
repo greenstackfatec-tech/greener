@@ -394,6 +394,7 @@
   .auth {
     display: grid;
     grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+    grid-template-rows: 1fr auto;
   }
 
   .auth-topo,
@@ -487,6 +488,11 @@
 
   .auth-rodape-separador {
     display: inline !important;
+  }
+
+  .auth .footer {
+    grid-column: 2;
+    grid-row: 2;
   }
 }
 

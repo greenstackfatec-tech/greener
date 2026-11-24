@@ -182,7 +182,7 @@
   .adm {
     display: grid;
     grid-template-columns: 256px minmax(0, 1fr);
-    grid-template-rows: 80px 1fr;
+    grid-template-rows: 80px 1fr auto;
   }
 
   .adm-lateral {
@@ -312,5 +312,10 @@
     grid-column: 2;
     grid-row: 2;
     padding: 33px 32px 32px;
+  }
+
+  .adm .footer {
+    grid-column: 2;
+    grid-row: 3;
   }
 }
