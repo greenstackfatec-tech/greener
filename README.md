@@ -163,7 +163,7 @@ Os valores apresentados dependem das respostas das APIs e dos registros disponí
 | :---: | :---: | :---: | :--- | :---: |
 | 1 | 19/10/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-1.md) | [Ver vídeo](https://youtu.be/gBj58b91ARw) |
 | 2 | 09/11/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-2.md) | [Ver vídeo](https://www.youtube.com/watch?v=dAeaiwG0VI0) |
-| 3 | 23/11/2026 | ✅ | [Indisponível]() | [Indisponível](#) |
+| 3 | 23/11/2026 | ✅ | [Ver relatório](./docs/sprints/sprint-3.md) | [Ver vídeo](https://www.youtube.com/watch?v=8_LDRV6ipf4) |
 
 ### Legenda:
 
@@ -189,9 +189,9 @@ O andamento das atividades, as entregas, as pendências e as evidências podem s
 
 <br>
 
-### Sprint 3 — Análise, autenticação, visualização e consolidação
+## 🎯 Sprint 3 — Análise, autenticação, visualização e consolidação
 
-A terceira sprint avançou nas rotas e telas de histórico, ranking e comparação, reforçou a autenticação, adicionou o mapa geográfico e ampliou os ajustes de responsividade e qualidade. As atividades, o burndown e as pendências de fechamento estão disponível [aqui]](./docs/sprints/sprint-3.md).
+A terceira sprint avançou nas rotas e telas de histórico, ranking e comparação, reforçou a autenticação, adicionou o mapa geográfico e ampliou os ajustes de responsividade e qualidade. As atividades, o burndown e as pendências de fechamento estão disponível [aqui](./docs/sprints/sprint-3.md).
 
 <br>
 
