@@ -55,9 +55,9 @@ export function LayoutAutenticacao({ children }: { children: ReactNode }) {
             <p>Monitoramento de energia e emissões de CO₂e para seus softwares.</p>
           </div>
         </div>
-
-        <Footer variante="minimo" />
       </main>
+
+      <Footer variante="minimo" />
     </div>
   );
 }

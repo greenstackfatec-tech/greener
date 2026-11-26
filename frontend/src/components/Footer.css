@@ -652,14 +652,15 @@
 
 /* ------- LAYOUT AUTENTICAÇÃO ------- */
 .auth .footer--minimo {
+  flex: 0 0 auto;
   background: #fff;
   border-top: 1px solid var(--borda);
   padding: 10px 0;
 }
 
 .auth .footer-container--minimo {
-  padding: 0 24px;
-  max-width: 480px;
+  width: min(480px, calc(100% - 48px));
+  padding: 0;
   margin: 0 auto;
 }
 
@@ -689,20 +690,6 @@
   }
 
   .auth .footer-container--minimo {
-    padding: 0 64px;
-    max-width: none;
-  }
-
-  .auth .footer-minimo-marca {
-    font-size: 14px;
-  }
-
-  .auth .footer-minimo-marca img {
-    width: 20px;
-    height: 20px;
-  }
-
-  .auth .footer-minimo-copyright {
-    font-size: 12px;
+    width: min(440px, calc(100% - 48px));
   }
 }
