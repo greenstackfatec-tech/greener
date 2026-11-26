@@ -228,22 +228,6 @@
   color: var(--texto-apoio);
 }
 
-.auth-rodape {
-  max-width: 480px;
-  margin: 32px auto 0 !important;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--texto-apoio);
-}
-
-.auth-rodape span {
-  display: block;
-}
-
-.auth-rodape-separador {
-  display: none !important;
-}
-
 /* ---------- Gráfico ilustrativo (painel do desktop) ---------- */
 
 .resumo {
@@ -409,6 +393,7 @@
   .auth-painel {
     display: flex;
     flex-direction: column;
+    grid-row: 1 / -1;
     padding: 64px;
     background: var(--verde-suave);
   }
@@ -448,7 +433,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    padding: 0;
+    padding: 0 0 24px;
   }
 
   .auth-voltar {
@@ -463,36 +448,13 @@
   .auth-formulario {
     width: min(440px, calc(100% - 48px));
     margin-top: 125px;
+    align-self: center;
   }
 
   .auth-titulo {
     margin-top: 12px !important;
     font-size: 32px;
     line-height: 40px;
-  }
-
-  .auth-conteudo .auth-formulario,
-  .auth-conteudo .auth-rodape {
-    align-self: center;
-  }
-
-  .auth-rodape {
-    width: min(440px, calc(100% - 48px));
-    margin: 44px 0 32px !important;
-    text-align: center;
-  }
-
-  .auth-rodape span {
-    display: inline;
-  }
-
-  .auth-rodape-separador {
-    display: inline !important;
-  }
-
-  .auth .footer {
-    grid-column: 2;
-    grid-row: 2;
   }
 }
 

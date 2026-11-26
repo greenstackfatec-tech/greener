@@ -5,7 +5,7 @@ import { RankingPage } from "../src/pages/RankingPage.tsx";
 import type { RankingItem, RankingResposta } from "../src/services/analytics.ts";
 import { removerToken, salvarToken } from "../src/services/token.ts";
 
-const aplicacoes = [{ id: 4, nome: "Verde" }, { id: 9, nome: "Aurora" }];
+const aplicacoes = [{ id: 4, nome: "Verde" }, { id: 9, nome: "Aurora" }, { id: 12, nome: "GreenER Demo" }];
 const lider: RankingItem = {
   servicoId: 1, nome: "EcoCart API", aplicacao: "Verde",
   mediaEnergiaKwh: 0.002, mediaEmissaoCo2eG: 80,
@@ -65,6 +65,11 @@ test("consulta os últimos 30 dias na abertura e aplica métrica, ordem e escopo
   expect(within(tabela).getByText("0,002 kWh")).toBeInTheDocument();
   expect(screen.getByText("Período aplicado").parentElement).toHaveTextContent(dataHora(Date.parse("2026-10-01T18:00:00.000Z")));
   expect(screen.getByText("1 serviço sem dados de CO₂e no período.")).toBeInTheDocument();
+  const escopo = screen.getByRole("combobox", { name: "Escopo" });
+  expect(within(escopo).queryByRole("option", { name: "GreenER Demo" })).not.toBeInTheDocument();
+  expect(within(escopo).getAllByRole("option").map((opcao) => opcao.textContent)).toEqual([
+    "Todos os projetos", "Verde", "Aurora",
+  ]);
 
   fireEvent.change(screen.getByLabelText("Métrica"), { target: { value: "energiaTotal" } });
   fireEvent.change(screen.getByLabelText("Ordem"), { target: { value: "DESC" } });
@@ -78,6 +83,23 @@ test("consulta os últimos 30 dias na abertura e aplica métrica, ordem e escopo
   expect(aplicada.get("ordenacao")).toBe("DESC");
   expect(aplicada.get("aplicacaoId")).toBe("9");
   expect(aplicada.get("offset")).toBe("0");
+});
+
+test("mantém todos os projetos e os resultados quando só há a aplicação de demonstração", async () => {
+  fetchMock.mockImplementation(async (url) => {
+    const dados = await resposta(url).json();
+    return Response.json({ ...dados, aplicacoes: [{ id: 12, nome: " GREENER DEMO " }] });
+  });
+  render(<MemoryRouter><RankingPage /></MemoryRouter>);
+  await screen.findByRole("table");
+
+  const escopo = screen.getByRole("combobox", { name: "Escopo" });
+  expect(within(escopo).getAllByRole("option")).toHaveLength(1);
+  expect(escopo).toHaveValue("");
+  fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
+  await screen.findByRole("table");
+  expect(parametros(fetchMock.mock.calls[1][0]).has("aplicacaoId")).toBe(false);
+  expect(screen.getByRole("heading", { name: lider.nome })).toBeInTheDocument();
 });
 
 test("valida datas personalizadas e repete o mesmo intervalo se a consulta falhar", async () => {

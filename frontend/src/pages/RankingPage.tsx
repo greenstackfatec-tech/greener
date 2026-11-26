@@ -243,7 +243,7 @@ export function RankingPage() {
     void consultarRanking(consulta, controle.signal).then(
       (dados) => {
         if (controle.signal.aborted) return;
-        setAplicacoes(dados.aplicacoes);
+        setAplicacoes(dados.aplicacoes.filter(({ nome }) => nome.trim().toLowerCase() !== "greener demo"));
         const { classificados } = dados.resumo;
         if (classificados > 0 && consulta.offset >= classificados) {
           const offset = Math.floor((classificados - 1) / consulta.limite) * consulta.limite;
