@@ -28,7 +28,7 @@ function prepararProcesso(t: TestContext, codigo: string, ambiente: NodeJS.Proce
     `import { consultar, encerrarConexao } from "./src/db/connection.ts"; ${codigo}`,
   ], {
     cwd: fileURLToPath(new URL("../../", import.meta.url)),
-    env: { ...process.env, ...envPadrao, ...ambiente },
+    env: { ...envPadrao, ...process.env, ...ambiente },
     stdio: ["ignore", "ignore", "pipe", "ipc"],
   });
   let erros = "";
